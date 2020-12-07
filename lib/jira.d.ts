@@ -204,7 +204,7 @@ export default class JiraApi {
      * @param {string} properties - Comma separated list of properties to retrieve
      * @param {boolean} fieldsByKeys - False by default, used to retrieve fields by key instead of id
      */
-    findIssue(issueNumber: any, expand: any, fields: any, properties: any, fieldsByKeys: any): Promise<any>;
+    findIssue(issueNumber: string, expand?: string, fields?: string, properties?: string, fieldsByKeys?: boolean): Promise<any>;
     /**
      * @name downloadAttachment
      * @function

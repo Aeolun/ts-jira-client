@@ -393,7 +393,13 @@ export default class JiraApi {
    * @param {string} properties - Comma separated list of properties to retrieve
    * @param {boolean} fieldsByKeys - False by default, used to retrieve fields by key instead of id
    */
-  findIssue(issueNumber, expand, fields, properties, fieldsByKeys) {
+  findIssue(
+    issueNumber: string,
+    expand?: string,
+    fields?: string,
+    properties?: string,
+    fieldsByKeys?: boolean
+  ): Promise<any> {
     return this.doRequest(
       this.makeRequestHeader(
         this.makeUri({
