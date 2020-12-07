@@ -18,6 +18,7 @@
     "node": ">=10.0.0"
   },
   "main": "./lib/jira.js",
+  "typings": "./lib/jira.d.ts",
   "files": [
     "lib",
     "docs",
