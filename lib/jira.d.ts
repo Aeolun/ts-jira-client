@@ -1,3 +1,5 @@
+/// <reference types="node" />
+import { AxiosInstance, AxiosRequestConfig } from "axios";
 interface MakeUrlParams {
     pathname?: string;
     query?: Record<string, any>;
@@ -9,6 +11,30 @@ interface MakeSprintUrlParams {
     query?: Record<string, any>;
     intermediatePath?: string;
 }
+export interface JiraApiOptions {
+    protocol: 'http' | 'https';
+    host: string;
+    port?: number;
+    apiVersion?: 1 | 2;
+    base?: string;
+    intermediatePath?: string;
+    webHookVersion?: string;
+    greenhopperVersion?: string;
+    baseOptions?: AxiosRequestConfig;
+    axios?: AxiosInstance;
+    strictSSL?: boolean;
+    oauth?: {
+        consumer_key: string;
+        access_token: string;
+        consumer_secret: string;
+        access_token_secret: string;
+        signature_method: string;
+    };
+    bearer?: string;
+    timeout?: number;
+    username?: string;
+    password?: string;
+}
 /**
  * @name JiraApi
  * @class
@@ -19,20 +45,20 @@ export default class JiraApi {
     protocol: string;
     host: string;
     port: number;
-    apiVersion: string;
+    apiVersion: number;
     base: string;
     intermediatePath: string;
     strictSSL: any;
-    request: any;
+    axios: AxiosInstance;
     webhookVersion: string;
     greenhopperVersion: string;
-    baseOptions: any;
+    baseOptions: AxiosRequestConfig;
     /**
      * @constructor
      * @function
      * @param {JiraApiOptions} options
      */
-    constructor(options: any);
+    constructor(options: JiraApiOptions);
     /**
      * @typedef JiraApiOptions
      * @type {object}
@@ -93,27 +119,7 @@ export default class JiraApi {
      * @param {string} uri
      * @param {object} [options] - an object containing fields and formatting how the
      */
-    makeRequestHeader(uri: any, options?: {
-        method?: string;
-        followAllRedirects?: boolean;
-        body?: any;
-        json?: boolean;
-        encoding?: string;
-        qs?: Record<string, any>;
-        headers?: Record<string, any>;
-        formData?: Record<string, any>;
-    }): {
-        method: string;
-        followAllRedirects?: boolean;
-        body?: any;
-        json: boolean;
-        encoding?: string;
-        qs?: Record<string, any>;
-        headers?: Record<string, any>;
-        formData?: Record<string, any>;
-        rejectUnauthorized: any;
-        uri: any;
-    };
+    makeRequestHeader(url: any, options?: AxiosRequestConfig): AxiosRequestConfig;
     /**
      * @typedef makeRequestHeaderOptions
      * @type {object}
@@ -192,7 +198,8 @@ export default class JiraApi {
      * @param {object} requestOptions - fields on this object get posted as a request header for
      * requests to jira
      */
-    doRequest(requestOptions: any): Promise<any>;
+    doRequest<T>(requestOptions: AxiosRequestConfig): Promise<T>;
+    doPlainRequest<T>(requestOptions: AxiosRequestConfig): Promise<import("axios").AxiosResponse<T>>;
     /**
      * @name findIssue
      * @function
@@ -206,13 +213,36 @@ export default class JiraApi {
      */
     findIssue(issueNumber: string, expand?: string, fields?: string, properties?: string, fieldsByKeys?: boolean): Promise<any>;
     /**
+     * @name downloadUserAvatar
+     * @function
+     * Download an avatar
+     * [Jira Doc](http://docs.atlassian.com/jira/REST/latest/#id290709)
+     * @param {number} avatarId - The avatar to download
+     */
+    downloadUserAvatar(ownerId: string, avatarId: number): Promise<{
+        mimeType: string;
+        content: Buffer;
+    }>;
+    /**
+     * @name downloadAvatar
+     * @function
+     * Download an avatar
+     * [Jira Doc](http://docs.atlassian.com/jira/REST/latest/#id290709)
+     * @param avatarType
+     * @param {number} avatarId - The avatar to download
+     */
+    downloadAvatar(avatarType: string, avatarId: number): Promise<{
+        mimeType: string;
+        content: Buffer;
+    }>;
+    /**
      * @name downloadAttachment
      * @function
      * Download an attachment
      * [Jira Doc](http://docs.atlassian.com/jira/REST/latest/#id288524)
      * @param {object} attachment - the attachment
      */
-    downloadAttachment(attachment: any): Promise<any>;
+    downloadAttachment(attachment: any): Promise<Buffer>;
     /**
      * @name getUnresolvedIssueCount
      * @function
@@ -229,7 +259,7 @@ export default class JiraApi {
      * [Jira Doc](http://docs.atlassian.com/jira/REST/latest/#id289232)
      * @param {string} project - key for the project
      */
-    getProject(project: any): Promise<any>;
+    getProject(project: any): Promise<unknown>;
     /**
      * @name createProject
      * @function
@@ -237,7 +267,7 @@ export default class JiraApi {
      * [Jira Doc](https://docs.atlassian.com/jira/REST/latest/#api/2/project-createProject)
      * @param {object} project - with specs
      */
-    createProject(project: any): Promise<any>;
+    createProject(project: any): Promise<unknown>;
     /** Find the Rapid View for a specified project
      * @name findRapidView
      * @function
@@ -941,14 +971,14 @@ export default class JiraApi {
      * is used for estimation.
      * @param {string} body - value to set
      */
-    estimateIssueForBoard(issueIdOrKey: any, boardId: any, body: any): Promise<any>;
+    estimateIssueForBoard(issueIdOrKey: any, boardId: any, data: any): Promise<any>;
     /** Rank Issues
      * [Jira Doc](https://docs.atlassian.com/jira-software/REST/cloud/#agile/1.0/issue-rankIssues)
      * @name rankIssues
      * @function
      * @param {string} body - value to set
      */
-    rankIssues(body: any): Promise<any>;
+    rankIssues(data: any): Promise<any>;
     /** Get Projects
      * [Jira Doc](https://docs.atlassian.com/jira-software/REST/cloud/#agile/1.0/board/{boardId}/project-getProjects)
      * @name getProjects
@@ -989,7 +1019,7 @@ export default class JiraApi {
      * @param {string} propertyKey - Id of property to delete
      * @param {string} body - value to set, for objects make sure to stringify first
      */
-    setBoardProperty(boardId: any, propertyKey: any, body: any): Promise<any>;
+    setBoardProperty(boardId: any, propertyKey: any, data: any): Promise<any>;
     /** Get Board Property
      * [Jira Doc](https://docs.atlassian.com/jira-software/REST/cloud/#agile/1.0/board/{boardId}/properties-getProperty)
      * @name getBoardProperty
@@ -1057,7 +1087,7 @@ export default class JiraApi {
      * @param {string} epicIdOrKey - Id of epic to retrieve
      * @param {string} body - value to set, for objects make sure to stringify first
      */
-    partiallyUpdateEpic(epicIdOrKey: any, body: any): Promise<any>;
+    partiallyUpdateEpic(epicIdOrKey: any, data: any): Promise<any>;
     /** Get issues for epic
      * [Jira Doc](https://docs.atlassian.com/jira-software/REST/cloud/#agile/1.0/epic-getIssuesForEpic)
      * [Jira Doc](https://docs.atlassian.com/jira-software/REST/cloud/#agile/1.0/epic-getIssuesWithoutEpic)
@@ -1088,7 +1118,7 @@ export default class JiraApi {
      * @param {string} epicIdOrKey - Id of epic
      * @param {string} body - value to set
      */
-    rankEpics(epicIdOrKey: any, body: any): Promise<any>;
+    rankEpics(epicIdOrKey: any, data: any): Promise<any>;
     /**
      * @name getServerInfo
      * @function
