@@ -1587,9 +1587,7 @@ export default class JiraApi {
           pathname: `/issue/${issueId}/comment`,
         }),
         {
-          data: {
-            data: comment,
-          },
+          data: comment,
           method: 'POST',
 
         }
