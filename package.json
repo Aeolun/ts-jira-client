@@ -32,6 +32,7 @@
   },
   "scripts": {
     "build": "rm -rf lib && tsc",
+    "watch": "rm -rf lib && tsc -w",
     "docs-build": "rm -rf docs && esdoc -c esdoc.json",
     "lint": "eslint ./",
     "test": "npm run lint && mocha --require @babel/register && npm run docs-build",

@@ -1,22 +1,6 @@
 import * as url from 'url'
-import axios, {AxiosInstance, AxiosRequestConfig, Method} from "axios";
+import axios, { AxiosInstance, AxiosRequestConfig, Method } from 'axios'
 
-function request(uri, options) {
-  return new Promise((resolve, reject) => {
-    _request(uri, options, (err, httpResponse) => {
-      if (err) {
-        reject(err);
-      } else {
-        if (httpResponse.statusCode >= 400) {
-          reject(httpResponse.body);
-        }
-
-        // for compatibility with request-promise
-        resolve(httpResponse.body);
-      }
-    });
-  });
-}
 interface MakeUrlParams {
   pathname?: string
   query?: Record<string, any>
@@ -31,10 +15,10 @@ interface MakeSprintUrlParams {
 }
 
 export interface JiraApiOptions {
-  protocol: 'http' | 'https';
-  host: string;
-  port?: number;
-  apiVersion?: 1 | 2;
+  protocol: 'http' | 'https'
+  host: string
+  port?: number
+  apiVersion?: 1 | 2
   base?: string
   intermediatePath?: string
   webHookVersion?: string
@@ -100,7 +84,7 @@ export default class JiraApi {
     this.axios = options.axios || axios.create()
     this.webhookVersion = options.webHookVersion || '1.0'
     this.greenhopperVersion = options.greenhopperVersion || '1.0'
-    this.baseOptions = {...options.baseOptions }
+    this.baseOptions = { ...options.baseOptions }
 
     if (!this.baseOptions.headers) this.baseOptions.headers = {}
 
@@ -182,10 +166,7 @@ export default class JiraApi {
    * @param {string} uri
    * @param {object} [options] - an object containing fields and formatting how the
    */
-  makeRequestHeader(
-    url,
-    options: AxiosRequestConfig = {}
-  ): AxiosRequestConfig {
+  makeRequestHeader(url, options: AxiosRequestConfig = {}): AxiosRequestConfig {
     return {
       method: options.method || 'GET',
       url,
@@ -407,28 +388,28 @@ export default class JiraApi {
    * @param {number} avatarId - The avatar to download
    */
   async downloadUserAvatar(
-      ownerId: string,
-      avatarId: number
+    ownerId: string,
+    avatarId: number
   ): Promise<{
-    mimeType: string,
+    mimeType: string
     content: Buffer
   }> {
     const response = await this.doPlainRequest<Buffer>(
-        this.makeRequestHeader(
-            this.makeUri({
-              pathname: `/useravatar`,
-              intermediatePath: '/secure',
-              query: {
-                ownerId: ownerId,
-                avatarId: avatarId,
-              },
-            }),
-            { responseType: 'arraybuffer' }
-        )
+      this.makeRequestHeader(
+        this.makeUri({
+          pathname: `/useravatar`,
+          intermediatePath: '/secure',
+          query: {
+            ownerId: ownerId,
+            avatarId: avatarId,
+          },
+        }),
+        { responseType: 'arraybuffer' }
+      )
     )
     return {
       mimeType: response.headers['content-type'],
-      content: response.data
+      content: response.data,
     }
   }
 
@@ -441,28 +422,28 @@ export default class JiraApi {
    * @param {number} avatarId - The avatar to download
    */
   async downloadAvatar(
-      avatarType: string,
-      avatarId: number
+    avatarType: string,
+    avatarId: number
   ): Promise<{
-    mimeType: string,
+    mimeType: string
     content: Buffer
   }> {
     const response = await this.doPlainRequest<Buffer>(
-        this.makeRequestHeader(
-            this.makeUri({
-              pathname: `/viewavatar`,
-              intermediatePath: '/secure',
-              query: {
-                avatarType: avatarType,
-                avatarId: avatarId,
-              },
-            }),
-            { responseType: 'arraybuffer' }
-        )
+      this.makeRequestHeader(
+        this.makeUri({
+          pathname: `/viewavatar`,
+          intermediatePath: '/secure',
+          query: {
+            avatarType: avatarType,
+            avatarId: avatarId,
+          },
+        }),
+        { responseType: 'arraybuffer' }
+      )
     )
     return {
       mimeType: response.headers['content-type'],
-      content: response.data
+      content: response.data,
     }
   }
 
@@ -942,7 +923,7 @@ export default class JiraApi {
             includeActive: includeActive || true,
             includeInactive: includeInactive || false,
           },
-        }),
+        })
       )
     )
   }
@@ -982,7 +963,7 @@ export default class JiraApi {
             groupname,
             expand: `users[${startAt}:${maxResults}]`,
           },
-        }),
+        })
       )
     )
   }
@@ -1163,7 +1144,6 @@ export default class JiraApi {
         }),
         {
           method: 'DELETE',
-
         }
       )
     )
@@ -1187,7 +1167,6 @@ export default class JiraApi {
         {
           data: issueUpdate,
           method: 'PUT',
-
         }
       )
     )
@@ -1205,9 +1184,7 @@ export default class JiraApi {
         this.makeUri({
           pathname: `/issue/${issueId}/editmeta`,
         }),
-        {
-
-        }
+        {}
       )
     )
   }
@@ -1284,7 +1261,7 @@ export default class JiraApi {
       this.makeRequestHeader(
         this.makeUri({
           pathname: `/component/${id}`,
-          query: moveIssuesTo ? { moveIssuesTo } : null
+          query: moveIssuesTo ? { moveIssuesTo } : null,
         }),
         {
           method: 'DELETE',
@@ -1438,7 +1415,6 @@ export default class JiraApi {
         }),
         {
           method: 'DELETE',
-
         }
       )
     )
@@ -1552,7 +1528,6 @@ export default class JiraApi {
         {
           data: issueTransition,
           method: 'POST',
-
         }
       )
     )
@@ -1589,7 +1564,6 @@ export default class JiraApi {
         {
           data: comment,
           method: 'POST',
-
         }
       )
     )
@@ -1611,7 +1585,6 @@ export default class JiraApi {
         {
           data: comment,
           method: 'POST',
-
         }
       )
     )
@@ -1638,7 +1611,6 @@ export default class JiraApi {
             ...options,
           },
           method: 'PUT',
-
         }
       )
     )
@@ -1695,7 +1667,6 @@ export default class JiraApi {
         }),
         {
           method: 'DELETE',
-
         }
       )
     )
@@ -1725,7 +1696,7 @@ export default class JiraApi {
       data: worklog,
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
     }
 
@@ -1749,7 +1720,7 @@ export default class JiraApi {
       }),
       method: 'GET',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
     }
 
@@ -1804,7 +1775,6 @@ export default class JiraApi {
         }),
         {
           method: 'DELETE',
-
         }
       )
     )
@@ -2787,6 +2757,62 @@ export default class JiraApi {
           pathname: '/issue/createmeta',
           query: optional,
         })
+      )
+    )
+  }
+
+  getIssueCreateMetaProjectIssueTypes(projectIdOrKey: string | number, startAt: number, maxResults: number) {
+    return this.doRequest<any>(
+      this.makeRequestHeader(
+        this.makeUri({
+          pathname: '/issue/createmeta/'+projectIdOrKey+'/issuetypes',
+          query: {
+            startAt,
+            maxResults
+          }
+        })
+      )
+    )
+  }
+
+  getIssueCreateMetaFields(projectIdOrKey: string | number, issueTypeId: string, startAt: number, maxResults: number) {
+    return this.doRequest<any>(
+      this.makeRequestHeader(
+        this.makeUri({
+          pathname: '/issue/createmeta/'+projectIdOrKey+'/issuetypes/'+issueTypeId,
+          query: {
+            startAt,
+            maxResults
+          }
+        })
+      )
+    )
+  }
+
+  getWorkflows(query = {}) {
+    return this.doRequest<any>(
+      this.makeRequestHeader(
+        this.makeUri({
+          pathname: '/workflow',
+          query: query,
+        }),
+        {
+          method: 'GET',
+        }
+      )
+    )
+  }
+
+  getWorkflowScheme(projectKeyOrId: string, query = {}) {
+    return this.doRequest<any>(
+      this.makeRequestHeader(
+        this.makeUri({
+          pathname: `/project/${projectKeyOrId}/workflowscheme`,
+          query: query,
+        }),
+        {
+          method: 'GET',
+        }
       )
     )
   }

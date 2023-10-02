@@ -1,5 +1,5 @@
 /// <reference types="node" />
-import { AxiosInstance, AxiosRequestConfig } from "axios";
+import { AxiosInstance, AxiosRequestConfig } from 'axios';
 interface MakeUrlParams {
     pathname?: string;
     query?: Record<string, any>;
@@ -1140,6 +1140,10 @@ export default class JiraApi {
      * [Jira Doc](https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-issues/#api-rest-api-3-issue-createmeta-get)
      */
     getIssueCreateMetadata(optional?: {}): Promise<any>;
+    getIssueCreateMetaProjectIssueTypes(projectIdOrKey: string | number, startAt: number, maxResults: number): Promise<any>;
+    getIssueCreateMetaFields(projectIdOrKey: string | number, issueTypeId: string, startAt: number, maxResults: number): Promise<any>;
+    getWorkflows(query?: {}): Promise<any>;
+    getWorkflowScheme(projectKeyOrId: string, query?: {}): Promise<any>;
     /** Generic Get Request
      * [Jira Doc](https://docs.atlassian.com/jira-software/REST/cloud/2/)
      * @name genericGet
