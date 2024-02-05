@@ -58,4 +58,4 @@ logIssueName();
 ```
 
 ## Documentation ##
-Can't find what you need in the readme? Check out our documentation here: https://ts-jira-client.github.io/
+Can't find what you need in the readme? Check out our documentation here: https://aeolun.github.io/ts-jira-client/
