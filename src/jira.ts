@@ -182,7 +182,7 @@ export class JiraApi {
   }
 
   async doRequest<T>(requestOptions: AxiosRequestConfig) {
-    return this.doRawRequest(requestOptions).then((response) => response.data);
+    return this.doRawRequest<T>(requestOptions).then((response) => response.data);
   }
 
   async doRawRequest<T>(requestOptions: AxiosRequestConfig) {
@@ -437,8 +437,8 @@ export class JiraApi {
   /** Create an issue link between two issues
    * @param link - a link object formatted how the Jira API specifies
    */
-  issueLink(link: components["schemas"]["RemoteIssueLinkRequest"]) {
-    return this.doRequest<components["schemas"]["RemoteIssueLinkIdentifies"]>(
+  issueLink(link: components["schemas"]["RemoteIssueLinkRequest"]): Promise<components["schemas"]["RemoteIssueLinkIdentifies"]> {
+    return this.doRequest(
       this.makeRequestHeader(
         this.makeUri({
           pathname: "/issueLink",
@@ -451,11 +451,13 @@ export class JiraApi {
     );
   }
 
-  /** List all issue link types jira knows about
+  /**
+   * List all issue link types jira knows about
+   *
    * [Jira Doc](https://docs.atlassian.com/software/jira/docs/api/REST/8.5.0/#api/2/issueLinkType-getIssueLinkTypes)
    */
-  listIssueLinkTypes() {
-    return this.doRequest<components["schemas"]["IssueLinkTypes"]>(
+  listIssueLinkTypes(): Promise<components["schemas"]["IssueLinkTypes"]> {
+    return this.doRequest(
       this.makeRequestHeader(
         this.makeUri({
           pathname: "/issueLinkType",
@@ -464,11 +466,13 @@ export class JiraApi {
     );
   }
 
-  /** Retrieves the remote links associated with the given issue.
+  /**
+   * Retrieves the remote links associated with the given issue.
+   *
    * @param issueNumber - the issue number to find remote links for.
    */
-  getRemoteLinks(issueNumber: string) {
-    return this.doRequest<components["schemas"]["RemoteIssueLink"]>(
+  getRemoteLinks(issueNumber: string): Promise<components["schemas"]["RemoteIssueLink"]> {
+    return this.doRequest(
       this.makeRequestHeader(
         this.makeUri({
           pathname: `/issue/${issueNumber}/remotelink`,
@@ -482,8 +486,8 @@ export class JiraApi {
    * @param issueNumber - The issue number to create the remotelink under
    * @param remoteLink - the remotelink object as specified by the Jira API
    */
-  createRemoteLink(issueNumber: string, remoteLink: components["schemas"]["RemoteIssueLinkRequest"]) {
-    return this.doRequest<components["schemas"]["RemoteIssueLinkIdentifies"]>(
+  createRemoteLink(issueNumber: string, remoteLink: components["schemas"]["RemoteIssueLinkRequest"]): Promise<components["schemas"]["RemoteIssueLinkIdentifies"]> {
+    return this.doRequest(
       this.makeRequestHeader(
         this.makeUri({
           pathname: `/issue/${issueNumber}/remotelink`,
@@ -550,8 +554,8 @@ export class JiraApi {
    * [Jira Doc](http://docs.atlassian.com/jira/REST/latest/#id288232)
    * @param version - an object of the new version
    */
-  createVersion(version: components["schemas"]["Version"]) {
-    return this.doRequest<components["schemas"]["Version"]>(
+  createVersion(version: components["schemas"]["Version"]): Promise<components["schemas"]["Version"]> {
+    return this.doRequest(
       this.makeRequestHeader(
         this.makeUri({
           pathname: "/version",
@@ -568,8 +572,8 @@ export class JiraApi {
    * [Jira Doc](https://docs.atlassian.com/jira/REST/latest/#d2e510)
    * @param version - a new object of the version to update
    */
-  updateVersion(version: components["schemas"]["Version"]) {
-    return this.doRequest<components["schemas"]["Version"]>(
+  updateVersion(version: components["schemas"]["Version"]): Promise<components["schemas"]["Version"]> {
+    return this.doRequest(
       this.makeRequestHeader(
         this.makeUri({
           pathname: `/version/${version.id}`,
@@ -615,8 +619,8 @@ export class JiraApi {
    * @param position - an object of the new position
    */
 
-  moveVersion(versionId: string, position: components["schemas"]["VersionMoveBean"]) {
-    return this.doRequest<components["schemas"]["Version"]>(
+  moveVersion(versionId: string, position: components["schemas"]["VersionMoveBean"]): Promise<components["schemas"]["Version"]> {
+    return this.doRequest(
       this.makeRequestHeader(
         this.makeUri({
           pathname: `/version/${versionId}/move`,
@@ -655,8 +659,8 @@ export class JiraApi {
    * [Jira Doc](https://docs.atlassian.com/jira/REST/cloud/#api/2/user-createUser)
    * @param user - Properly Formatted User object
    */
-  createUser(user: components["schemas"]["NewUserDetails"]) {
-    return this.doRequest<components["schemas"]["UserDetails"]>(
+  createUser(user: components["schemas"]["NewUserDetails"]): Promise<components["schemas"]["UserDetails"]> {
+    return this.doRequest(
       this.makeRequestHeader(
         this.makeUri({
           pathname: "/user",
@@ -669,11 +673,13 @@ export class JiraApi {
     );
   }
 
-  /** Search user on Jira
+  /**
+   * Search user on Jira
+   *
    * [Jira Doc](http://docs.atlassian.com/jira/REST/latest/#d2e3756)
    */
-  searchUsers({ username, query, startAt, maxResults }: cloudOperations["findUsers"]["parameters"]["query"]) {
-    return this.doRequest<components["schemas"]["User"][]>(
+  searchUsers({ username, query, startAt, maxResults }: cloudOperations["findUsers"]["parameters"]["query"]): Promise<(components["schemas"]["User"][])> {
+    return this.doRequest(
       this.makeRequestHeader(
         this.makeUri({
           pathname: "/user/search",
@@ -780,8 +786,8 @@ export class JiraApi {
   /** Add issue to Jira
    * [Jira Doc](http://docs.atlassian.com/jira/REST/latest/#id290028)
    */
-  addNewIssue(issue: components["schemas"]["IssueUpdateDetails"]) {
-    return this.doRequest<components["schemas"]["CreatedIssue"]>(
+  addNewIssue(issue: components["schemas"]["IssueUpdateDetails"]): Promise<components["schemas"]["CreatedIssue"]> {
+    return this.doRequest(
       this.makeRequestHeader(
         this.makeUri({
           pathname: "/issue",
@@ -928,8 +934,8 @@ export class JiraApi {
    * [Jira Doc](http://docs.atlassian.com/jira/REST/latest/#id290028)
    * @param component - Properly Formatted Component
    */
-  addNewComponent(component: components["schemas"]["ProjectComponent"]) {
-    return this.doRequest<components["schemas"]["ProjectComponent"]>(
+  addNewComponent(component: components["schemas"]["ProjectComponent"]): Promise<components["schemas"]["ProjectComponent"]> {
+    return this.doRequest(
       this.makeRequestHeader(
         this.makeUri({
           pathname: "/component",
@@ -948,8 +954,8 @@ export class JiraApi {
    * @param componentId - the Id of the component to update
    * @param component - Properly Formatted Component
    */
-  updateComponent(componentId: string, component: components["schemas"]["ProjectComponent"]) {
-    return this.doRequest<components["schemas"]["ProjectComponent"]>(
+  updateComponent(componentId: string, component: components["schemas"]["ProjectComponent"]): Promise<components["schemas"]["ProjectComponent"]> {
+    return this.doRequest(
       this.makeRequestHeader(
         this.makeUri({
           pathname: `/component/${componentId}`,
@@ -1001,8 +1007,8 @@ export class JiraApi {
    * [Jira Doc](http://docs.atlassian.com/jira/REST/latest/#api/2/field-createCustomField)
    * @param field - Properly formatted Field object
    */
-  createCustomField(field: components["schemas"]["CustomFieldDefinitionJsonBean"]) {
-    return this.doRequest<components["schemas"]["FieldDetails"]>(
+  createCustomField(field: components["schemas"]["CustomFieldDefinitionJsonBean"]): Promise<components["schemas"]["FieldDetails"]> {
+    return this.doRequest(
       this.makeRequestHeader(
         this.makeUri({
           pathname: "/field",
@@ -1034,8 +1040,8 @@ export class JiraApi {
    * @param fieldKey - the key of the select list field
    * @param option - properly formatted Option object
    */
-  createFieldOption(fieldKey: string, option: components["schemas"]["IssueFieldOptionCreateBean"]) {
-    return this.doRequest<components["schemas"]["IssueFieldOption"]>(
+  createFieldOption(fieldKey: string, option: components["schemas"]["IssueFieldOptionCreateBean"]): Promise<components["schemas"]["IssueFieldOption"]> {
+    return this.doRequest(
       this.makeRequestHeader(
         this.makeUri({
           pathname: `/field/${fieldKey}/option`,
@@ -1053,8 +1059,8 @@ export class JiraApi {
    * [Jira Doc](http://docs.atlassian.com/jira/REST/latest/#api/2/field/{fieldKey}/option-getAllOptions)
    * @param fieldKey - the key of the select list field
    */
-  listFieldOptions(fieldKey: string) {
-    return this.doRequest<components["schemas"]["PageBeanIssueFieldOption"]>(
+  listFieldOptions(fieldKey: string): Promise<components["schemas"]["PageBeanIssueFieldOption"]> {
+    return this.doRequest(
       this.makeRequestHeader(
         this.makeUri({
           pathname: `/field/${fieldKey}/option`,
@@ -1069,8 +1075,8 @@ export class JiraApi {
    * @param optionId - the id of the modified option
    * @param option - properly formatted Option object
    */
-  upsertFieldOption(fieldKey: string, optionId: string, option: components["schemas"]["IssueFieldOption"]) {
-    return this.doRequest<components["schemas"]["IssueFieldOption"]>(
+  upsertFieldOption(fieldKey: string, optionId: string, option: components["schemas"]["IssueFieldOption"]): Promise<components["schemas"]["IssueFieldOption"]> {
+    return this.doRequest(
       this.makeRequestHeader(
         this.makeUri({
           pathname: `/field/${fieldKey}/option/${optionId}`,
@@ -1089,8 +1095,8 @@ export class JiraApi {
    * @param fieldKey - the key of the select list field
    * @param optionId - the id of the option
    */
-  getFieldOption(fieldKey: string, optionId: string) {
-    return this.doRequest<components["schemas"]["IssueFieldOption"]>(
+  getFieldOption(fieldKey: string, optionId: string): Promise<components["schemas"]["IssueFieldOption"]> {
+    return this.doRequest(
       this.makeRequestHeader(
         this.makeUri({
           pathname: `/field/${fieldKey}/option/${optionId}`,
@@ -1221,8 +1227,8 @@ export class JiraApi {
   /** List all Viewable Projects
    * [Jira Doc](http://docs.atlassian.com/jira/REST/latest/#id289193)
    */
-  listProjects() {
-    return this.doRequest<components["schemas"]["Project"][]>(
+  listProjects(): Promise<components["schemas"]["Project"][]> {
+    return this.doRequest(
       this.makeRequestHeader(
         this.makeUri({
           pathname: "/project",
@@ -1514,8 +1520,8 @@ export class JiraApi {
    * [Jira Doc](https://developer.atlassian.com/display/JIRADEV/JIRA+Webhooks+Overview)
    * @param webhook - properly formatted webhook
    */
-  registerWebhook(webhook: components["schemas"]["WebhookRegistrationDetails"]) {
-    return this.doRequest<components["schemas"]["ContainerForRegisteredWebhooks"]>(
+  registerWebhook(webhook: components["schemas"]["WebhookRegistrationDetails"]): Promise<components["schemas"]["ContainerForRegisteredWebhooks"]> {
+    return this.doRequest(
       this.makeRequestHeader(
         this.makeWebhookUri({
           pathname: "/webhook",
@@ -1531,8 +1537,8 @@ export class JiraApi {
   /** List all registered webhooks
    * [Jira Doc](https://developer.atlassian.com/display/JIRADEV/JIRA+Webhooks+Overview)
    */
-  listWebhooks() {
-    return this.doRequest<components["schemas"]["PageBeanWebhook"]>(
+  listWebhooks(): Promise<components["schemas"]["PageBeanWebhook"]> {
+    return this.doRequest(
       this.makeRequestHeader(
         this.makeWebhookUri({
           pathname: "/webhook",
@@ -1575,8 +1581,8 @@ export class JiraApi {
   /** Describe the currently authenticated user
    * [Jira Doc](http://docs.atlassian.com/jira/REST/latest/#id2e865)
    */
-  getCurrentUser() {
-    return this.doRequest<components["schemas"]["User"]>(
+  getCurrentUser(): Promise<components["schemas"]["User"]> {
+    return this.doRequest(
       this.makeRequestHeader(
         this.makeUri({
           pathname: "/myself",
@@ -1588,8 +1594,8 @@ export class JiraApi {
   /** Retrieve the backlog of a certain Board
    * @param boardId - rapid view id
    */
-  getBacklogForBoard(boardId: string) {
-    return this.doRequest<components["schemas"]["SearchResults"]>(
+  getBacklogForBoard(boardId: string): Promise<components["schemas"]["SearchResults"]> {
+    return this.doRequest(
       this.makeRequestHeader(
         this.makeUri({
           pathname: `board/${boardId}/backlog`,
@@ -1644,8 +1650,8 @@ export class JiraApi {
   /** Get list of possible statuses
    * [Jira Doc](https://docs.atlassian.com/jira/REST/latest/#api/2/status-getStatuses)
    */
-  listStatus() {
-    return this.doRequest<components["schemas"]["StatusDetails"][]>(
+  listStatus(): Promise<components["schemas"]["StatusDetails"][]> {
+    return this.doRequest(
       this.makeRequestHeader(
         this.makeUri({
           pathname: "/status",
@@ -1738,8 +1744,8 @@ export class JiraApi {
    * @param [startAt=0] - The starting index of the returned boards.
    * @param [maxResults=50] - The maximum number of boards to return per page.
    */
-  getAllBoards(type: string, name: string, projectKeyOrId: string, startAt = 0, maxResults = 50) {
-    return this.doRequest<operations["getAllBoards"]["responses"][200]["content"]["application/json"]>(
+  getAllBoards(type: string, name: string, projectKeyOrId: string, startAt = 0, maxResults = 50): Promise<operations["getAllBoards"]["responses"][200]["content"]["application/json"]> {
+    return this.doRequest(
       this.makeRequestHeader(
         this.makeAgileUri({
           pathname: "/board",
@@ -1758,8 +1764,8 @@ export class JiraApi {
   /** Create Board
    * [Jira Doc](https://docs.atlassian.com/jira-software/REST/cloud/#agile/1.0/board-createBoard)
    */
-  createBoard(boardBody: operations["createBoard"]["requestBody"]["content"]["application/json"]) {
-    return this.doRequest<operations["createBoard"]["responses"][201]["content"]["application/json"]>(
+  createBoard(boardBody: operations["createBoard"]["requestBody"]["content"]["application/json"]): Promise<operations["createBoard"]["responses"][201]["content"]["application/json"]> {
+    return this.doRequest(
       this.makeRequestHeader(
         this.makeAgileUri({
           pathname: "/board",
@@ -1776,8 +1782,8 @@ export class JiraApi {
    * [Jira Doc](https://docs.atlassian.com/jira-software/REST/cloud/#agile/1.0/board-getBoard)
    * @param boardId - Id of board to retrieve
    */
-  getBoard(boardId: string) {
-    return this.doRequest<operations["getBoard"]["responses"][200]["content"]["application/json"]>(
+  getBoard(boardId: string): Promise<operations["getBoard"]["responses"][200]["content"]["application/json"]> {
+    return this.doRequest(
       this.makeRequestHeader(
         this.makeAgileUri({
           pathname: `/board/${boardId}`,
@@ -1820,8 +1826,8 @@ export class JiraApi {
     startAt = 0,
     maxResults = 50,
     validateQuery = true,
-  ) {
-    return this.doRequest<components["schemas"]["SearchResults"]>(
+  ): Promise<components["schemas"]["SearchResults"]> {
+    return this.doRequest(
       this.makeRequestHeader(
         this.makeAgileUri({
           pathname: `/board/${boardId}/backlog`,
@@ -1868,8 +1874,8 @@ export class JiraApi {
     startAt = 0,
     maxResults = 50,
     validateQuery = true,
-  ) {
-    return this.doRequest<components["schemas"]["SearchResults"]>(
+  ): Promise<components["schemas"]["SearchResults"]> {
+    return this.doRequest(
       this.makeRequestHeader(
         this.makeAgileUri({
           pathname: `/board/${boardId}/issue`,
@@ -2157,8 +2163,8 @@ export class JiraApi {
     validateQuery = true,
     fields: string[] | undefined = undefined,
     expand: string[] | undefined = undefined,
-  ) {
-    return this.doRequest<components["schemas"]["SearchResults"]>(
+  ): Promise<components["schemas"]["SearchResults"]> {
+    return this.doRequest(
       this.makeRequestHeader(
         this.makeAgileUri({
           pathname: `/board/${boardId}/sprint/${sprintId}/issue`,
@@ -2268,8 +2274,8 @@ export class JiraApi {
     jql: string | undefined = undefined,
     validateQuery = true,
     fields: string[] | undefined = undefined,
-  ) {
-    return this.doRequest<components["schemas"]["SearchResults"]>(
+  ): Promise<components["schemas"]["SearchResults"]> {
+    return this.doRequest(
       this.makeRequestHeader(
         this.makeAgileUri({
           pathname: `/epic/${epicId}/issue`,
@@ -2330,8 +2336,8 @@ export class JiraApi {
    * Get server info
    * [Jira Doc](https://developer.atlassian.com/cloud/jira/platform/rest/v2/#api-api-2-serverInfo-get)
    */
-  getServerInfo() {
-    return this.doRequest<components["schemas"]["ServerInformation"]>(
+  getServerInfo(): Promise<components["schemas"]["ServerInformation"]> {
+    return this.doRequest(
       this.makeRequestHeader(
         this.makeUri({
           pathname: "/serverInfo",
@@ -2344,8 +2350,8 @@ export class JiraApi {
    * Get metadata for creating an issue.
    * [Jira Doc](https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-issues/#api-rest-api-3-issue-createmeta-get)
    */
-  getIssueCreateMetadata(optional: cloudOperations['getCreateIssueMeta']['parameters']['query'] = {}) {
-    return this.doRequest<components["schemas"]["IssueCreateMetadata"]>(
+  getIssueCreateMetadata(optional: cloudOperations['getCreateIssueMeta']['parameters']['query'] = {}): Promise<components["schemas"]["IssueCreateMetadata"]> {
+    return this.doRequest(
       this.makeRequestHeader(
         this.makeUri({
           pathname: "/issue/createmeta",
@@ -2361,8 +2367,8 @@ export class JiraApi {
     );
   }
 
-  getIssueCreateMetaProjectIssueTypes(projectIdOrKey: string | number, startAt: number, maxResults: number) {
-    return this.doRequest<components["schemas"]["ProjectIssueCreateMetadata"]>(
+  getIssueCreateMetaProjectIssueTypes(projectIdOrKey: string | number, startAt: number, maxResults: number): Promise<components["schemas"]["ProjectIssueCreateMetadata"]> {
+    return this.doRequest(
       this.makeRequestHeader(
         this.makeUri({
           pathname: `/issue/createmeta/${projectIdOrKey}/issuetypes`,
@@ -2375,8 +2381,8 @@ export class JiraApi {
     );
   }
 
-  getIssueCreateMetaFields(projectIdOrKey: string | number, issueTypeId: string, startAt: number, maxResults: number) {
-    return this.doRequest<components["schemas"]["FieldCreateMetadata"]>(
+  getIssueCreateMetaFields(projectIdOrKey: string | number, issueTypeId: string, startAt: number, maxResults: number): Promise<components["schemas"]["FieldCreateMetadata"]> {
+    return this.doRequest(
       this.makeRequestHeader(
         this.makeUri({
           pathname: `/issue/createmeta/${projectIdOrKey}/issuetypes/${issueTypeId}`,
@@ -2389,8 +2395,8 @@ export class JiraApi {
     );
   }
 
-  getWorkflows(query = {}) {
-    return this.doRequest<components["schemas"]["DeprecatedWorkflow"][]>(
+  getWorkflows(query = {}): Promise<components["schemas"]["DeprecatedWorkflow"][]> {
+    return this.doRequest(
       this.makeRequestHeader(
         this.makeUri({
           pathname: "/workflow",
