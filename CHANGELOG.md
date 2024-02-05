@@ -1,3 +1,10 @@
+## [1.0.1](https://github.com/Aeolun/ts-jira-client/compare/v1.0.0...v1.0.1) (2024-02-05)
+
+
+### Bug Fixes
+
+* specify return types in a way that typedoc understands ([198213f](https://github.com/Aeolun/ts-jira-client/commit/198213f9c36f566d0750f40ce812bfb7e696745f))
+
 # 1.0.0 (2024-02-05)
 
 
