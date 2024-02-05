@@ -1,0 +1,17 @@
+{
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
+  "formatter": {
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 120,
+    "include": ["src/**/*.ts"],
+    "ignore": ["src/generated/**/*.d.ts"]
+  },
+  "linter": {
+    "include": ["src/**/*.ts"],
+    "ignore": ["src/generated/**/*.d.ts"]
+  },
+  "files": {
+    "maxSize": 2097152
+  }
+}

@@ -10,7 +10,7 @@ be interested in. Maybe somebody is trying to fix that stupid bug that bothers
 you. Review the PR. Do you have any better ideas how to fix this problem? Let us
 know.
 
-Here is a helpful set of tips for making your own commits: https://robots.thoughtbot.com/5-useful-tips-for-a-better-commit-message 
+Here is a helpful set of tips for making your own commits: https://www.conventionalcommits.org/en/v1.0.0/
 
 ## Issues
 
@@ -27,17 +27,11 @@ All commits that fix bugs or add features need appropriate unit tests.
 
 Please adhere to the current code styling. We have included an `.editorconfig`
 at the repo's root to facilitate uniformity regardless of your editor. See the
-[editor config site][editorconfig] for integration details.
+[editor config site](https://editorconfig.org/) for integration details.
 
-We use [ESLint][eslint] for all JavaScript Linting. There should be no linting
+We use [Biome](https://biomejs.dev/) for all TypeScript Linting. There should be no linting
 errors and no new warnings for new work. You are welcome to configure your
-editor to use ESLint or the `npm test` command will run unit tests and the
-linter.
-
-
-
--[editorconfig]: http://editorconfig.org
--[eslint]: http://eslint.org
+editor to use Biome or use the `pnpm lint` command.
 
 ## Visual Changes
 
