@@ -1,6 +1,6 @@
 # Typescript JIRA API for node.js #
 
-A Typescript wrapper for the Jira Rest API, now in Typescript. I had this as a fork of `jira-client` for a while, but I felt the need to completely split it up to modernize it (as well as give myself an easier time deploying). 
+A Typescript wrapper for the Jira Rest API, now in Typescript. I had this as a fork of [jira-client](https://github.com/jira-node/node-jira-client) for a while, but I felt the need to completely split it up to modernize it (as well as give myself an easier time deploying). 
 
 I've tried to keep the api as close to the original api as possible, but sometimes I've had to make compromises. Where possible any legacy calls have been removed, and replaced with what made most sense considering the latest versions of Jira Datacenter, Cloud, Software and Service Desk.
 
