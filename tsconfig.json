@@ -2,9 +2,12 @@
   "compilerOptions": {
     "esModuleInterop": true,
     "declaration": true,
-    "outDir": "lib"
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "outDir": "lib",
+    "baseUrl": "."
   },
-  "files": [
-    "src/jira.ts"
+  "include": [
+    "src/**/*.ts"
   ]
 }
