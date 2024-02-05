@@ -51,6 +51,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: node_modules/.bin/semantic-release --debug
+      - name: Build docs
+        run: pnpm run docs-build
       - name: Deploy pages
         uses: peaceiris/actions-gh-pages@v3
         with:
