@@ -12,7 +12,7 @@
     "Matt Smith <mtscout6+node-jira@gmail.com>",
     "Anson Wayman <kanoyugoro+node-jira@gmail.com>"
   ],
-  "homepage": "http://github.com/aeolun/node-jira-client",
+  "homepage": "https://github.com/aeolun/ts-jira-client",
   "repository": {
     "type": "git",
     "url": "git@github.com:Aeolun/ts-jira-client.git"
