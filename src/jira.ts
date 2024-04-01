@@ -78,7 +78,7 @@ export class JiraApi {
     if ("axios" in options) {
       this.axios = options.axios;
     } else if ("strictSSL" in options || "ca" in options) {
-      this.httpsAgent = new Agent({ rejectUnauthorized: !options.strictSSL, ca: options.ca });
+      this.httpsAgent = new Agent({ rejectUnauthorized: options.strictSSL ?? true, ca: options.ca });
       this.axios = axios.create({
         httpsAgent: this.httpsAgent,
       });
