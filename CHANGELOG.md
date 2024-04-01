@@ -1,3 +1,10 @@
+## [1.0.2](https://github.com/Aeolun/ts-jira-client/compare/v1.0.1...v1.0.2) (2024-04-01)
+
+
+### Bug Fixes
+
+* corrected the strictSSL setting for the jira client ([#1](https://github.com/Aeolun/ts-jira-client/issues/1)) ([03da7b2](https://github.com/Aeolun/ts-jira-client/commit/03da7b209aae320cd2499901e53fc6a716bd0f19))
+
 ## [1.0.1](https://github.com/Aeolun/ts-jira-client/compare/v1.0.0...v1.0.1) (2024-02-05)
 
 
