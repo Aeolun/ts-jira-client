@@ -530,13 +530,13 @@ export class JiraApi {
    * @param project - A project key to get versions for
    * @param query - An object containing the query params
    */
-  getVersions(project: string, query: Pick<PaginationParams, "expand">) {
+  getVersions(project: string, query?: Partial<Pick<PaginationParams, "expand">>) {
     return this.doRequest(
       this.makeRequestHeader(
         this.makeUri({
           pathname: `/project/${project}/versions`,
           query: {
-            expand: query.expand?.join(","),
+            expand: query?.expand?.join(","),
           },
         }),
       ),
