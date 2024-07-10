@@ -3,6 +3,7 @@
  * Do not make direct changes to the file.
  */
 
+
 export interface paths {
   "/api/2/application-properties": {
     /** @description Returns an application property. */
@@ -3104,6 +3105,7 @@ export type $defs = Record<string, never>;
 export type external = Record<string, never>;
 
 export interface operations {
+
   /**
    * @description Returns the value of the property with a given key from the user identified by the key or by the id. The user who retrieves
    *  the property is required to have permissions to read the user.

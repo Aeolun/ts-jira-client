@@ -3,6 +3,7 @@
  * Do not make direct changes to the file.
  */
 
+
 export interface paths {
   "/rest/servicedeskapi/assets/workspace": {
     /**
@@ -70,6 +71,8 @@ export interface paths {
      * Get organization
      * @description This method returns details of an organization. Use this method to get organization details whenever your application component is passed an organization ID but needs to display other organization details.
      *
+     * To get organization detail field values which are visible in Jira Service Management, see the [Customer Service Management REST API](https://developer.atlassian.com/cloud/customer-service-management/rest/v1/api-group-organization/#api-group-organization).
+     *
      * **[Permissions](#permissions) required**: Any
      *
      * **Response limitations**: Customers can only retrieve organization of which they are members.
@@ -86,7 +89,9 @@ export interface paths {
   "/rest/servicedeskapi/organization/{organizationId}/property": {
     /**
      * Get properties keys
-     * @description Returns the keys of all properties for an organization. Use this resource when you need to find out what additional properties items have been added to an organization.
+     * @description Returns the keys of all organization properties. Organization properties are a type of entity property which are available to the API only, and not shown in Jira Service Management. [Learn more](https://developer.atlassian.com/cloud/jira/platform/jira-entity-properties/).
+     *
+     * To get organization detail field values which are visible in Jira Service Management, see the [Customer Service Management REST API](https://developer.atlassian.com/cloud/customer-service-management/rest/v1/api-group-organization/#api-group-organization).
      *
      * **[Permissions](#permissions) required**: Any
      *
@@ -97,7 +102,9 @@ export interface paths {
   "/rest/servicedeskapi/organization/{organizationId}/property/{propertyKey}": {
     /**
      * Get property
-     * @description Returns the value of a property from an organization. Use this method to obtain the JSON content for an organization's property.
+     * @description Returns the value of an organization property. Use this method to obtain the JSON content for an organization's property. Organization properties are a type of entity property which are available to the API only, and not shown in Jira Service Management. [Learn more](https://developer.atlassian.com/cloud/jira/platform/jira-entity-properties/).
+     *
+     * To get organization detail field values which are visible in Jira Service Management, see the [Customer Service Management REST API](https://developer.atlassian.com/cloud/customer-service-management/rest/v1/api-group-organization/#api-group-organization).
      *
      * **[Permissions](#permissions) required**: Any
      *
@@ -106,7 +113,9 @@ export interface paths {
     get: operations["getProperty"];
     /**
      * Set property
-     * @description Sets the value of a property for an organization. Use this resource to store custom data against an organization.
+     * @description Sets the value of an organization property. Use this resource to store custom data against an organization. Organization properties are a type of entity property which are available to the API only, and not shown in Jira Service Management. [Learn more](https://developer.atlassian.com/cloud/jira/platform/jira-entity-properties/).
+     *
+     * To store organization detail field values which are visible in Jira Service Management, see the [Customer Service Management REST API](https://developer.atlassian.com/cloud/customer-service-management/rest/v1/api-group-organization/#api-group-organization).
      *
      * **[Permissions](#permissions) required**: Service Desk Administrator or Agent.
      *
@@ -115,7 +124,9 @@ export interface paths {
     put: operations["setProperty"];
     /**
      * Delete property
-     * @description Removes a property from an organization.
+     * @description Removes an organization property. Organization properties are a type of entity property which are available to the API only, and not shown in Jira Service Management. [Learn more](https://developer.atlassian.com/cloud/jira/platform/jira-entity-properties/).
+     *
+     * For operations relating to organization detail field values which are visible in Jira Service Management, see the [Customer Service Management REST API](https://developer.atlassian.com/cloud/customer-service-management/rest/v1/api-group-organization/#api-group-organization).
      *
      * **[Permissions](#permissions) required**: Service Desk Administrator or Agent.
      *
@@ -1342,6 +1353,8 @@ export interface components {
       id?: string;
       /** @description Name of the organization. */
       name?: string;
+      /** @description A unique system generated ID for the organization. This is identity from the group directory id */
+      uuid?: string;
     };
     OrganizationServiceDeskUpdateDTO: {
       /**
@@ -2229,6 +2242,7 @@ export type $defs = Record<string, never>;
 export type external = Record<string, never>;
 
 export interface operations {
+
   /**
    * Get assets workspaces
    * @description Returns a list of Assets workspace IDs. Include a workspace ID in the path to access the [Assets REST APIs](https://developer.atlassian.com/cloud/assets/rest).
@@ -2393,7 +2407,7 @@ export interface operations {
       query: {
         /** @description The string used to filter the articles (required). */
         query: string;
-        /** @description If set to true matching query term in the title and excerpt will be highlighted using the \{@code */
+        /** @description If set to true matching query term in the title and excerpt will be highlighted using the `@@@hl@@@term@@@endhl@@@` syntax. Default: false. */
         highlight?: boolean;
         /** @description The starting index of the returned objects. Base index: 0. See the [Pagination](#pagination) section for more details. */
         start?: number;
@@ -2544,6 +2558,8 @@ export interface operations {
   /**
    * Get organization
    * @description This method returns details of an organization. Use this method to get organization details whenever your application component is passed an organization ID but needs to display other organization details.
+   *
+   * To get organization detail field values which are visible in Jira Service Management, see the [Customer Service Management REST API](https://developer.atlassian.com/cloud/customer-service-management/rest/v1/api-group-organization/#api-group-organization).
    *
    * **[Permissions](#permissions) required**: Any
    *
@@ -4993,13 +5009,13 @@ export interface operations {
         /**
          * @example {
          *   "accountIds": [
-         *     "qm:a713c8ea-1075-4e30-9d96-891a7d181739:5ad6d3a01db05e2a66fa80bd",
          *     "qm:a713c8ea-1075-4e30-9d96-891a7d181739:5ad6d3581db05e2a66fa80b",
+         *     "qm:a713c8ea-1075-4e30-9d96-891a7d181739:5ad6d3a01db05e2a66fa80bd",
          *     "qm:a713c8ea-1075-4e30-9d96-891a7d181739:5ad6d69abfa3980ce712caae"
          *   ],
          *   "usernames": [
-         *     "qm:a713c8ea-1075-4e30-9d96-891a7d181739:5ad6d3a01db05e2a66fa80bd",
          *     "qm:a713c8ea-1075-4e30-9d96-891a7d181739:5ad6d3581db05e2a66fa80b",
+         *     "qm:a713c8ea-1075-4e30-9d96-891a7d181739:5ad6d3a01db05e2a66fa80bd",
          *     "qm:a713c8ea-1075-4e30-9d96-891a7d181739:5ad6d69abfa3980ce712caae"
          *   ]
          * }
@@ -5062,13 +5078,13 @@ export interface operations {
         /**
          * @example {
          *   "accountIds": [
-         *     "qm:a713c8ea-1075-4e30-9d96-891a7d181739:5ad6d3a01db05e2a66fa80bd",
          *     "qm:a713c8ea-1075-4e30-9d96-891a7d181739:5ad6d3581db05e2a66fa80b",
+         *     "qm:a713c8ea-1075-4e30-9d96-891a7d181739:5ad6d3a01db05e2a66fa80bd",
          *     "qm:a713c8ea-1075-4e30-9d96-891a7d181739:5ad6d69abfa3980ce712caae"
          *   ],
          *   "usernames": [
-         *     "qm:a713c8ea-1075-4e30-9d96-891a7d181739:5ad6d3a01db05e2a66fa80bd",
          *     "qm:a713c8ea-1075-4e30-9d96-891a7d181739:5ad6d3581db05e2a66fa80b",
+         *     "qm:a713c8ea-1075-4e30-9d96-891a7d181739:5ad6d3a01db05e2a66fa80bd",
          *     "qm:a713c8ea-1075-4e30-9d96-891a7d181739:5ad6d69abfa3980ce712caae"
          *   ]
          * }

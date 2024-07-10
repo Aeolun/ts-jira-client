@@ -3,6 +3,7 @@
  * Do not make direct changes to the file.
  */
 
+
 export interface paths {
   "/rest/api/3/announcementBanner": {
     /**
@@ -302,6 +303,93 @@ export interface paths {
      */
     get: operations["getAllSystemAvatars"];
   };
+  "/rest/api/3/bulk/issues/fields": {
+    /**
+     * Get bulk editable fields
+     * @description Use this API to get a list of fields visible to the user to perform bulk edit operations. You can pass single or multiple issues in the query to get eligible editable fields. This API uses pagination to return responses, delivering 50 fields at a time.
+     *
+     * This method is experimental and may change.
+     *
+     * **[Permissions](#permissions) required:**
+     *
+     *  *  Global bulk change [permission](https://support.atlassian.com/jira-cloud-administration/docs/manage-global-permissions/).
+     *  *  Browse [project permission](https://support.atlassian.com/jira-cloud-administration/docs/permissions-for-company-managed-projects/) in all projects that contain the selected issues.
+     */
+    get: operations["getBulkEditableFields"];
+    /**
+     * Bulk edit issues
+     * @description Use this API to submit a bulk edit request and simultaneously edit multiple issues. There are limits applied to the number of issues and fields that can be edited. A single request can accommodate a maximum of 1000 issues (including subtasks) and 200 fields.
+     *
+     * **[Permissions](#permissions) required:**
+     *
+     *  *  Global bulk change [permission](https://support.atlassian.com/jira-cloud-administration/docs/manage-global-permissions/).
+     *  *  Browse [project permission](https://support.atlassian.com/jira-cloud-administration/docs/permissions-for-company-managed-projects/) in all projects that contain the selected issues.
+     */
+    post: operations["submitBulkEdit"];
+  };
+  "/rest/api/3/bulk/issues/move": {
+    /**
+     * Bulk move issues
+     * @description Use this API to submit a bulk issue move request. You can move multiple issues, but they must all be moved to and from a single project, issue type, and parent. You can't move more than 1000 issues (including subtasks) at once.
+     *
+     * #### Scenarios: ####
+     *
+     * This is an early version of the API and it doesn't have full feature parity with the Bulk Move UI experience.
+     *
+     *  *  Moving issue of type A to issue of type B in the same project or a different project: `SUPPORTED`
+     *  *  Moving multiple issues of type A in one project to multiple issues of type B in the same project or a different project: **`SUPPORTED`**
+     *  *  Moving a standard parent issue of type A with its multiple subtask issue types in one project to standard issue of type B and multiple subtask issue types in the same project or a different project: `SUPPORTED`
+     *  *  Moving an epic issue with its child issues to a different project without losing their relation: `NOT SUPPORTED`
+     *     (Workaround: Move them individually and stitch the relationship back with the Bulk Edit API)
+     *
+     * #### Limits applied to bulk issue moves: ####
+     *
+     * When using the bulk move, keep in mind that there are limits on the number of issues and fields you can include.
+     *
+     *  *  You can move up to 1,000 issues in a single operation, including any subtasks.
+     *  *  All issues must originate from the same project and share the same issue type and parent.
+     *  *  The total combined number of fields across all issues must not exceed 1,500,000. For example, if each issue includes 15,000 fields, then the maximum number of issues that can be moved is 100.
+     *
+     * **[Permissions](#permissions) required:**
+     *
+     *  *  Global bulk change [permission](https://support.atlassian.com/jira-cloud-administration/docs/manage-global-permissions/).
+     *  *  Move [issues permission](https://support.atlassian.com/jira-cloud-administration/docs/permissions-for-company-managed-projects/) in source projects.
+     *  *  Create [issues permission](https://support.atlassian.com/jira-cloud-administration/docs/permissions-for-company-managed-projects/) in destination projects.
+     *  *  Browse [project permission](https://support.atlassian.com/jira-cloud-administration/docs/permissions-for-company-managed-projects/) in destination projects, if moving subtasks only.
+     */
+    post: operations["submitBulkMove"];
+  };
+  "/rest/api/3/bulk/queue/{taskId}": {
+    /**
+     * Get bulk issue operation progress
+     * @description Use this to get the progress state for the specified bulk operation `taskId`.
+     *
+     * **[Permissions](#permissions) required:**
+     *
+     *  *  Global bulk change [permission](https://support.atlassian.com/jira-cloud-administration/docs/manage-global-permissions/).
+     *  *  Administer Jira [global permission](https://support.atlassian.com/jira-cloud-administration/docs/manage-global-permissions/), or be the creator of the task.
+     *
+     * If the task is running, this resource will return:
+     *
+     *     {"taskId":"10779","status":"RUNNING","progressPercent":65,"submittedBy":{"accountId":"5b10a2844c20165700ede21g"},"created":1690180055963,"started":1690180056206,"updated":169018005829}
+     *
+     * If the task has completed, then this resource will return:
+     *
+     *     {"processedAccessibleIssues":[10001,10002],"created":1709189449954,"progressPercent":100,"started":1709189450154,"status":"COMPLETE","submittedBy":{"accountId":"5b10a2844c20165700ede21g"},"invalidOrInaccessibleIssueCount":0,"taskId":"10000","totalIssueCount":2,"updated":1709189450354}
+     *
+     * **Note:** You can view task progress for up to 14 days from creation.
+     */
+    get: operations["getBulkOperationProgress"];
+  };
+  "/rest/api/3/classification-levels": {
+    /**
+     * Get all classification levels
+     * @description Returns all classification levels.
+     *
+     * **[Permissions](#permissions) required:** None.
+     */
+    get: operations["getAllUserDataClassificationLevels"];
+  };
   "/rest/api/3/comment/list": {
     /**
      * Get comments by IDs
@@ -374,6 +462,15 @@ export interface paths {
     delete: operations["deleteCommentProperty"];
   };
   "/rest/api/3/component": {
+    /**
+     * Find components for projects
+     * @description Returns a [paginated](#pagination) list of all components in a project, including global (Compass) components when applicable.
+     *
+     * This operation can be accessed anonymously.
+     *
+     * **[Permissions](#permissions) required:** *Browse Projects* [project permission](https://confluence.atlassian.com/x/yodKLg) for the project.
+     */
+    get: operations["findComponentsForProjects"];
     /**
      * Create component
      * @description Creates a component. Use components to provide containers for issues within a project. Use components to provide containers for issues within a project.
@@ -688,6 +785,20 @@ export interface paths {
      * The dashboard to be copied must be owned by or shared with the user.
      */
     post: operations["copyDashboard"];
+  };
+  "/rest/api/3/data-policy": {
+    /**
+     * Get data policy for the workspace
+     * @description Returns data policy for the workspace.
+     */
+    get: operations["getPolicy"];
+  };
+  "/rest/api/3/data-policy/project": {
+    /**
+     * Get data policy for projects
+     * @description Returns data policies for the projects specified in the request.
+     */
+    get: operations["getPolicies"];
   };
   "/rest/api/3/events": {
     /**
@@ -1039,6 +1150,17 @@ export interface paths {
      */
     delete: operations["deleteCustomFieldOption"];
   };
+  "/rest/api/3/field/{fieldId}/context/{contextId}/option/{optionId}/issue": {
+    /**
+     * Replace custom field options
+     * @description Replaces the options of a custom field.
+     *
+     * Note that this operation **only works for issue field select list options created in Jira or using operations from the [Issue custom field options](#api-group-Issue-custom-field-options) resource**, it cannot be used with issue field select list options created by Connect or Forge apps.
+     *
+     * **[Permissions](#permissions) required:** *Administer Jira* [global permission](https://confluence.atlassian.com/x/x4dKLg).
+     */
+    delete: operations["replaceCustomFieldOption"];
+  };
   "/rest/api/3/field/{fieldId}/context/{contextId}/project": {
     /**
      * Assign custom field context to projects
@@ -1267,14 +1389,14 @@ export interface paths {
   };
   "/rest/api/3/fieldconfigurationscheme": {
     /**
-     * Get all fieldg rnfiguration schemes
+     * Get all field configuration schemes
      * @description Returns a [paginated](#pagination) list of field configuration schemes.
      *
      * Only field configuration schemes used in classic projects are returned.
      *
      * **[Permissions](#permissions) required:** *Administer Jira* [global permission](https://confluence.atlassian.com/x/x4dKLg).
      */
-    get: operations["getAllFieldgRnfigurationSchemes"];
+    get: operations["getAllFieldConfigurationSchemes"];
     /**
      * Create field configuration scheme
      * @description Creates a field configuration scheme.
@@ -1608,7 +1730,10 @@ export interface paths {
      *
      * Returns all users in a group.
      *
-     * **[Permissions](#permissions) required:** *Administer Jira* [global permission](https://confluence.atlassian.com/x/x4dKLg).
+     * **[Permissions](#permissions) required:** either of:
+     *
+     *  *  *Browse users and groups* [global permission](https://confluence.atlassian.com/x/x4dKLg).
+     *  *  *Administer Jira* [global permission](https://confluence.atlassian.com/x/x4dKLg).
      */
     get: operations["getGroup"];
     /**
@@ -1642,7 +1767,10 @@ export interface paths {
      *
      * Note that users are ordered by username, however the username is not returned in the results due to privacy reasons.
      *
-     * **[Permissions](#permissions) required:** *Administer Jira* [global permission](https://confluence.atlassian.com/x/x4dKLg).
+     * **[Permissions](#permissions) required:** either of:
+     *
+     *  *  *Browse users and groups* [global permission](https://confluence.atlassian.com/x/x4dKLg).
+     *  *  *Administer Jira* [global permission](https://confluence.atlassian.com/x/x4dKLg).
      */
     get: operations["getUsersFromGroup"];
   };
@@ -1795,6 +1923,8 @@ export interface paths {
      * @deprecated
      * @description Returns details of projects, issue types within projects, and, when requested, the create screen fields for each issue type for the user. Use the information to populate the requests in [ Create issue](#api-rest-api-3-issue-post) and [Create issues](#api-rest-api-3-issue-bulk-post).
      *
+     * Deprecated, see [Create Issue Meta Endpoint Deprecation Notice](https://developer.atlassian.com/cloud/jira/platform/changelog/#CHANGE-1304).
+     *
      * The request can be restricted to specific projects or issue types using the query parameters. The response will contain information for the valid projects, issue types, or project and issue type combinations requested. Note that invalid project, issue type, or project and issue type combinations do not generate errors.
      *
      * This operation can be accessed anonymously.
@@ -1824,6 +1954,18 @@ export interface paths {
      * **[Permissions](#permissions) required:** *Create issues* [project permission](https://confluence.atlassian.com/x/yodKLg) in the requested projects.
      */
     get: operations["getCreateIssueMetaIssueTypeId"];
+  };
+  "/rest/api/3/issue/limit/report": {
+    /**
+     * Get issue limit report
+     * @description Returns all issues breaching and approaching per-issue limits.
+     *
+     * **[Permissions](#permissions) required:**
+     *
+     *  *  *Browse projects* [project permission](https://confluence.atlassian.com/x/yodKLg) is required for the project the issues are in. Results may be incomplete otherwise
+     *  *  *Administer Jira* [global permission](https://confluence.atlassian.com/x/x4dKLg).
+     */
+    get: operations["getIssueLimitReport"];
   };
   "/rest/api/3/issue/picker": {
     /**
@@ -1990,7 +2132,7 @@ export interface paths {
     get: operations["getIssue"];
     /**
      * Edit issue
-     * @description Edits an issue. A transition may be applied and issue properties updated as part of the edit.
+     * @description Edits an issue. Issue properties may be updated as part of the edit. Please note that issue transition will be ignored as it is not supported yet.
      *
      * The edits to the issue's fields are defined using `update` and `fields`. The fields that can be edited are determined using [ Get edit issue metadata](#api-rest-api-3-issue-issueIdOrKey-editmeta-get).
      *
@@ -2604,7 +2746,7 @@ export interface paths {
   "/rest/api/3/issue/{issueIdOrKey}/worklog": {
     /**
      * Get issue worklogs
-     * @description Returns worklogs for an issue, starting from the oldest worklog or from the worklog started on or after a date and time.
+     * @description Returns worklogs for an issue (ordered by created time), starting from the oldest worklog or from the worklog started on or after a date and time.
      *
      * Time tracking must be enabled in Jira, otherwise this operation returns an error. For more information, see [Configuring time tracking](https://confluence.atlassian.com/x/qoXKM).
      *
@@ -2957,7 +3099,7 @@ export interface paths {
   };
   "/rest/api/3/issuesecurityschemes/{issueSecuritySchemeId}/members": {
     /**
-     * Get issue security level members
+     * Get issue security level members by issue security scheme
      * @description Returns issue security level members.
      *
      * Only issue security level members in context of classic projects are returned.
@@ -3520,12 +3662,9 @@ export interface paths {
      *
      * This means that users may be shown as having an issue permission (such as EDIT\_ISSUES) in the global context or a project context but may not have the permission for any or all issues. For example, if Reporters have the EDIT\_ISSUES permission a user would be shown as having this permission in the global context or the context of a project, because any user can be a reporter. However, if they are not the user who reported the issue queried they would not have EDIT\_ISSUES permission for that issue.
      *
+     * For [Jira Service Management project permissions](https://support.atlassian.com/jira-cloud-administration/docs/customize-jira-service-management-permissions/), this will be evaluated similarly to a user in the customer portal. For example, if the BROWSE\_PROJECTS permission is granted to Service Project Customer - Portal Access, any users with access to the customer portal will have the BROWSE\_PROJECTS permission.
+     *
      * Global permissions are unaffected by context.
-     *
-     * **Deprecation notice:** The required OAuth 2.0 scopes will be updated on February 15, 2024.
-     *
-     *  *  **Classic**: `read:jira-work`
-     *  *  **Granular**: `read:permission:jira`
      *
      * This operation can be accessed anonymously.
      *
@@ -3545,7 +3684,6 @@ export interface paths {
      *
      * These system preferences keys will be deprecated by 15/07/2024. You can still retrieve these keys, but it will not have any impact on Notification behaviour.
      *
-     *  *  *user.notifiy.own.changes* Whether the user gets notified of their own changes.
      *  *  *user.notifications.watcher* Whether the user gets notified when they are watcher.
      *  *  *user.notifications.assignee* Whether the user gets notified when they are assignee.
      *  *  *user.notifications.reporter* Whether the user gets notified when they are reporter.
@@ -3564,6 +3702,7 @@ export interface paths {
      *  *  *user.default.share.private* Whether new [ filters](https://confluence.atlassian.com/x/eQiiLQ) are set to private. Defaults to `true`.
      *  *  *user.keyboard.shortcuts.disabled* Whether keyboard shortcuts are disabled. Defaults to `false`.
      *  *  *user.autowatch.disabled* Whether the user automatically watches issues they create or add a comment to. By default, not set: the user takes the instance autowatch setting.
+     *  *  *user.notifiy.own.changes* Whether the user gets notified of their own changes.
      *
      * Note that these keys are deprecated:
      *
@@ -3572,7 +3711,6 @@ export interface paths {
      *
      * These system preferences keys will be deprecated by 15/07/2024. You can still use these keys to create arbitrary preferences, but it will not have any impact on Notification behaviour.
      *
-     *  *  *user.notifiy.own.changes* Whether the user gets notified of their own changes.
      *  *  *user.notifications.watcher* Whether the user gets notified when they are watcher.
      *  *  *user.notifications.assignee* Whether the user gets notified when they are assignee.
      *  *  *user.notifications.reporter* Whether the user gets notified when they are reporter.
@@ -3721,7 +3859,9 @@ export interface paths {
      *  *  project permissions.
      *  *  global permissions added by plugins.
      *
-     * **[Permissions](#permissions) required:** *Administer Jira* [global permission](https://confluence.atlassian.com/x/x4dKLg).
+     * This operation can be accessed anonymously.
+     *
+     * **[Permissions](#permissions) required:** None.
      */
     get: operations["getAllPermissions"];
   };
@@ -3757,11 +3897,6 @@ export interface paths {
     /**
      * Get permitted projects
      * @description Returns all the projects where the user is granted a list of project permissions.
-     *
-     * **Deprecation notice:** The required OAuth 2.0 scopes will be updated on February 15, 2024.
-     *
-     *  *  **Classic**: `read:jira-work`
-     *  *  **Granular**: `read:permission:jira`, `read:project:jira`
      *
      * This operation can be accessed anonymously.
      *
@@ -3970,6 +4105,7 @@ export interface paths {
   "/rest/api/3/priority/search": {
     /**
      * Search priorities
+     * @deprecated
      * @description Returns a [paginated](#pagination) list of priorities. The list can contain all priorities or a subset determined by any combination of these criteria:
      *
      *  *  a list of priority IDs. Any invalid priority IDs are ignored.
@@ -3997,16 +4133,83 @@ export interface paths {
     put: operations["updatePriority"];
     /**
      * Delete priority
-     * @deprecated
-     * @description *Deprecated: please refer to the* [changelog](https://developer.atlassian.com/changelog/#CHANGE-1066) *for more details.*
-     *
-     * Deletes an issue priority.
+     * @description Deletes an issue priority.
      *
      * This operation is [asynchronous](#async). Follow the `location` link in the response to determine the status of the task and use [Get task](#api-rest-api-3-task-taskId-get) to obtain subsequent updates.
      *
      * **[Permissions](#permissions) required:** *Administer Jira* [global permission](https://confluence.atlassian.com/x/x4dKLg).
      */
     delete: operations["deletePriority"];
+  };
+  "/rest/api/3/priorityscheme": {
+    /**
+     * Get priority schemes
+     * @description Returns a [paginated](#pagination) list of priority schemes.
+     *
+     * **[Permissions](#permissions) required:** Permission to access Jira.
+     */
+    get: operations["getPrioritySchemes"];
+    /**
+     * Create priority scheme
+     * @description Creates a new priority scheme.
+     *
+     * **[Permissions](#permissions) required:** *Administer Jira* [global permission](https://confluence.atlassian.com/x/x4dKLg).
+     */
+    post: operations["createPriorityScheme"];
+  };
+  "/rest/api/3/priorityscheme/mappings": {
+    /**
+     * Suggested priorities for mappings
+     * @description Returns a [paginated](#pagination) list of priorities that would require mapping, given a change in priorities or projects associated with a priority scheme.
+     *
+     * **[Permissions](#permissions) required:** Permission to access Jira.
+     */
+    post: operations["suggestedPrioritiesForMappings"];
+  };
+  "/rest/api/3/priorityscheme/priorities/available": {
+    /**
+     * Get available priorities by priority scheme
+     * @description Returns a [paginated](#pagination) list of priorities available for adding to a priority scheme.
+     *
+     * **[Permissions](#permissions) required:** Permission to access Jira.
+     */
+    get: operations["getAvailablePrioritiesByPriorityScheme"];
+  };
+  "/rest/api/3/priorityscheme/{schemeId}": {
+    /**
+     * Update priority scheme
+     * @description Updates a priority scheme. This includes its details, the lists of priorities and projects in it
+     *
+     * **[Permissions](#permissions) required:** *Administer Jira* [global permission](https://confluence.atlassian.com/x/x4dKLg).
+     */
+    put: operations["updatePriorityScheme"];
+    /**
+     * Delete priority scheme
+     * @description Deletes a priority scheme.
+     *
+     * This operation is only available for priority schemes without any associated projects. Any associated projects must be removed from the priority scheme before this operation can be performed.
+     *
+     * **[Permissions](#permissions) required:** *Administer Jira* [global permission](https://confluence.atlassian.com/x/x4dKLg).
+     */
+    delete: operations["deletePriorityScheme"];
+  };
+  "/rest/api/3/priorityscheme/{schemeId}/priorities": {
+    /**
+     * Get priorities by priority scheme
+     * @description Returns a [paginated](#pagination) list of priorities by scheme.
+     *
+     * **[Permissions](#permissions) required:** Permission to access Jira.
+     */
+    get: operations["getPrioritiesByPriorityScheme"];
+  };
+  "/rest/api/3/priorityscheme/{schemeId}/projects": {
+    /**
+     * Get projects by priority scheme
+     * @description Returns a [paginated](#pagination) list of projects by scheme.
+     *
+     * **[Permissions](#permissions) required:** Permission to access Jira.
+     */
+    get: operations["getProjectsByPriorityScheme"];
   };
   "/rest/api/3/project": {
     /**
@@ -4209,6 +4412,39 @@ export interface paths {
      * **[Permissions](#permissions) required:** *Browse projects* [project permission](https://confluence.atlassian.com/x/yodKLg) for the project.
      */
     get: operations["getAllProjectAvatars"];
+  };
+  "/rest/api/3/project/{projectIdOrKey}/classification-level/default": {
+    /**
+     * Get the default data classification level of a project
+     * @description Returns the default data classification for a project.
+     *
+     * **[Permissions](#permissions) required:**
+     *
+     *  *  *Browse Projects* [project permission](https://confluence.atlassian.com/x/yodKLg) for the project.
+     *  *  *Administer projects* [project permission](https://confluence.atlassian.com/x/yodKLg) for the project.
+     *  *  *Administer jira* [global permission](https://confluence.atlassian.com/x/x4dKLg).
+     */
+    get: operations["getDefaultProjectClassification"];
+    /**
+     * Update the default data classification level of a project
+     * @description Updates the default data classification level for a project.
+     *
+     * **[Permissions](#permissions) required:**
+     *
+     *  *  *Administer projects* [project permission](https://confluence.atlassian.com/x/yodKLg) for the project.
+     *  *  *Administer jira* [global permission](https://confluence.atlassian.com/x/x4dKLg).
+     */
+    put: operations["updateDefaultProjectClassification"];
+    /**
+     * Remove the default data classification level from a project
+     * @description Remove the default data classification level for a project.
+     *
+     * **[Permissions](#permissions) required:**
+     *
+     *  *  *Administer projects* [project permission](https://confluence.atlassian.com/x/yodKLg) for the project.
+     *  *  *Administer jira* [global permission](https://confluence.atlassian.com/x/x4dKLg).
+     */
+    delete: operations["removeDefaultProjectClassification"];
   };
   "/rest/api/3/project/{projectIdOrKey}/component": {
     /**
@@ -4440,7 +4676,6 @@ export interface paths {
   "/rest/api/3/project/{projectId}/hierarchy": {
     /**
      * Get project issue type hierarchy
-     * @deprecated
      * @description Get the issue type hierarchy for a next-gen project.
      *
      * The issue type hierarchy for a project consists of:
@@ -4937,6 +5172,22 @@ export interface paths {
      *  *  If [issue-level security](https://confluence.atlassian.com/x/J4lKLg) is configured, issue-level security permission to view the issue.
      */
     post: operations["searchForIssuesUsingJqlPost"];
+  };
+  "/rest/api/3/search/id": {
+    /**
+     * Search issue IDs using JQL
+     * @description Searches for IDs of issues using [JQL](https://confluence.atlassian.com/x/egORLQ).
+     *
+     * Use the [Search](#api-rest-api-3-search-post) endpoint if you need to fetch more than just issue IDs. The Search endpoint returns more information, but may take much longer to respond to requests. This is because it uses a different mechanism for ordering results than this endpoint and doesn't provide the total number of results for your query.
+     *
+     * This operation can be accessed anonymously.
+     *
+     * **[Permissions](#permissions) required:** Issues are included in the response where the user has:
+     *
+     *  *  *Browse projects* [project permission](https://confluence.atlassian.com/x/yodKLg) for the project containing the issue.
+     *  *  If [issue-level security](https://confluence.atlassian.com/x/J4lKLg) is configured, issue-level security permission to view the issue.
+     */
+    post: operations["searchForIssuesIds"];
   };
   "/rest/api/3/securitylevel/{id}": {
     /**
@@ -7588,7 +7839,7 @@ export interface paths {
      * @description Gets all the properties of an app.
      *
      * **[Permissions](#permissions) required:** Only a Connect app whose key matches `addonKey` can make this request.
-     * Additionally, Forge apps published on the Marketplace can access properties of Connect apps they were [migrated from](https://developer.atlassian.com/platform/forge/build-a-connect-on-forge-app/).
+     * Additionally, Forge apps can access Connect app properties (stored against the same `app.connect.key`).
      */
     get: operations["AddonPropertiesResource.getAddonProperties_get"];
   };
@@ -7598,7 +7849,7 @@ export interface paths {
      * @description Returns the key and value of an app's property.
      *
      * **[Permissions](#permissions) required:** Only a Connect app whose key matches `addonKey` can make this request.
-     * Additionally, Forge apps published on the Marketplace can access properties of Connect apps they were [migrated from](https://developer.atlassian.com/platform/forge/build-a-connect-on-forge-app/).
+     * Additionally, Forge apps can access Connect app properties (stored against the same `app.connect.key`).
      */
     get: operations["AddonPropertiesResource.getAddonProperty_get"];
     /**
@@ -7608,6 +7859,7 @@ export interface paths {
      * The value of the request body must be a [valid](http://tools.ietf.org/html/rfc4627), non-empty JSON blob. The maximum length is 32768 characters.
      *
      * **[Permissions](#permissions) required:** Only a Connect app whose key matches `addonKey` can make this request.
+     * Additionally, Forge apps can access Connect app properties (stored against the same `app.connect.key`).
      */
     put: operations["AddonPropertiesResource.putAddonProperty_put"];
     /**
@@ -7615,6 +7867,7 @@ export interface paths {
      * @description Deletes an app's property.
      *
      * **[Permissions](#permissions) required:** Only a Connect app whose key matches `addonKey` can make this request.
+     * Additionally, Forge apps can access Connect app properties (stored against the same `app.connect.key`).
      */
     delete: operations["AddonPropertiesResource.deleteAddonProperty_delete"];
   };
@@ -7687,14 +7940,14 @@ export interface paths {
      *
      * **[Permissions](#permissions) required:** Only Forge apps can make this request.
      */
-    put: operations["AddonPropertiesResource.putAppProperty_put"];
+    put: operations["putForgeAppProperty"];
     /**
      * Delete app property (Forge)
      * @description Deletes a Forge app's property.
      *
      * **[Permissions](#permissions) required:** Only Forge apps can make this request.
      */
-    delete: operations["AddonPropertiesResource.deleteAppProperty_delete"];
+    delete: operations["deleteForgeAppProperty"];
   };
 }
 
@@ -8246,6 +8499,15 @@ export interface components {
         [key: string]: string;
       };
     };
+    /** @description Bulk Edit Get Fields Response. */
+    BulkEditGetFields: {
+      /** @description The end cursor for use in pagination. */
+      endingBefore?: string;
+      /** @description List of all the fields */
+      fields?: readonly components["schemas"]["IssueBulkEditField"][];
+      /** @description The start cursor for use in pagination. */
+      startingAfter?: string;
+    };
     /** @description Details of a request to bulk edit shareable entity. */
     BulkEditShareableEntityRequest: {
       /**
@@ -8290,12 +8552,61 @@ export interface components {
       /** @description The value of the property. The value must be a [valid](https://tools.ietf.org/html/rfc4627), non-empty JSON blob. The maximum length is 32768 characters. */
       value?: unknown;
     };
+    BulkOperationErrorResponse: {
+      errors?: components["schemas"]["ErrorMessage"][];
+    };
     BulkOperationErrorResult: {
       elementErrors?: components["schemas"]["ErrorCollection"];
       /** Format: int32 */
       failedElementNumber?: number;
       /** Format: int32 */
       status?: number;
+    };
+    BulkOperationProgress: {
+      /**
+       * Format: date-time
+       * @description A timestamp of when the task was submitted.
+       */
+      created?: string;
+      /** @description Map of issue IDs for which the operation failed and that the user has permission to view, to their one or more reasons for failure. These reasons are open-ended text descriptions of the error and are not selected from a predefined list of standard reasons. */
+      failedAccessibleIssues?: {
+        [key: string]: string[];
+      };
+      /**
+       * Format: int32
+       * @description The number of issues that are either invalid or issues that the user doesn't have permission to view, regardless of the success or failure of the operation.
+       */
+      invalidOrInaccessibleIssueCount?: number;
+      /** @description List of issue IDs for which the operation was successful and that the user has permission to view. */
+      processedAccessibleIssues?: number[];
+      /**
+       * Format: int64
+       * @description Progress of the task as a percentage.
+       */
+      progressPercent?: number;
+      /**
+       * Format: date-time
+       * @description A timestamp of when the task was started.
+       */
+      started?: string;
+      /**
+       * @description The status of the task.
+       * @enum {string}
+       */
+      status?: "ENQUEUED" | "RUNNING" | "COMPLETE" | "FAILED" | "CANCEL_REQUESTED" | "CANCELLED" | "DEAD";
+      submittedBy?: components["schemas"]["User"];
+      /** @description The ID of the task. */
+      taskId?: string;
+      /**
+       * Format: int32
+       * @description The number of issues that the bulk operation was attempted on.
+       */
+      totalIssueCount?: number;
+      /**
+       * Format: date-time
+       * @description A timestamp of when the task progress was last updated.
+       */
+      updated?: string;
     };
     /** @description Details of global and project permissions granted to the user. */
     BulkPermissionGrants: {
@@ -8476,6 +8787,17 @@ export interface components {
        */
       self?: string;
     };
+    ComponentJsonBean: {
+      ari?: string;
+      description?: string;
+      id?: string;
+      metadata?: {
+        [key: string]: string;
+      };
+      name?: string;
+      self?: string;
+      [key: string]: unknown;
+    };
     /** @description Details about a component with a count of the issues it contains. */
     ComponentWithIssueCount: {
       /** @description The details of the user associated with `assigneeType`, if any. See `realAssignee` for details of the user assigned to issues created with this component. */
@@ -8541,7 +8863,7 @@ export interface components {
       operator: "and" | "or" | "not";
     };
     /** @description The conditions group associated with the transition. */
-    ConditionGroupConfiguration: {
+    ConditionGroupConfiguration: ({
       /** @description The nested conditions of the condition group. */
       conditionGroups?: components["schemas"]["ConditionGroupConfiguration"][];
       /** @description The rules for this condition. */
@@ -8551,9 +8873,9 @@ export interface components {
        * @enum {string}
        */
       operation?: "ANY" | "ALL";
-    } | null;
+    }) | null;
     /** @description The conditions group associated with the transition. */
-    ConditionGroupUpdate: {
+    ConditionGroupUpdate: ({
       /** @description The nested conditions of the condition group. */
       conditionGroups?: components["schemas"]["ConditionGroupUpdate"][];
       /** @description The rules for this condition. */
@@ -8563,7 +8885,7 @@ export interface components {
        * @enum {string}
        */
       operation: "ANY" | "ALL";
-    } | null;
+    }) | null;
     /** @description Details about the configuration of Jira. */
     Configuration: {
       /** @description Whether the ability to add attachments to issues is enabled. */
@@ -8589,13 +8911,7 @@ export interface components {
        * @description The type of custom field.
        * @enum {string}
        */
-      _type:
-        | "StringIssueField"
-        | "NumberIssueField"
-        | "RichTextIssueField"
-        | "SingleSelectIssueField"
-        | "MultiSelectIssueField"
-        | "TextIssueField";
+      _type: "StringIssueField" | "NumberIssueField" | "RichTextIssueField" | "SingleSelectIssueField" | "MultiSelectIssueField" | "TextIssueField";
       /** @description The custom field ID. */
       fieldID: number;
       /** @description The issue ID. */
@@ -8804,22 +9120,30 @@ export interface components {
        * @description The URL of an icon for the priority. Accepted protocols are HTTP and HTTPS. Built in icons can also be used.
        * @enum {string}
        */
-      iconUrl?:
-        | "/images/icons/priorities/blocker.png"
-        | "/images/icons/priorities/critical.png"
-        | "/images/icons/priorities/high.png"
-        | "/images/icons/priorities/highest.png"
-        | "/images/icons/priorities/low.png"
-        | "/images/icons/priorities/lowest.png"
-        | "/images/icons/priorities/major.png"
-        | "/images/icons/priorities/medium.png"
-        | "/images/icons/priorities/minor.png"
-        | "/images/icons/priorities/trivial.png";
+      iconUrl?: "/images/icons/priorities/blocker.png" | "/images/icons/priorities/critical.png" | "/images/icons/priorities/high.png" | "/images/icons/priorities/highest.png" | "/images/icons/priorities/low.png" | "/images/icons/priorities/lowest.png" | "/images/icons/priorities/major.png" | "/images/icons/priorities/medium.png" | "/images/icons/priorities/minor.png" | "/images/icons/priorities/trivial.png" | "/images/icons/priorities/blocker_new.png" | "/images/icons/priorities/critical_new.png" | "/images/icons/priorities/high_new.png" | "/images/icons/priorities/highest_new.png" | "/images/icons/priorities/low_new.png" | "/images/icons/priorities/lowest_new.png" | "/images/icons/priorities/major_new.png" | "/images/icons/priorities/medium_new.png" | "/images/icons/priorities/minor_new.png" | "/images/icons/priorities/trivial_new.png";
       /** @description The name of the priority. Must be unique. */
       name: string;
       /** @description The status color of the priority in 3-digit or 6-digit hexadecimal format. */
       statusColor: string;
       [key: string]: unknown;
+    };
+    /** @description Details of a new priority scheme */
+    CreatePrioritySchemeDetails: {
+      /**
+       * Format: int64
+       * @description The ID of the default priority for the priority scheme.
+       */
+      defaultPriorityId: number;
+      /** @description The description of the priority scheme. */
+      description?: string;
+      /** @description Mappings of issue priorities for issues being migrated in and out of this priority scheme. */
+      mappings?: components["schemas"]["PriorityMapping"];
+      /** @description The name of the priority scheme. Must be unique. */
+      name: string;
+      /** @description The IDs of priorities in the scheme. */
+      priorityIds: number[];
+      /** @description The IDs of projects that will use the priority scheme. */
+      projectIds?: number[];
     };
     /** @description Details about the project. */
     CreateProjectDetails: {
@@ -8882,51 +9206,7 @@ export interface components {
        * @description A predefined configuration for a project. The type of the `projectTemplateKey` must match with the type of the `projectTypeKey`.
        * @enum {string}
        */
-      projectTemplateKey?:
-        | "com.pyxis.greenhopper.jira:gh-simplified-agility-kanban"
-        | "com.pyxis.greenhopper.jira:gh-simplified-agility-scrum"
-        | "com.pyxis.greenhopper.jira:gh-simplified-basic"
-        | "com.pyxis.greenhopper.jira:gh-simplified-kanban-classic"
-        | "com.pyxis.greenhopper.jira:gh-simplified-scrum-classic"
-        | "com.pyxis.greenhopper.jira:gh-cross-team-template"
-        | "com.pyxis.greenhopper.jira:gh-cross-team-planning-template"
-        | "com.atlassian.servicedesk:simplified-it-service-management"
-        | "com.atlassian.servicedesk:simplified-general-service-desk"
-        | "com.atlassian.servicedesk:simplified-general-service-desk-it"
-        | "com.atlassian.servicedesk:simplified-general-service-desk-business"
-        | "com.atlassian.servicedesk:simplified-internal-service-desk"
-        | "com.atlassian.servicedesk:simplified-external-service-desk"
-        | "com.atlassian.servicedesk:simplified-hr-service-desk"
-        | "com.atlassian.servicedesk:simplified-facilities-service-desk"
-        | "com.atlassian.servicedesk:simplified-legal-service-desk"
-        | "com.atlassian.servicedesk:simplified-marketing-service-desk"
-        | "com.atlassian.servicedesk:simplified-finance-service-desk"
-        | "com.atlassian.servicedesk:simplified-analytics-service-desk"
-        | "com.atlassian.servicedesk:simplified-design-service-desk"
-        | "com.atlassian.servicedesk:simplified-sales-service-desk"
-        | "com.atlassian.servicedesk:simplified-halp-service-desk"
-        | "com.atlassian.servicedesk:simplified-blank-project-it"
-        | "com.atlassian.servicedesk:simplified-blank-project-business"
-        | "com.atlassian.servicedesk:next-gen-it-service-desk"
-        | "com.atlassian.servicedesk:next-gen-hr-service-desk"
-        | "com.atlassian.servicedesk:next-gen-legal-service-desk"
-        | "com.atlassian.servicedesk:next-gen-marketing-service-desk"
-        | "com.atlassian.servicedesk:next-gen-facilities-service-desk"
-        | "com.atlassian.servicedesk:next-gen-general-service-desk"
-        | "com.atlassian.servicedesk:next-gen-general-it-service-desk"
-        | "com.atlassian.servicedesk:next-gen-general-business-service-desk"
-        | "com.atlassian.servicedesk:next-gen-analytics-service-desk"
-        | "com.atlassian.servicedesk:next-gen-finance-service-desk"
-        | "com.atlassian.servicedesk:next-gen-design-service-desk"
-        | "com.atlassian.servicedesk:next-gen-sales-service-desk"
-        | "com.atlassian.jira-core-project-templates:jira-core-simplified-content-management"
-        | "com.atlassian.jira-core-project-templates:jira-core-simplified-document-approval"
-        | "com.atlassian.jira-core-project-templates:jira-core-simplified-lead-tracking"
-        | "com.atlassian.jira-core-project-templates:jira-core-simplified-process-control"
-        | "com.atlassian.jira-core-project-templates:jira-core-simplified-procurement"
-        | "com.atlassian.jira-core-project-templates:jira-core-simplified-project-management"
-        | "com.atlassian.jira-core-project-templates:jira-core-simplified-recruitment"
-        | "com.atlassian.jira-core-project-templates:jira-core-simplified-task-";
+      projectTemplateKey?: "com.pyxis.greenhopper.jira:gh-simplified-agility-kanban" | "com.pyxis.greenhopper.jira:gh-simplified-agility-scrum" | "com.pyxis.greenhopper.jira:gh-simplified-basic" | "com.pyxis.greenhopper.jira:gh-simplified-kanban-classic" | "com.pyxis.greenhopper.jira:gh-simplified-scrum-classic" | "com.pyxis.greenhopper.jira:gh-cross-team-template" | "com.pyxis.greenhopper.jira:gh-cross-team-planning-template" | "com.atlassian.servicedesk:simplified-it-service-management" | "com.atlassian.servicedesk:simplified-general-service-desk" | "com.atlassian.servicedesk:simplified-general-service-desk-it" | "com.atlassian.servicedesk:simplified-general-service-desk-business" | "com.atlassian.servicedesk:simplified-internal-service-desk" | "com.atlassian.servicedesk:simplified-external-service-desk" | "com.atlassian.servicedesk:simplified-hr-service-desk" | "com.atlassian.servicedesk:simplified-facilities-service-desk" | "com.atlassian.servicedesk:simplified-legal-service-desk" | "com.atlassian.servicedesk:simplified-marketing-service-desk" | "com.atlassian.servicedesk:simplified-finance-service-desk" | "com.atlassian.servicedesk:simplified-analytics-service-desk" | "com.atlassian.servicedesk:simplified-design-service-desk" | "com.atlassian.servicedesk:simplified-sales-service-desk" | "com.atlassian.servicedesk:simplified-halp-service-desk" | "com.atlassian.servicedesk:simplified-blank-project-it" | "com.atlassian.servicedesk:simplified-blank-project-business" | "com.atlassian.servicedesk:next-gen-it-service-desk" | "com.atlassian.servicedesk:next-gen-hr-service-desk" | "com.atlassian.servicedesk:next-gen-legal-service-desk" | "com.atlassian.servicedesk:next-gen-marketing-service-desk" | "com.atlassian.servicedesk:next-gen-facilities-service-desk" | "com.atlassian.servicedesk:next-gen-general-service-desk" | "com.atlassian.servicedesk:next-gen-general-it-service-desk" | "com.atlassian.servicedesk:next-gen-general-business-service-desk" | "com.atlassian.servicedesk:next-gen-analytics-service-desk" | "com.atlassian.servicedesk:next-gen-finance-service-desk" | "com.atlassian.servicedesk:next-gen-design-service-desk" | "com.atlassian.servicedesk:next-gen-sales-service-desk" | "com.atlassian.jira-core-project-templates:jira-core-simplified-content-management" | "com.atlassian.jira-core-project-templates:jira-core-simplified-document-approval" | "com.atlassian.jira-core-project-templates:jira-core-simplified-lead-tracking" | "com.atlassian.jira-core-project-templates:jira-core-simplified-process-control" | "com.atlassian.jira-core-project-templates:jira-core-simplified-procurement" | "com.atlassian.jira-core-project-templates:jira-core-simplified-project-management" | "com.atlassian.jira-core-project-templates:jira-core-simplified-recruitment" | "com.atlassian.jira-core-project-templates:jira-core-simplified-task-";
       /**
        * @description The [project type](https://confluence.atlassian.com/x/GwiiLQ#Jiraapplicationsoverview-Productfeaturesandprojecttypes), which defines the application-specific feature set. If you don't specify the project template you have to specify the project type.
        * @enum {string}
@@ -9144,11 +9424,7 @@ export interface components {
     CustomContextVariable: {
       /** @description Type of custom context variable. */
       type: string;
-    } & (
-      | components["schemas"]["UserContextVariable"]
-      | components["schemas"]["IssueContextVariable"]
-      | components["schemas"]["JsonContextVariable"]
-    );
+    } & (components["schemas"]["UserContextVariable"] | components["schemas"]["IssueContextVariable"] | components["schemas"]["JsonContextVariable"]);
     /** @description Details of configurations for a custom field. */
     CustomFieldConfigurations: {
       /** @description The list of custom field configuration details. */
@@ -9167,34 +9443,7 @@ export interface components {
       /** @description The name of the context. */
       name: string;
     };
-    CustomFieldContextDefaultValue:
-      | components["schemas"]["CustomFieldContextDefaultValueCascadingOption"]
-      | components["schemas"]["CustomFieldContextDefaultValueMultipleOption"]
-      | components["schemas"]["CustomFieldContextDefaultValueSingleOption"]
-      | components["schemas"]["CustomFieldContextSingleUserPickerDefaults"]
-      | components["schemas"]["CustomFieldContextDefaultValueMultiUserPicker"]
-      | components["schemas"]["CustomFieldContextDefaultValueSingleGroupPicker"]
-      | components["schemas"]["CustomFieldContextDefaultValueMultipleGroupPicker"]
-      | components["schemas"]["CustomFieldContextDefaultValueDate"]
-      | components["schemas"]["CustomFieldContextDefaultValueDateTime"]
-      | components["schemas"]["CustomFieldContextDefaultValueURL"]
-      | components["schemas"]["CustomFieldContextDefaultValueProject"]
-      | components["schemas"]["CustomFieldContextDefaultValueFloat"]
-      | components["schemas"]["CustomFieldContextDefaultValueLabels"]
-      | components["schemas"]["CustomFieldContextDefaultValueTextField"]
-      | components["schemas"]["CustomFieldContextDefaultValueTextArea"]
-      | components["schemas"]["CustomFieldContextDefaultValueReadOnly"]
-      | components["schemas"]["CustomFieldContextDefaultValueSingleVersionPicker"]
-      | components["schemas"]["CustomFieldContextDefaultValueMultipleVersionPicker"]
-      | components["schemas"]["CustomFieldContextDefaultValueForgeStringField"]
-      | components["schemas"]["CustomFieldContextDefaultValueForgeMultiStringField"]
-      | components["schemas"]["CustomFieldContextDefaultValueForgeObjectField"]
-      | components["schemas"]["CustomFieldContextDefaultValueForgeDateTimeField"]
-      | components["schemas"]["CustomFieldContextDefaultValueForgeGroupField"]
-      | components["schemas"]["CustomFieldContextDefaultValueForgeMultiGroupField"]
-      | components["schemas"]["CustomFieldContextDefaultValueForgeNumberField"]
-      | components["schemas"]["CustomFieldContextDefaultValueForgeUserField"]
-      | components["schemas"]["CustomFieldContextDefaultValueForgeMultiUserField"];
+    CustomFieldContextDefaultValue: components["schemas"]["CustomFieldContextDefaultValueCascadingOption"] | components["schemas"]["CustomFieldContextDefaultValueMultipleOption"] | components["schemas"]["CustomFieldContextDefaultValueSingleOption"] | components["schemas"]["CustomFieldContextSingleUserPickerDefaults"] | components["schemas"]["CustomFieldContextDefaultValueMultiUserPicker"] | components["schemas"]["CustomFieldContextDefaultValueSingleGroupPicker"] | components["schemas"]["CustomFieldContextDefaultValueMultipleGroupPicker"] | components["schemas"]["CustomFieldContextDefaultValueDate"] | components["schemas"]["CustomFieldContextDefaultValueDateTime"] | components["schemas"]["CustomFieldContextDefaultValueURL"] | components["schemas"]["CustomFieldContextDefaultValueProject"] | components["schemas"]["CustomFieldContextDefaultValueFloat"] | components["schemas"]["CustomFieldContextDefaultValueLabels"] | components["schemas"]["CustomFieldContextDefaultValueTextField"] | components["schemas"]["CustomFieldContextDefaultValueTextArea"] | components["schemas"]["CustomFieldContextDefaultValueReadOnly"] | components["schemas"]["CustomFieldContextDefaultValueSingleVersionPicker"] | components["schemas"]["CustomFieldContextDefaultValueMultipleVersionPicker"] | components["schemas"]["CustomFieldContextDefaultValueForgeStringField"] | components["schemas"]["CustomFieldContextDefaultValueForgeMultiStringField"] | components["schemas"]["CustomFieldContextDefaultValueForgeObjectField"] | components["schemas"]["CustomFieldContextDefaultValueForgeDateTimeField"] | components["schemas"]["CustomFieldContextDefaultValueForgeGroupField"] | components["schemas"]["CustomFieldContextDefaultValueForgeMultiGroupField"] | components["schemas"]["CustomFieldContextDefaultValueForgeNumberField"] | components["schemas"]["CustomFieldContextDefaultValueForgeUserField"] | components["schemas"]["CustomFieldContextDefaultValueForgeMultiUserField"];
     /** @description The default value for a cascading select custom field. */
     CustomFieldContextDefaultValueCascadingOption: {
       /** @description The ID of the default cascading option. */
@@ -9488,20 +9737,7 @@ export interface components {
        * If no searcher is provided, the field isn't searchable. However, [Forge custom fields](https://developer.atlassian.com/platform/forge/manifest-reference/modules/#jira-custom-field-type--beta-) have a searcher set automatically, so are always searchable.
        * @enum {string}
        */
-      searcherKey?:
-        | "com.atlassian.jira.plugin.system.customfieldtypes:cascadingselectsearcher"
-        | "com.atlassian.jira.plugin.system.customfieldtypes:daterange"
-        | "com.atlassian.jira.plugin.system.customfieldtypes:datetimerange"
-        | "com.atlassian.jira.plugin.system.customfieldtypes:exactnumber"
-        | "com.atlassian.jira.plugin.system.customfieldtypes:exacttextsearcher"
-        | "com.atlassian.jira.plugin.system.customfieldtypes:grouppickersearcher"
-        | "com.atlassian.jira.plugin.system.customfieldtypes:labelsearcher"
-        | "com.atlassian.jira.plugin.system.customfieldtypes:multiselectsearcher"
-        | "com.atlassian.jira.plugin.system.customfieldtypes:numberrange"
-        | "com.atlassian.jira.plugin.system.customfieldtypes:projectsearcher"
-        | "com.atlassian.jira.plugin.system.customfieldtypes:textsearcher"
-        | "com.atlassian.jira.plugin.system.customfieldtypes:userpickergroupsearcher"
-        | "com.atlassian.jira.plugin.system.customfieldtypes:versionsearcher";
+      searcherKey?: "com.atlassian.jira.plugin.system.customfieldtypes:cascadingselectsearcher" | "com.atlassian.jira.plugin.system.customfieldtypes:daterange" | "com.atlassian.jira.plugin.system.customfieldtypes:datetimerange" | "com.atlassian.jira.plugin.system.customfieldtypes:exactnumber" | "com.atlassian.jira.plugin.system.customfieldtypes:exacttextsearcher" | "com.atlassian.jira.plugin.system.customfieldtypes:grouppickersearcher" | "com.atlassian.jira.plugin.system.customfieldtypes:labelsearcher" | "com.atlassian.jira.plugin.system.customfieldtypes:multiselectsearcher" | "com.atlassian.jira.plugin.system.customfieldtypes:numberrange" | "com.atlassian.jira.plugin.system.customfieldtypes:projectsearcher" | "com.atlassian.jira.plugin.system.customfieldtypes:textsearcher" | "com.atlassian.jira.plugin.system.customfieldtypes:userpickergroupsearcher" | "com.atlassian.jira.plugin.system.customfieldtypes:versionsearcher";
       /**
        * @description The type of the custom field. These built-in custom field types are available:
        *
@@ -9709,6 +9945,31 @@ export interface components {
       /** @description The title of the gadget. */
       title?: string;
     };
+    /** @description The data classification. */
+    DataClassificationLevelsBean: {
+      /** @description The data classifications. */
+      classifications?: components["schemas"]["DataClassificationTagBean"][];
+    };
+    /** @description The data classification. */
+    DataClassificationTagBean: {
+      /** @description The color of the data classification object. */
+      color?: string;
+      /** @description The description of the data classification object. */
+      description?: string;
+      /** @description The guideline of the data classification object. */
+      guideline?: string;
+      /** @description The ID of the data classification object. */
+      id: string;
+      /** @description The name of the data classification object. */
+      name?: string;
+      /**
+       * Format: int32
+       * @description The rank of the data classification object.
+       */
+      rank?: number;
+      /** @description The status of the data classification object. */
+      status: string;
+    };
     /** @description List issues archived within a specified date range. */
     DateRangeFilterRequest: {
       /** @description List issues archived after a specified date, passed in the YYYY-MM-DD format. */
@@ -9842,14 +10103,8 @@ export interface components {
       status?: number;
     };
     ErrorCollections: Record<string, never>;
-    /**
-     * @example {
-     *   "message": "The request is not from a Connect app."
-     * }
-     */
     ErrorMessage: {
-      /** @description The error message. */
-      message: string;
+      message?: string;
     };
     Errors: {
       issueIsSubtask?: components["schemas"]["Error"];
@@ -9876,19 +10131,7 @@ export interface components {
        * @description Identifies the recipients of the notification.
        * @enum {string}
        */
-      notificationType?:
-        | "CurrentAssignee"
-        | "Reporter"
-        | "CurrentUser"
-        | "ProjectLead"
-        | "ComponentLead"
-        | "User"
-        | "Group"
-        | "ProjectRole"
-        | "EmailAddress"
-        | "AllWatchers"
-        | "UserCustomField"
-        | "GroupCustomField";
+      notificationType?: "CurrentAssignee" | "Reporter" | "CurrentUser" | "ProjectLead" | "ComponentLead" | "User" | "Group" | "ProjectRole" | "EmailAddress" | "AllWatchers" | "UserCustomField" | "GroupCustomField";
       /**
        * @description As a group's name can change, use of `recipient` is recommended. The identifier associated with the `notificationType` value that defines the receiver of the notification, where the receiver isn't implied by `notificationType` value. So, when `notificationType` is:
        *
@@ -9913,6 +10156,24 @@ export interface components {
       recipient?: string;
       /** @description The specified user. */
       user?: components["schemas"]["UserDetails"];
+    };
+    /** @description A priority scheme with less fields to be used in for an API expand response. */
+    ExpandPrioritySchemeBean: {
+      /** @description The ID of the priority scheme. */
+      id?: string;
+      /** @description The name of the priority scheme. */
+      name?: string;
+      /** @description The URL of the priority scheme. */
+      self?: string;
+    };
+    ExpandPrioritySchemePage: {
+      /** Format: int32 */
+      maxResults?: number;
+      /** Format: int64 */
+      startAt?: number;
+      /** Format: int64 */
+      total?: number;
+      [key: string]: unknown;
     };
     /** @description The response for status request for a running/completed export task. */
     ExportArchivedIssuesTaskProgressResponse: {
@@ -9987,6 +10248,8 @@ export interface components {
       screensCount?: number;
       /** @description The searcher key of the field. Returned for custom fields. */
       searcherKey?: string;
+      /** @description The stable ID of the field. */
+      stableId?: string;
     };
     /** @description A clause that asserts whether a field was changed. For example, `status CHANGED AFTER startOfMonth(-1M)`.See [CHANGED](https://confluence.atlassian.com/x/dgiiLQ#Advancedsearching-operatorsreference-CHANGEDCHANGED) for more information about the CHANGED operator. */
     FieldChangedClause: {
@@ -10289,6 +10552,11 @@ export interface components {
     };
     /** @description Details about a filter. */
     Filter: {
+      /**
+       * Format: date-time
+       * @description \[Experimental\] Approximate last used time. Returns the date and time when the filter was last used. Returns `null` if the filter hasn't been used after tracking was enabled. For performance reasons, timestamps aren't updated in real time and therefore may not be exactly accurate.
+       */
+      approximateLastUsed?: string;
       /** @description A description of the filter. */
       description?: string;
       /** @description The groups and projects that can edit the filter. */
@@ -10332,6 +10600,11 @@ export interface components {
     };
     /** @description Details of a filter. */
     FilterDetails: {
+      /**
+       * Format: date-time
+       * @description \[Experimental\] Approximate last used time. Returns the date and time when the filter was last used. Returns `null` if the filter hasn't been used after tracking was enabled. For performance reasons, timestamps aren't updated in real time and therefore may not be exactly accurate.
+       */
+      approximateLastUsed?: string;
       /** @description The description of the filter. */
       description?: string;
       /** @description The groups and projects that can edit the filter. This can be specified when updating a filter, but not when creating a filter. */
@@ -10633,6 +10906,25 @@ export interface components {
       /** @description The key of the referenced item. */
       key?: string;
     };
+    IdSearchRequestBean: {
+      /** @description A [JQL](https://confluence.atlassian.com/x/egORLQ) expression. Order by clauses are not allowed. */
+      jql?: string;
+      /**
+       * Format: int32
+       * @description The maximum number of items to return per page.
+       * @default 1000
+       */
+      maxResults?: number;
+      /** @description The continuation token to fetch the next page. This token is provided by the response of this endpoint. */
+      nextPageToken?: string;
+    };
+    /** @description Result of your JQL search. Returns a list of issue IDs and a token to fetch the next page if one exists. */
+    IdSearchResults: {
+      /** @description The list of issue IDs found by the search. */
+      issueIds?: readonly number[];
+      /** @description Continuation token to fetch the next page. If this result represents the last or the only page this token will be null. */
+      nextPageToken?: string;
+    };
     IncludedFields: {
       actuallyIncluded?: string[];
       excluded?: string[];
@@ -10699,6 +10991,51 @@ export interface components {
         };
       };
     };
+    IssueBulkEditField: {
+      /** @description Description of the field. */
+      description?: string;
+      /** @description A list of options related to the field, applicable in contexts where multiple selections are allowed. */
+      fieldOptions?: components["schemas"]["IssueBulkOperationsFieldOption"][];
+      /** @description The unique ID of the field. */
+      id?: string;
+      /** @description Indicates whether the field is mandatory for the operation. */
+      isRequired?: boolean;
+      /** @description Specifies supported actions (like add, replace, remove) on multi-select fields via an enum. */
+      multiSelectFieldOptions?: ("ADD" | "REMOVE" | "REPLACE" | "REMOVE_ALL")[];
+      /** @description The display name of the field. */
+      name?: string;
+      /** @description A URL to fetch additional data for the field */
+      searchUrl?: string;
+      /** @description The type of the field. */
+      type?: string;
+      /** @description A message indicating why the field is unavailable for editing. */
+      unavailableMessage?: string;
+    };
+    /** @description Issue Bulk Edit Payload */
+    IssueBulkEditPayload: {
+      /** @description An object that defines the values to be updated in specified fields of an issue. The structure and content of this parameter vary depending on the type of field being edited. Although the order is not significant, ensure that field IDs align with those in selectedActions. */
+      editedFieldsInput: components["schemas"]["JiraIssueFields"];
+      /** @description List of all the field IDs that are to be bulk edited. Each field ID in this list corresponds to a specific attribute of an issue that is set to be modified in the bulk edit operation. The relevant field ID can be obtained by calling the Bulk Edit Get Fields REST API (documentation available on this page itself). */
+      selectedActions: string[];
+      /** @description List of issue IDs or keys which are to be bulk edited. These IDs or keys can be from different projects and issue types. */
+      selectedIssueIdsOrKeys: string[];
+    };
+    /** @description Issue Bulk Move Payload */
+    IssueBulkMovePayload: {
+      /**
+       * @description An object representing the mapping of issues and data related to destination entities, like fields and statuses, that are required during a bulk move.
+       *
+       * The key is a string that is created by concatenating the following three entities in order, separated by commas. The format is `<project ID or key>,<issueType ID>,<parent ID or key>`. It should be unique across mappings provided in the payload. If you provide multiple mappings for the same key, only one will be processed. However, the operation won't fail, so the error may be hard to track down.
+       *
+       *  *  ***Destination project*** (Required): ID or key of the project to which the issues are being moved.
+       *  *  ***Destination issueType*** (Required): ID of the issueType to which the issues are being moved.
+       *  *  ***Destination parent ID or key*** (Optional): ID or key of the issue which will become the parent of the issues being moved. Only required when the destination issueType is a subtask.
+       */
+      targetToSourcesMapping?: {
+        [key: string]: components["schemas"]["targetToSourcesMapping"];
+      };
+    };
+    IssueBulkOperationsFieldOption: Record<string, never>;
     /** @description A list of changelog IDs. */
     IssueChangelogIds: {
       /** @description The list of changelog IDs. */
@@ -10813,6 +11150,30 @@ export interface components {
       entityIds?: number[];
       /** @description Whether the bulk operation occurs only when the property is present on or absent from an issue. */
       hasProperty?: boolean;
+    };
+    IssueLimitReportRequest: {
+      /** @description A list of fields and their respective approaching limit threshold. Required for querying issues approaching limits. Optional for querying issues breaching limits. Accepted fields are: `comment`, `worklog`, `attachment`, `remoteIssueLinks`, and `issuelinks`. Example: `{"issuesApproachingLimitParams": {"comment": 4500, "attachment": 1800}}` */
+      issuesApproachingLimitParams?: {
+        [key: string]: number;
+      };
+    };
+    IssueLimitReportResponseBean: {
+      /** @description A list of ids of issues approaching the limit and their field count */
+      issuesApproachingLimit?: {
+        [key: string]: {
+          [key: string]: number;
+        };
+      };
+      /** @description A list of ids of issues breaching the limit and their field count */
+      issuesBreachingLimit?: {
+        [key: string]: {
+          [key: string]: number;
+        };
+      };
+      /** @description The fields and their defined limits */
+      limits?: {
+        [key: string]: number;
+      };
     };
     /** @description Details of a link between issues. */
     IssueLink: {
@@ -11365,6 +11726,36 @@ export interface components {
        */
       validation?: "strict" | "warn" | "none";
     };
+    JiraCascadingSelectField: {
+      childOptionValue?: components["schemas"]["JiraSelectedOptionField"];
+      fieldId: string;
+      parentOptionValue: components["schemas"]["JiraSelectedOptionField"];
+    };
+    JiraColorField: {
+      color: components["schemas"]["JiraColorInput"];
+      fieldId: string;
+    };
+    JiraColorInput: {
+      name: string;
+    };
+    JiraComponentField: {
+      /** Format: int64 */
+      componentId: number;
+    };
+    JiraDateField: {
+      date?: components["schemas"]["JiraDateInput"];
+      fieldId: string;
+    };
+    JiraDateInput: {
+      formattedDate: string;
+    };
+    JiraDateTimeField: {
+      dateTime: components["schemas"]["JiraDateTimeInput"];
+      fieldId: string;
+    };
+    JiraDateTimeInput: {
+      formattedDateTime: string;
+    };
     /** @description Details about the analysed Jira expression. */
     JiraExpressionAnalysis: {
       complexity?: components["schemas"]["JiraExpressionComplexity"];
@@ -11519,6 +11910,228 @@ export interface components {
        */
       value: number;
     };
+    JiraGroupInput: {
+      groupName: string;
+    };
+    JiraIssueFields: {
+      /**
+       * @description Add or clear a cascading select field:
+       *
+       *  *  To add, specify `optionId` for both parent and child.
+       *  *  To clear the child, set its `optionId` to null.
+       *  *  To clear both, set the parent's `optionId` to null.
+       */
+      cascadingSelectFields?: components["schemas"]["JiraCascadingSelectField"][];
+      /**
+       * @description Add or clear a number field:
+       *
+       *  *  To add, specify a numeric `value`.
+       *  *  To clear, set `value` to `null`.
+       */
+      clearableNumberFields?: components["schemas"]["JiraNumberField"][];
+      /**
+       * @description Add or clear a color field:
+       *
+       *  *  To add, specify the color `name`. Available colors are: `purple`, `blue`, `green`, `teal`, `yellow`, `orange`, `grey`, `dark purple`, `dark blue`, `dark green`, `dark teal`, `dark yellow`, `dark orange`, `dark grey`.
+       *  *  To clear, set the color `name` to an empty string.
+       */
+      colorFields?: components["schemas"]["JiraColorField"][];
+      /**
+       * @description Add or clear a date picker field:
+       *
+       *  *  To add, specify the date in `d/mmm/yy` format or ISO format `dd-mm-yyyy`.
+       *  *  To clear, set `formattedDate` to an empty string.
+       */
+      datePickerFields?: components["schemas"]["JiraDateField"][];
+      /**
+       * @description Add or clear the planned start date and time:
+       *
+       *  *  To add, specify the date and time in ISO format for `formattedDateTime`.
+       *  *  To clear, provide an empty string for `formattedDateTime`.
+       */
+      dateTimePickerFields?: components["schemas"]["JiraDateTimeField"][];
+      /** @description Set the issue type field by providing an `issueTypeId`. */
+      issueType?: components["schemas"]["JiraIssueTypeField"];
+      /**
+       * @description Edit a labels field:
+       *
+       *  *  Options include `ADD`, `REPLACE`, `REMOVE`, or `REMOVE_ALL` for bulk edits.
+       *  *  To clear labels, use the `REMOVE_ALL` option with an empty `labels` array.
+       */
+      labelsFields?: components["schemas"]["JiraLabelsField"][];
+      /**
+       * @description Add or clear a multi-group picker field:
+       *
+       *  *  To add groups, provide an array of groups with `groupName`s.
+       *  *  To clear all groups, use an empty `groups` array.
+       */
+      multipleGroupPickerFields?: components["schemas"]["JiraMultipleGroupPickerField"][];
+      /**
+       * @description Assign or unassign multiple users to/from a field:
+       *
+       *  *  To assign, provide an array of user `accountId`s.
+       *  *  To clear, set `users` to `null`.
+       */
+      multipleSelectClearableUserPickerFields?: components["schemas"]["JiraMultipleSelectUserPickerField"][];
+      /**
+       * @description Add or clear a multi-select field:
+       *
+       *  *  To add, provide an array of options with `optionId`s.
+       *  *  To clear, use an empty `options` array.
+       */
+      multipleSelectFields?: components["schemas"]["JiraMultipleSelectField"][];
+      /**
+       * @description Edit a multi-version picker field like Fix Versions/Affects Versions:
+       *
+       *  *  Options include `ADD`, `REPLACE`, `REMOVE`, or `REMOVE_ALL` for bulk edits.
+       *  *  To clear the field, use the `REMOVE_ALL` option with an empty `versions` array.
+       */
+      multipleVersionPickerFields?: components["schemas"]["JiraMultipleVersionPickerField"][];
+      /**
+       * @description Edit a multi select components field:
+       *
+       *  *  Options include `ADD`, `REPLACE`, `REMOVE`, or `REMOVE_ALL` for bulk edits.
+       *  *  To clear, use the `REMOVE_ALL` option with an empty `components` array.
+       */
+      multiselectComponents?: components["schemas"]["JiraMultiSelectComponentField"];
+      /** @description Set the priority of an issue by specifying a `priorityId`. */
+      priority?: components["schemas"]["JiraPriorityField"];
+      /**
+       * @description Add or clear a rich text field:
+       *
+       *  *  To add, provide `adfValue`. Note that rich text fields only support ADF values.
+       *  *  To clear, use an empty `richText` object.
+       *
+       * For ADF format details, refer to: [Atlassian Document Format](https://developer.atlassian.com/cloud/jira/platform/apis/document/structure).
+       */
+      richTextFields?: components["schemas"]["JiraRichTextField"][];
+      /**
+       * @description Add or clear a single group picker field:
+       *
+       *  *  To add, specify the group with `groupName`.
+       *  *  To clear, set `groupName` to an empty string.
+       */
+      singleGroupPickerFields?: components["schemas"]["JiraSingleGroupPickerField"][];
+      /**
+       * @description Add or clear a single line text field:
+       *
+       *  *  To add, provide the `text` value.
+       *  *  To clear, set `text` to an empty string.
+       */
+      singleLineTextFields?: components["schemas"]["JiraSingleLineTextField"][];
+      /**
+       * @description Edit assignment for single select user picker fields like Assignee/Reporter:
+       *
+       *  *  To assign an issue, specify the user's `accountId`.
+       *  *  To unassign an issue, set `user` to `null`.
+       *  *  For automatic assignment, set `accountId` to `-1`.
+       */
+      singleSelectClearableUserPickerFields?: components["schemas"]["JiraSingleSelectUserPickerField"][];
+      /**
+       * @description Add or clear a single select field:
+       *
+       *  *  To add, specify the option with an `optionId`.
+       *  *  To clear, pass an option with `optionId` as `-1`.
+       */
+      singleSelectFields?: components["schemas"]["JiraSingleSelectField"][];
+      /**
+       * @description Add or clear a single version picker field:
+       *
+       *  *  To add, specify the version with a `versionId`.
+       *  *  To clear, set `versionId` to `-1`.
+       */
+      singleVersionPickerFields?: components["schemas"]["JiraSingleVersionPickerField"][];
+      /**
+       * @description Add or clear a URL field:
+       *
+       *  *  To add, provide the `url` with the desired URL value.
+       *  *  To clear, set `url` to an empty string.
+       */
+      urlFields?: components["schemas"]["JiraUrlField"][];
+    };
+    JiraIssueTypeField: {
+      issueTypeId: string;
+    };
+    JiraLabelsField: {
+      /** @enum {string} */
+      bulkEditMultiSelectFieldOption: "ADD" | "REMOVE" | "REPLACE" | "REMOVE_ALL";
+      fieldId: string;
+      labels: components["schemas"]["JiraLabelsInput"][];
+    };
+    JiraLabelsInput: {
+      name: string;
+    };
+    JiraMultiSelectComponentField: {
+      /** @enum {string} */
+      bulkEditMultiSelectFieldOption: "ADD" | "REMOVE" | "REPLACE" | "REMOVE_ALL";
+      components: components["schemas"]["JiraComponentField"][];
+      fieldId: string;
+    };
+    JiraMultipleGroupPickerField: {
+      fieldId: string;
+      groups: components["schemas"]["JiraGroupInput"][];
+    };
+    JiraMultipleSelectField: {
+      fieldId: string;
+      options: components["schemas"]["JiraSelectedOptionField"][];
+    };
+    JiraMultipleSelectUserPickerField: {
+      fieldId: string;
+      users?: components["schemas"]["JiraUserField"][];
+    };
+    JiraMultipleVersionPickerField: {
+      /** @enum {string} */
+      bulkEditMultiSelectFieldOption: "ADD" | "REMOVE" | "REPLACE" | "REMOVE_ALL";
+      fieldId: string;
+      versions: components["schemas"]["JiraVersionField"][];
+    };
+    JiraNumberField: {
+      fieldId: string;
+      /** Format: double */
+      value?: number;
+    };
+    JiraPriorityField: {
+      priorityId: string;
+    };
+    JiraRichTextField: {
+      fieldId: string;
+      richText: components["schemas"]["JiraRichTextInput"];
+    };
+    JiraRichTextInput: {
+      adfValue?: {
+        [key: string]: unknown;
+      };
+    };
+    JiraSelectedOptionField: {
+      /** Format: int64 */
+      optionId?: number;
+    };
+    JiraSingleGroupPickerField: {
+      fieldId: string;
+      group: components["schemas"]["JiraGroupInput"];
+    };
+    JiraSingleLineTextField: {
+      fieldId: string;
+      text: string;
+    };
+    /**
+     * @description Add or clear a single select field:
+     *
+     *  *  To add, specify the option with an `optionId`.
+     *  *  To clear, pass an option with `optionId` as `-1`.
+     */
+    JiraSingleSelectField: {
+      fieldId: string;
+      option: components["schemas"]["JiraSelectedOptionField"];
+    };
+    JiraSingleSelectUserPickerField: {
+      fieldId: string;
+      user?: components["schemas"]["JiraUserField"];
+    };
+    JiraSingleVersionPickerField: {
+      fieldId: string;
+      version: components["schemas"]["JiraVersionField"];
+    };
     /** @description Details of a status. */
     JiraStatus: {
       /** @description The description of the status. */
@@ -11538,6 +12151,16 @@ export interface components {
       /** @description The workflows that use this status. Only available if the `workflowUsages` expand is requested. */
       workflowUsages?: components["schemas"]["WorkflowUsages"][];
     };
+    JiraUrlField: {
+      fieldId: string;
+      url: string;
+    };
+    JiraUserField: {
+      accountId: string;
+    };
+    JiraVersionField: {
+      versionId?: string;
+    };
     /** @description Details of a workflow. */
     JiraWorkflow: {
       /** @description The description of the workflow. */
@@ -11554,7 +12177,7 @@ export interface components {
       statuses?: components["schemas"]["WorkflowReferenceStatus"][];
       /** @description If there is a current [asynchronous task](#async-operations) operation for this workflow. */
       taskId?: string | null;
-      /** @description The transitions of the workflow. */
+      /** @description The transitions of the workflow. Note that a transition can have either the deprecated `to`/`from` fields or the `toStatusReference`/`links` fields, but never both nor a combination. */
       transitions?: components["schemas"]["WorkflowTransitions"][];
       /** @description Use the optional `workflows.usages` expand to get additional information about the projects and issue types associated with the requested workflows. */
       usages?: components["schemas"]["ProjectIssueTypes"][];
@@ -11642,17 +12265,9 @@ export interface components {
       where?: components["schemas"]["JqlQueryClause"];
     };
     /** @description A JQL query clause. */
-    JqlQueryClause:
-      | components["schemas"]["CompoundClause"]
-      | components["schemas"]["FieldValueClause"]
-      | components["schemas"]["FieldWasClause"]
-      | components["schemas"]["FieldChangedClause"];
+    JqlQueryClause: components["schemas"]["CompoundClause"] | components["schemas"]["FieldValueClause"] | components["schemas"]["FieldWasClause"] | components["schemas"]["FieldChangedClause"];
     /** @description Details of an operand in a JQL clause. */
-    JqlQueryClauseOperand:
-      | components["schemas"]["ListOperand"]
-      | components["schemas"]["ValueOperand"]
-      | components["schemas"]["FunctionOperand"]
-      | components["schemas"]["KeywordOperand"];
+    JqlQueryClauseOperand: components["schemas"]["ListOperand"] | components["schemas"]["ValueOperand"] | components["schemas"]["FunctionOperand"] | components["schemas"]["KeywordOperand"];
     /** @description A time predicate for a temporal JQL clause. */
     JqlQueryClauseTimePredicate: {
       operand: components["schemas"]["JqlQueryClauseOperand"];
@@ -11717,10 +12332,7 @@ export interface components {
       query: string;
     };
     /** @description An operand that can be part of a list operand. */
-    JqlQueryUnitaryOperand:
-      | components["schemas"]["ValueOperand"]
-      | components["schemas"]["FunctionOperand"]
-      | components["schemas"]["KeywordOperand"];
+    JqlQueryUnitaryOperand: components["schemas"]["ValueOperand"] | components["schemas"]["FunctionOperand"] | components["schemas"]["KeywordOperand"];
     /** @description A JSON object with custom content. */
     JsonContextVariable: {
       /** @description Type of custom context variable. */
@@ -11878,6 +12490,38 @@ export interface components {
       /** @description The locale code. The Java the locale format is used: a two character language code (ISO 639), an underscore, and two letter country code (ISO 3166). For example, en\_US represents a locale of English (United States). Required on create. */
       locale?: string;
     };
+    /** @description List of string of inputs */
+    MandatoryFieldValue: {
+      /**
+       * @description If `true`, will try to retain original non-null issue field values on move.
+       * @default true
+       */
+      retain?: boolean | null;
+      /**
+       * @description Will treat as `MandatoryFieldValue` if type is `raw` or `empty`
+       * @default raw
+       * @enum {string|null}
+       */
+      type?: "adf" | "raw" | null;
+      /** @description Value for each field. Provide a `list of strings` for non-ADF fields. */
+      value: string[];
+    };
+    /** @description An object notation input */
+    MandatoryFieldValueForADF: {
+      /**
+       * @description If `true`, will try to retain original non-null issue field values on move.
+       * @default true
+       */
+      retain?: boolean | null;
+      /**
+       * @description Will treat as `MandatoryFieldValueForADF` if type is `adf`
+       * @default raw
+       * @enum {string}
+       */
+      type: "adf" | "raw";
+      /** @description Value for each field. Accepts Atlassian Document Format (ADF) for rich text fields like `description`, `environments`. For ADF format details, refer to: [Atlassian Document Format](https://developer.atlassian.com/cloud/jira/platform/apis/document/structure) */
+      value: Record<string, never>;
+    };
     /** @description Overrides, for the selected issue types, any status mappings provided in `statusMappingsByWorkflows`. Status mappings are required when the new workflow for an issue type doesn't contain all statuses that the old workflow has. Status mappings can be provided by a combination of `statusMappingsByWorkflows` and `statusMappingsByIssueTypeOverride`. */
     MappingsByIssueTypeOverride: {
       /** @description The ID of the issue type for this mapping. */
@@ -11965,8 +12609,8 @@ export interface components {
       name?: string;
       /** @description This property is no longer available. If the user has an Atlassian account, their password is not changed. If the user does not have an Atlassian account, they are sent an email asking them set up an account. */
       password?: string;
-      /** @description Products the new user has access to. Valid products are: jira-core, jira-servicedesk, jira-product-discovery, jira-software. If left empty, the user will get default product access. To create a user without product access, set this field to be an empty array. */
-      products?: string[];
+      /** @description Products the new user has access to. Valid products are: jira-core, jira-servicedesk, jira-product-discovery, jira-software. To create a user without product access, set this field to be an empty array. */
+      products: string[];
       /** @description The URL of the user. */
       self?: string;
       [key: string]: unknown;
@@ -12131,6 +12775,38 @@ export interface components {
        * @enum {string}
        */
       position?: "First" | "Last";
+    };
+    /** @description A page of items. */
+    PageBean2ComponentJsonBean: {
+      /** @description Whether this is the last page. */
+      isLast?: boolean;
+      /**
+       * Format: int32
+       * @description The maximum number of items that could be returned.
+       */
+      maxResults?: number;
+      /**
+       * Format: uri
+       * @description If there is another page of results, the URL of the next page.
+       */
+      nextPage?: string;
+      /**
+       * Format: uri
+       * @description The URL of the page.
+       */
+      self?: string;
+      /**
+       * Format: int64
+       * @description The index of the first item returned.
+       */
+      startAt?: number;
+      /**
+       * Format: int64
+       * @description The number of items returned.
+       */
+      total?: number;
+      /** @description The list of items. */
+      values?: readonly components["schemas"]["ComponentJsonBean"][];
     };
     /** @description A page of items. */
     PageBeanChangelog: {
@@ -13189,6 +13865,70 @@ export interface components {
       values?: readonly components["schemas"]["Priority"][];
     };
     /** @description A page of items. */
+    PageBeanPrioritySchemeWithPaginatedPrioritiesAndProjects: {
+      /** @description Whether this is the last page. */
+      isLast?: boolean;
+      /**
+       * Format: int32
+       * @description The maximum number of items that could be returned.
+       */
+      maxResults?: number;
+      /**
+       * Format: uri
+       * @description If there is another page of results, the URL of the next page.
+       */
+      nextPage?: string;
+      /**
+       * Format: uri
+       * @description The URL of the page.
+       */
+      self?: string;
+      /**
+       * Format: int64
+       * @description The index of the first item returned.
+       */
+      startAt?: number;
+      /**
+       * Format: int64
+       * @description The number of items returned.
+       */
+      total?: number;
+      /** @description The list of items. */
+      values?: readonly components["schemas"]["PrioritySchemeWithPaginatedPrioritiesAndProjects"][];
+    };
+    /** @description A page of items. */
+    PageBeanPriorityWithSequence: {
+      /** @description Whether this is the last page. */
+      isLast?: boolean;
+      /**
+       * Format: int32
+       * @description The maximum number of items that could be returned.
+       */
+      maxResults?: number;
+      /**
+       * Format: uri
+       * @description If there is another page of results, the URL of the next page.
+       */
+      nextPage?: string;
+      /**
+       * Format: uri
+       * @description The URL of the page.
+       */
+      self?: string;
+      /**
+       * Format: int64
+       * @description The index of the first item returned.
+       */
+      startAt?: number;
+      /**
+       * Format: int64
+       * @description The number of items returned.
+       */
+      total?: number;
+      /** @description The list of items. */
+      values?: readonly components["schemas"]["PriorityWithSequence"][];
+    };
+    /** @description A page of items. */
     PageBeanProject: {
       /** @description Whether this is the last page. */
       isLast?: boolean;
@@ -14117,6 +14857,8 @@ export interface components {
       isDefault?: boolean;
       /** @description The name of the issue priority. */
       name?: string;
+      /** @description Priority schemes associated with the issue priority. */
+      schemes?: components["schemas"]["ExpandPrioritySchemePage"];
       /** @description The URL of the issue priority. */
       self?: string;
       /** @description The color used to indicate the issue priority. */
@@ -14128,6 +14870,73 @@ export interface components {
       /** @description The ID of the issue priority. */
       id: string;
       [key: string]: unknown;
+    };
+    /** @description Mapping of issue priorities for changes in priority schemes. */
+    PriorityMapping: {
+      /** @description The mapping of priorities for issues being migrated **into** this priority scheme. Key is the old priority ID, value is the new priority ID (must exist in this priority scheme). */
+      in?: {
+        [key: string]: number;
+      };
+      /** @description The mapping of priorities for issues being migrated **out of** this priority scheme. Key is the old priority ID (must exist in this priority scheme), value is the new priority ID (must exist in the default priority scheme). Required for updating an existing priority scheme. Not used when creating a new priority scheme. */
+      out?: {
+        [key: string]: number;
+      };
+    };
+    PrioritySchemeChangesWithMappings: {
+      /** @description Affected entity ids. */
+      ids: number[];
+      /** @description Instructions to migrate issues. */
+      mappings?: components["schemas"]["PriorityMapping"][];
+    };
+    PrioritySchemeChangesWithoutMappings: {
+      /** @description Affected entity ids. */
+      ids: number[];
+    };
+    /** @description The ID of a priority scheme. */
+    PrioritySchemeId: {
+      /** @description The ID of the priority scheme. */
+      id?: string;
+      /** @description The in-progress issue migration task. */
+      task?: components["schemas"]["TaskProgressBeanJsonNode"];
+    };
+    /** @description A priority scheme with paginated priorities and projects. */
+    PrioritySchemeWithPaginatedPrioritiesAndProjects: {
+      default?: boolean;
+      /** @description The ID of the default issue priority. */
+      defaultPriorityId?: string;
+      /** @description The description of the priority scheme */
+      description?: string;
+      /** @description The ID of the priority scheme. */
+      id: string;
+      isDefault?: boolean;
+      /** @description The name of the priority scheme */
+      name: string;
+      /** @description The paginated list of priorities. */
+      priorities?: components["schemas"]["PageBeanPriorityWithSequence"];
+      /** @description The paginated list of projects. */
+      projects?: components["schemas"]["PageBeanProjectDetails"];
+      /** @description The URL of the priority scheme. */
+      self?: string;
+      [key: string]: unknown;
+    };
+    /** @description An issue priority with sequence information. */
+    PriorityWithSequence: {
+      /** @description The description of the issue priority. */
+      description?: string;
+      /** @description The URL of the icon for the issue priority. */
+      iconUrl?: string;
+      /** @description The ID of the issue priority. */
+      id?: string;
+      /** @description Whether this priority is the default. */
+      isDefault?: boolean;
+      /** @description The name of the issue priority. */
+      name?: string;
+      /** @description The URL of the issue priority. */
+      self?: string;
+      /** @description The sequence of the issue priority. */
+      sequence?: string;
+      /** @description The color used to indicate the issue priority. */
+      statusColor?: string;
     };
     /** @description Details about a project. */
     Project: {
@@ -14318,6 +15127,16 @@ export interface components {
        */
       self?: string;
     };
+    /** @description Details about data policies for a list of projects. */
+    ProjectDataPolicies: {
+      /** @description List of projects with data policies. */
+      projectDataPolicies?: readonly components["schemas"]["ProjectWithDataPolicy"][];
+    };
+    /** @description Details about data policy. */
+    ProjectDataPolicy: {
+      /** @description Whether the project contains any content inaccessible to the requesting application. */
+      anyContentBlocked?: boolean;
+    };
     /** @description Details about a project. */
     ProjectDetails: {
       /** @description The URLs of the project's avatars. */
@@ -14475,7 +15294,7 @@ export interface components {
     /** @description Use the optional `workflows.usages` expand to get additional information about the projects and issue types associated with the requested workflows. */
     ProjectIssueTypes: {
       /** @description IDs of the issue types */
-      issueTypes?: (string | null)[] | null;
+      issueTypes?: ((string | null)[]) | null;
       project?: components["schemas"]["ProjectId"];
     };
     /** @description Details of an issue type hierarchy level. */
@@ -14632,6 +15451,16 @@ export interface components {
       icon?: string;
       /** @description The key of the project type. */
       key?: string;
+    };
+    /** @description Details about data policies for a project. */
+    ProjectWithDataPolicy: {
+      /** @description Data policy. */
+      dataPolicy?: components["schemas"]["ProjectDataPolicy"];
+      /**
+       * Format: int64
+       * @description The project ID.
+       */
+      id?: number;
     };
     /** @description Property key details. */
     PropertyKey: {
@@ -14955,7 +15784,7 @@ export interface components {
        * Format: int64
        * @description The ID of the default screen. Required when creating a screen scheme.
        */
-      default?: number;
+      default: number;
       /**
        * Format: int64
        * @description The ID of the edit screen.
@@ -15585,7 +16414,10 @@ export interface components {
       oldStatusReference: string;
       [key: string]: unknown;
     };
-    /** @description The status reference and port that a transition is connected to. */
+    /**
+     * @deprecated
+     * @description The status reference and port that a transition is connected to.
+     */
     StatusReferenceAndPort: {
       /**
        * Format: int32
@@ -15635,6 +16467,9 @@ export interface components {
     };
     StreamingResponseBody: Record<string, never>;
     StringList: Record<string, never>;
+    SubmittedBulkOperation: {
+      taskId?: string;
+    };
     /** @description An issue suggested for use in the issue picker auto-completion. */
     SuggestedIssue: {
       /**
@@ -15653,10 +16488,100 @@ export interface components {
       /** @description The phrase containing the query string, as plain text. */
       summaryText?: string;
     };
+    /** @description Details of changes to a priority scheme's priorities that require suggested priority mappings. */
+    SuggestedMappingsForPrioritiesRequestBean: {
+      /** @description The ids of priorities being removed from the scheme. */
+      add?: number[];
+      /** @description The ids of priorities being removed from the scheme. */
+      remove?: number[];
+    };
+    /** @description Details of changes to a priority scheme's projects that require suggested priority mappings. */
+    SuggestedMappingsForProjectsRequestBean: {
+      /** @description The ids of projects being added to the scheme. */
+      add?: number[];
+    };
+    /** @description Details of changes to a priority scheme that require suggested priority mappings. */
+    SuggestedMappingsRequestBean: {
+      /**
+       * Format: int32
+       * @description The maximum number of results that could be on the page.
+       */
+      maxResults?: number;
+      /** @description The priority changes in the scheme. */
+      priorities?: components["schemas"]["SuggestedMappingsForPrioritiesRequestBean"];
+      /** @description The project changes in the scheme. */
+      projects?: components["schemas"]["SuggestedMappingsForProjectsRequestBean"];
+      /**
+       * Format: int64
+       * @description The id of the priority scheme.
+       */
+      schemeId?: number;
+      /**
+       * Format: int64
+       * @description The index of the first item returned on the page.
+       */
+      startAt?: number;
+    };
     /** @description List of system avatars. */
     SystemAvatars: {
       /** @description A list of avatar details. */
       system?: readonly components["schemas"]["Avatar"][];
+    };
+    /** @description Details about a task. */
+    TaskProgressBeanJsonNode: {
+      /** @description The description of the task. */
+      description?: string;
+      /**
+       * Format: int64
+       * @description The execution time of the task, in milliseconds.
+       */
+      elapsedRuntime: number;
+      /**
+       * Format: int64
+       * @description A timestamp recording when the task was finished.
+       */
+      finished?: number;
+      /** @description The ID of the task. */
+      id: string;
+      /**
+       * Format: int64
+       * @description A timestamp recording when the task progress was last updated.
+       */
+      lastUpdate: number;
+      /** @description Information about the progress of the task. */
+      message?: string;
+      /**
+       * Format: int64
+       * @description The progress of the task, as a percentage complete.
+       */
+      progress: number;
+      /** @description The result of the task execution. */
+      result?: components["schemas"]["JsonNode"];
+      /**
+       * Format: uri
+       * @description The URL of the task.
+       */
+      self: string;
+      /**
+       * Format: int64
+       * @description A timestamp recording when the task was started.
+       */
+      started?: number;
+      /**
+       * @description The status of the task.
+       * @enum {string}
+       */
+      status: "ENQUEUED" | "RUNNING" | "COMPLETE" | "FAILED" | "CANCEL_REQUESTED" | "CANCELLED" | "DEAD";
+      /**
+       * Format: int64
+       * @description A timestamp recording when the task was submitted.
+       */
+      submitted: number;
+      /**
+       * Format: int64
+       * @description The ID of the user who submitted the task.
+       */
+      submittedBy: number;
     };
     /** @description Details about a task. */
     TaskProgressBeanObject: {
@@ -15857,7 +16782,7 @@ export interface components {
       /** @description The name of the screen. */
       name?: string;
     };
-    /** @description The transitions of this workflow. */
+    /** @description The transition update data. Note that a transition can have either the deprecated `to`/`from` fields or the `toStatusReference`/`links` fields, but never both nor a combination. */
     TransitionUpdateDTO: {
       /** @description The post-functions of the transition. */
       actions?: components["schemas"]["WorkflowRuleConfiguration"][];
@@ -15866,10 +16791,15 @@ export interface components {
       customIssueEventId?: string;
       /** @description The description of the transition. */
       description?: string;
-      /** @description The statuses the transition can start from. */
+      /**
+       * @deprecated
+       * @description The statuses and ports that the transition can start from. This field is deprecated - use `toStatusReference`/`links` instead.
+       */
       from?: components["schemas"]["StatusReferenceAndPort"][];
       /** @description The ID of the transition. */
       id: string;
+      /** @description The statuses the transition can start from, and the mapping of ports between the statuses. */
+      links?: components["schemas"]["WorkflowTransitionLinks"][];
       /** @description The name of the transition. */
       name: string;
       /** @description The properties of the transition. */
@@ -15877,6 +16807,8 @@ export interface components {
         [key: string]: string;
       };
       to?: components["schemas"]["StatusReferenceAndPort"];
+      /** @description The status the transition goes to. */
+      toStatusReference?: string;
       transitionScreen?: components["schemas"]["WorkflowRuleConfiguration"];
       /** @description The triggers of the transition. */
       triggers?: components["schemas"]["WorkflowTrigger"][];
@@ -15973,20 +16905,12 @@ export interface components {
        *  *  `version`: `versionsearcher`
        * @enum {string}
        */
-      searcherKey?:
-        | "com.atlassian.jira.plugin.system.customfieldtypes:cascadingselectsearcher"
-        | "com.atlassian.jira.plugin.system.customfieldtypes:daterange"
-        | "com.atlassian.jira.plugin.system.customfieldtypes:datetimerange"
-        | "com.atlassian.jira.plugin.system.customfieldtypes:exactnumber"
-        | "com.atlassian.jira.plugin.system.customfieldtypes:exacttextsearcher"
-        | "com.atlassian.jira.plugin.system.customfieldtypes:grouppickersearcher"
-        | "com.atlassian.jira.plugin.system.customfieldtypes:labelsearcher"
-        | "com.atlassian.jira.plugin.system.customfieldtypes:multiselectsearcher"
-        | "com.atlassian.jira.plugin.system.customfieldtypes:numberrange"
-        | "com.atlassian.jira.plugin.system.customfieldtypes:projectsearcher"
-        | "com.atlassian.jira.plugin.system.customfieldtypes:textsearcher"
-        | "com.atlassian.jira.plugin.system.customfieldtypes:userpickergroupsearcher"
-        | "com.atlassian.jira.plugin.system.customfieldtypes:versionsearcher";
+      searcherKey?: "com.atlassian.jira.plugin.system.customfieldtypes:cascadingselectsearcher" | "com.atlassian.jira.plugin.system.customfieldtypes:daterange" | "com.atlassian.jira.plugin.system.customfieldtypes:datetimerange" | "com.atlassian.jira.plugin.system.customfieldtypes:exactnumber" | "com.atlassian.jira.plugin.system.customfieldtypes:exacttextsearcher" | "com.atlassian.jira.plugin.system.customfieldtypes:grouppickersearcher" | "com.atlassian.jira.plugin.system.customfieldtypes:labelsearcher" | "com.atlassian.jira.plugin.system.customfieldtypes:multiselectsearcher" | "com.atlassian.jira.plugin.system.customfieldtypes:numberrange" | "com.atlassian.jira.plugin.system.customfieldtypes:projectsearcher" | "com.atlassian.jira.plugin.system.customfieldtypes:textsearcher" | "com.atlassian.jira.plugin.system.customfieldtypes:userpickergroupsearcher" | "com.atlassian.jira.plugin.system.customfieldtypes:versionsearcher";
+    };
+    /** @description The request for updating the default project classification level. */
+    UpdateDefaultProjectClassificationBean: {
+      /** @description The ID of the project classification. */
+      id: string;
     };
     /** @description The ID of a screen scheme. */
     UpdateDefaultScreenScheme: {
@@ -16022,6 +16946,14 @@ export interface components {
       name?: string;
       [key: string]: unknown;
     };
+    /** @description Update priorities in a scheme */
+    UpdatePrioritiesInSchemeRequestBean: {
+      /** @description Priorities to add to a scheme */
+      add?: components["schemas"]["PrioritySchemeChangesWithoutMappings"];
+      /** @description Priorities to remove from a scheme */
+      remove?: components["schemas"]["PrioritySchemeChangesWithMappings"];
+      [key: string]: unknown;
+    };
     /** @description Details of an issue priority. */
     UpdatePriorityDetails: {
       /** @description The description of the priority. */
@@ -16030,21 +16962,36 @@ export interface components {
        * @description The URL of an icon for the priority. Accepted protocols are HTTP and HTTPS. Built in icons can also be used.
        * @enum {string}
        */
-      iconUrl?:
-        | "/images/icons/priorities/blocker.png"
-        | "/images/icons/priorities/critical.png"
-        | "/images/icons/priorities/high.png"
-        | "/images/icons/priorities/highest.png"
-        | "/images/icons/priorities/low.png"
-        | "/images/icons/priorities/lowest.png"
-        | "/images/icons/priorities/major.png"
-        | "/images/icons/priorities/medium.png"
-        | "/images/icons/priorities/minor.png"
-        | "/images/icons/priorities/trivial.png";
+      iconUrl?: "/images/icons/priorities/blocker.png" | "/images/icons/priorities/critical.png" | "/images/icons/priorities/high.png" | "/images/icons/priorities/highest.png" | "/images/icons/priorities/low.png" | "/images/icons/priorities/lowest.png" | "/images/icons/priorities/major.png" | "/images/icons/priorities/medium.png" | "/images/icons/priorities/minor.png" | "/images/icons/priorities/trivial.png" | "/images/icons/priorities/blocker_new.png" | "/images/icons/priorities/critical_new.png" | "/images/icons/priorities/high_new.png" | "/images/icons/priorities/highest_new.png" | "/images/icons/priorities/low_new.png" | "/images/icons/priorities/lowest_new.png" | "/images/icons/priorities/major_new.png" | "/images/icons/priorities/medium_new.png" | "/images/icons/priorities/minor_new.png" | "/images/icons/priorities/trivial_new.png";
       /** @description The name of the priority. Must be unique. */
       name?: string;
       /** @description The status color of the priority in 3-digit or 6-digit hexadecimal format. */
       statusColor?: string;
+      [key: string]: unknown;
+    };
+    /** @description Details of a priority scheme. */
+    UpdatePrioritySchemeRequestBean: {
+      /**
+       * Format: int64
+       * @description The default priority of the scheme.
+       */
+      defaultPriorityId?: number;
+      /** @description The description of the priority scheme. */
+      description?: string;
+      /** @description Instructions to migrate issues. */
+      mappings?: components["schemas"]["PriorityMapping"];
+      /** @description The name of the priority scheme. Must be unique. */
+      name?: string;
+      /** @description The priorities in the scheme. */
+      priorities?: components["schemas"]["UpdatePrioritiesInSchemeRequestBean"];
+      /** @description The projects in the scheme. */
+      projects?: components["schemas"]["UpdateProjectsInSchemeRequestBean"];
+    };
+    /** @description Details of the updated priority scheme. */
+    UpdatePrioritySchemeResponseBean: {
+      priorityScheme?: components["schemas"]["PrioritySchemeWithPaginatedPrioritiesAndProjects"];
+      /** @description The in-progress issue migration task. */
+      task?: components["schemas"]["TaskProgressBeanJsonNode"];
       [key: string]: unknown;
     };
     /** @description Details about the project. */
@@ -16091,6 +17038,14 @@ export interface components {
       permissionScheme?: number;
       /** @description A link to information about this project, such as project documentation */
       url?: string;
+    };
+    /** @description Update projects in a scheme */
+    UpdateProjectsInSchemeRequestBean: {
+      /** @description Projects to add to a scheme */
+      add?: components["schemas"]["PrioritySchemeChangesWithoutMappings"];
+      /** @description Projects to remove from a scheme */
+      remove?: components["schemas"]["PrioritySchemeChangesWithoutMappings"];
+      [key: string]: unknown;
     };
     /** @description Details of an issue resolution. */
     UpdateResolutionDetails: {
@@ -16533,7 +17488,7 @@ export interface components {
       category: string;
       /**
        * Format: int64
-       * @description The title of the related work
+       * @description The ID of the issue associated with the related work (if there is one). Cannot be updated via the Rest API.
        */
       issueId?: number;
       /** @description The id of the related work. For the native release note related work item, this will be null, and Rest API does not support updating it. */
@@ -16542,7 +17497,7 @@ export interface components {
       title?: string;
       /**
        * Format: uri
-       * @description The URL of the related work
+       * @description The URL of the related work. Will be null for the native release note related work item, but is otherwise required.
        */
       url?: string;
     };
@@ -16629,16 +17584,7 @@ export interface components {
     /** @description A webhook. */
     Webhook: {
       /** @description The Jira events that trigger the webhook. */
-      events: (
-        | "jira:issue_created"
-        | "jira:issue_updated"
-        | "jira:issue_deleted"
-        | "comment_created"
-        | "comment_updated"
-        | "comment_deleted"
-        | "issue_property_set"
-        | "issue_property_deleted"
-      )[];
+      events: ("jira:issue_created" | "jira:issue_updated" | "jira:issue_deleted" | "comment_created" | "comment_updated" | "comment_deleted" | "issue_property_set" | "issue_property_deleted")[];
       /**
        * Format: int64
        * @description The date after which the webhook is no longer sent. Use [Extend webhook life](https://developer.atlassian.com/cloud/jira/platform/rest/v3/api-group-webhooks/#api-rest-api-3-webhook-refresh-put) to extend the date.
@@ -16659,16 +17605,7 @@ export interface components {
     /** @description A list of webhooks. */
     WebhookDetails: {
       /** @description The Jira events that trigger the webhook. */
-      events: (
-        | "jira:issue_created"
-        | "jira:issue_updated"
-        | "jira:issue_deleted"
-        | "comment_created"
-        | "comment_updated"
-        | "comment_deleted"
-        | "issue_property_set"
-        | "issue_property_deleted"
-      )[];
+      events: ("jira:issue_created" | "jira:issue_updated" | "jira:issue_deleted" | "comment_created" | "comment_updated" | "comment_deleted" | "issue_property_set" | "issue_property_deleted")[];
       /** @description A list of field IDs. When the issue changelog contains any of the fields, the webhook `jira:issue_updated` is sent. If this parameter is not present, the app is notified about all field updates. */
       fieldIdsFilter?: string[];
       /** @description A list of issue property keys. A change of those issue properties triggers the `issue_property_set` or `issue_property_deleted` webhooks. If this parameter is not present, the app is notified about all issue property updates. */
@@ -16745,11 +17682,8 @@ export interface components {
       editorScope?: "PROJECT" | "GLOBAL";
       /** @description The Forge provided ecosystem rules available. */
       forgeRules?: components["schemas"]["AvailableWorkflowForgeRule"][];
-      /**
-       * @description The types of projects that this capability set is available for.
-       * @enum {array}
-       */
-      projectTypes?: unknown;
+      /** @description The types of projects that this capability set is available for. */
+      projectTypes?: ("software" | "service_desk" | "product_discovery" | "business" | "unknown")[];
       /** @description The Atlassian provided system rules available. */
       systemRules?: components["schemas"]["AvailableWorkflowSystemRule"][];
       /** @description The trigger rules available. */
@@ -16767,9 +17701,7 @@ export interface components {
       operator: "AND" | "OR";
     };
     /** @description The workflow transition rule conditions tree. */
-    WorkflowCondition:
-      | components["schemas"]["WorkflowSimpleCondition"]
-      | components["schemas"]["WorkflowCompoundCondition"];
+    WorkflowCondition: components["schemas"]["WorkflowSimpleCondition"] | components["schemas"]["WorkflowCompoundCondition"];
     /** @description The details of the workflows to create. */
     WorkflowCreate: {
       /** @description The description of the workflow to create. */
@@ -16893,7 +17825,7 @@ export interface components {
       statusReference?: string;
     };
     /** @description The configuration of the rule. */
-    WorkflowRuleConfiguration: {
+    WorkflowRuleConfiguration: ({
       /** @description The ID of the rule. */
       id?: string | null;
       /** @description The parameters related to the rule. */
@@ -16902,7 +17834,7 @@ export interface components {
       };
       /** @description The rule key of the rule. */
       ruleKey: string;
-    } | null;
+    }) | null;
     /** @description A collection of transition rules. */
     WorkflowRules: {
       conditionsTree?: components["schemas"]["WorkflowCondition"];
@@ -17017,9 +17949,9 @@ export interface components {
     /** @description The workflow scheme read request body. */
     WorkflowSchemeReadRequest: {
       /** @description The list of project IDs to query. */
-      projectIds?: (string | null)[] | null;
+      projectIds?: ((string | null)[]) | null;
       /** @description The list of workflow scheme IDs to query. */
-      workflowSchemeIds?: (string | null)[] | null;
+      workflowSchemeIds?: ((string | null)[]) | null;
     };
     WorkflowSchemeReadResponse: {
       defaultWorkflow?: components["schemas"]["WorkflowMetadataRestModel"];
@@ -17104,8 +18036,11 @@ export interface components {
         [key: string]: unknown;
       };
     };
-    /** @description The status reference and port that a transition is connected to. */
-    WorkflowStatusAndPort: {
+    /**
+     * @deprecated
+     * @description The status reference and port that a transition is connected to.
+     */
+    WorkflowStatusAndPort: ({
       /**
        * Format: int32
        * @description The port the transition is connected to this status.
@@ -17113,9 +18048,9 @@ export interface components {
       port?: number | null;
       /** @description The reference of this status. */
       statusReference?: string;
-    } | null;
+    }) | null;
     /** @description The x and y location of the status in the workflow. */
-    WorkflowStatusLayout: {
+    WorkflowStatusLayout: ({
       /**
        * Format: double
        * @description The x axis location.
@@ -17126,7 +18061,7 @@ export interface components {
        * @description The y axis location.
        */
       y?: number | null;
-    } | null;
+    }) | null;
     /** @description Details of the status being updated. */
     WorkflowStatusUpdate: {
       /** @description The description of the status. */
@@ -17154,6 +18089,21 @@ export interface components {
       /** @description The transition name. */
       name: string;
     };
+    /** @description The statuses the transition can start from, and the mapping of ports between the statuses. */
+    WorkflowTransitionLinks: ({
+      /**
+       * Format: int32
+       * @description The port that the transition starts from.
+       */
+      fromPort?: number | null;
+      /** @description The status that the transition starts from. */
+      fromStatusReference?: string | null;
+      /**
+       * Format: int32
+       * @description The port that the transition goes to.
+       */
+      toPort?: number | null;
+    }) | null;
     /** @description Details about the server Jira is running on. */
     WorkflowTransitionProperty: {
       /** @description The ID of the transition property. */
@@ -17207,7 +18157,7 @@ export interface components {
       /** @description A list of workflows. */
       updateResults: components["schemas"]["WorkflowTransitionRulesUpdateErrorDetails"][];
     };
-    /** @description The transitions of the workflow. */
+    /** @description The transitions of the workflow. Note that a transition can have either the deprecated `to`/`from` fields or the `toStatusReference`/`links` fields, but never both nor a combination. */
     WorkflowTransitions: {
       /** @description The post-functions of the transition. */
       actions?: components["schemas"]["WorkflowRuleConfiguration"][];
@@ -17216,10 +18166,15 @@ export interface components {
       customIssueEventId?: string | null;
       /** @description The description of the transition. */
       description?: string;
-      /** @description The statuses the transition can start from. */
+      /**
+       * @deprecated
+       * @description The statuses and ports that the transition can start from. This field is deprecated - use `toStatusReference`/`links` instead.
+       */
       from?: components["schemas"]["WorkflowStatusAndPort"][];
       /** @description The ID of the transition. */
       id?: string;
+      /** @description The statuses the transition can start from, and the mapping of ports between the statuses. */
+      links?: components["schemas"]["WorkflowTransitionLinks"][];
       /** @description The name of the transition. */
       name?: string;
       /** @description The properties of the transition. */
@@ -17227,6 +18182,8 @@ export interface components {
         [key: string]: string;
       };
       to?: components["schemas"]["WorkflowStatusAndPort"];
+      /** @description The status the transition goes to. */
+      toStatusReference?: string;
       transitionScreen?: components["schemas"]["WorkflowRuleConfiguration"];
       /** @description The triggers of the transition. */
       triggers?: components["schemas"]["WorkflowTrigger"][];
@@ -17309,17 +18266,7 @@ export interface components {
        * @description The type of element the error or warning references.
        * @enum {string}
        */
-      type?:
-        | "RULE"
-        | "STATUS"
-        | "STATUS_LAYOUT"
-        | "STATUS_PROPERTY"
-        | "WORKFLOW"
-        | "TRANSITION"
-        | "TRANSITION_PROPERTY"
-        | "SCOPE"
-        | "STATUS_MAPPING"
-        | "TRIGGER";
+      type?: "RULE" | "STATUS" | "STATUS_LAYOUT" | "STATUS_PROPERTY" | "WORKFLOW" | "TRANSITION" | "TRANSITION_PROPERTY" | "SCOPE" | "STATUS_MAPPING" | "TRIGGER";
     };
     WorkflowValidationErrorList: {
       /** @description The list of validation errors. */
@@ -17379,6 +18326,85 @@ export interface components {
       /** @description A list of worklog IDs. */
       ids: number[];
     };
+    /** @description Details about data policy. */
+    WorkspaceDataPolicy: {
+      /** @description Whether the workspace contains any content inaccessible to the requesting application. */
+      anyContentBlocked?: boolean;
+    };
+    /** @description Can contain multiple field values of following types depending on `type` key */
+    fields: ({
+      /**
+       * @description If `true`, will try to retain original non-null issue field values on move.
+       * @default true
+       */
+      retain?: boolean | null;
+      /** @enum {string} */
+      type?: "adf" | "raw";
+      value?: Record<string, never>;
+    }) & (components["schemas"]["MandatoryFieldValue"] | components["schemas"]["MandatoryFieldValueForADF"]);
+    /** @description Field mapping for mandatory fields in target */
+    targetMandatoryFields: {
+      /** @description Contains the value of mandatory fields */
+      fields: {
+        [key: string]: components["schemas"]["fields"];
+      };
+    } | null;
+    /** @description Status mapping for statuses in source workflow to respective target status in target workflow. */
+    targetStatus: {
+      /** @description An object with the key as the ID of the target status and value with the list of the IDs of the current source statuses. */
+      statuses: {
+        [key: string]: string[];
+      };
+    } | null;
+    /** @description An object representing the mapping of issues and data related to destination entities, like fields and statuses, that are required during a bulk move. */
+    targetToSourcesMapping: {
+      /**
+       * @description If `true`, values from the source issues will be retained for the mandatory fields in the field configuration of the destination project. The `targetMandatoryFields` property shouldn't be defined.
+       *
+       * If `false`, the user is required to set values for mandatory fields present in the field configuration of the destination project. Provide input by defining the `targetMandatoryFields` property
+       */
+      inferFieldDefaults: boolean;
+      /**
+       * @description If `true`, the statuses of issues being moved in this target group that are not present in the target workflow will be changed to the default status of the target workflow (see below). Leave `targetStatus` empty when using this.
+       *
+       * If `false`, you must provide a `targetStatus` for each status not present in the target workflow.
+       *
+       * The default status in a workflow is referred to as the "initial status". Each workflow has its own unique initial status. When an issue is created, it is automatically assigned to this initial status. Read more about configuring initial statuses: [Configure the initial status | Atlassian Support.](https://support.atlassian.com/jira-cloud-administration/docs/configure-the-initial-status/)
+       */
+      inferStatusDefaults: boolean;
+      /**
+       * @description When an issue is moved, its subtasks (if there are any) need to be moved with it. `inferSubtaskTypeDefault` helps with moving the subtasks by picking a random subtask type in the target project.
+       *
+       * If `true`, subtasks will automatically move to the same project as their parent.
+       *
+       * When they move:
+       *
+       *  *  Their `issueType` will be set to the default for subtasks in the target project.
+       *  *  Values for mandatory fields will be retained from the source issues
+       *  *  Specifying separate mapping for implicit subtasks won’t be allowed.
+       *
+       * If `false`, you must manually move the subtasks. They will retain the parent which they had in the current project after being moved.
+       */
+      inferSubtaskTypeDefault: boolean;
+      /** @description List of issue IDs or keys to be moved. These issues must be from the same project, have the same issue type, and be from the same parent (if they’re subtasks). */
+      issueIdsOrKeys?: string[];
+      /**
+       * @description List of objects containing mandatory fields in the target field configuration and new values that need to be set during the bulk move operation.
+       *
+       * The new values will only be applied if the field is mandatory in the target project and at least one issue from the source has that field empty, or if the field context is different in the target project (e.g. project-scoped version fields).
+       *
+       * **You should only define this property when `inferFieldDefaults` is `false`.**
+       */
+      targetMandatoryFields?: components["schemas"]["targetMandatoryFields"][] | null;
+      /**
+       * @description List of the objects containing statuses in the source workflow and their new values which need to be set during the bulk move operation.
+       *
+       * The new values will only be applied if the source status is invalid for the target project and issue type.
+       *
+       * **You should only define this property when `inferStatusDefaults` is `false`.**
+       */
+      targetStatus?: components["schemas"]["targetStatus"][] | null;
+    };
   };
   responses: never;
   parameters: never;
@@ -17392,6 +18418,7 @@ export type $defs = Record<string, never>;
 export type external = Record<string, never>;
 
 export interface operations {
+
   /**
    * Get announcement banner configuration
    * @description Returns the current announcement banner configuration.
@@ -17978,7 +19005,7 @@ export interface operations {
       /** @description Returned if the request is successful when `redirect` is set to `false`. */
       200: {
         content: {
-          "application/json": components["schemas"]["StreamingResponseBody"];
+          "application/json": unknown[];
         };
       };
       /** @description Returned if the request is successful when a `Range` header is provided and `redirect` is set to `false`. */
@@ -18074,7 +19101,7 @@ export interface operations {
       /** @description Returned if the request is successful when `redirect` is set to `false`. */
       200: {
         content: {
-          "application/json": components["schemas"]["StreamingResponseBody"];
+          "application/json": unknown[];
         };
       };
       /** @description Returned if the request is successful. See the `Location` header for the download URL. */
@@ -18383,6 +19410,309 @@ export interface operations {
     };
   };
   /**
+   * Get bulk editable fields
+   * @description Use this API to get a list of fields visible to the user to perform bulk edit operations. You can pass single or multiple issues in the query to get eligible editable fields. This API uses pagination to return responses, delivering 50 fields at a time.
+   *
+   * This method is experimental and may change.
+   *
+   * **[Permissions](#permissions) required:**
+   *
+   *  *  Global bulk change [permission](https://support.atlassian.com/jira-cloud-administration/docs/manage-global-permissions/).
+   *  *  Browse [project permission](https://support.atlassian.com/jira-cloud-administration/docs/permissions-for-company-managed-projects/) in all projects that contain the selected issues.
+   */
+  getBulkEditableFields: {
+    parameters: {
+      query: {
+        /** @description The IDs or keys of the issues to get editable fields from. */
+        issueIdsOrKeys: string;
+        /** @description (Optional)The text to search for in the editable fields. */
+        searchText?: string;
+        /** @description (Optional)The end cursor for use in pagination. */
+        endingBefore?: string;
+        /** @description (Optional)The start cursor for use in pagination. */
+        startingAfter?: string;
+      };
+    };
+    responses: {
+      /** @description Returned if the request is successful. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["BulkEditGetFields"];
+        };
+      };
+      /** @description Returned if the request is not valid. */
+      400: {
+        content: {
+          "application/json": components["schemas"]["BulkOperationErrorResponse"];
+        };
+      };
+      /** @description Returned if the authentication credentials are incorrect or missing. */
+      401: {
+        content: {
+          "application/json": components["schemas"]["BulkOperationErrorResponse"];
+        };
+      };
+      /** @description Returned if the user does not have the necessary permission. */
+      403: {
+        content: {
+          "application/json": components["schemas"]["BulkOperationErrorResponse"];
+        };
+      };
+      /** @description Returned if no editable fields are found for the provided issue IDs. */
+      404: {
+        content: {
+          "application/json": components["schemas"]["BulkOperationErrorResponse"];
+        };
+      };
+    };
+  };
+  /**
+   * Bulk edit issues
+   * @description Use this API to submit a bulk edit request and simultaneously edit multiple issues. There are limits applied to the number of issues and fields that can be edited. A single request can accommodate a maximum of 1000 issues (including subtasks) and 200 fields.
+   *
+   * **[Permissions](#permissions) required:**
+   *
+   *  *  Global bulk change [permission](https://support.atlassian.com/jira-cloud-administration/docs/manage-global-permissions/).
+   *  *  Browse [project permission](https://support.atlassian.com/jira-cloud-administration/docs/permissions-for-company-managed-projects/) in all projects that contain the selected issues.
+   */
+  submitBulkEdit: {
+    parameters: {
+      query?: {
+        /** @description A boolean value that indicates whether to send a bulk change notification when the issues are being edited. */
+        sendBulkNotification?: boolean;
+      };
+    };
+    /** @description The request body containing the issues to be edited and the new field values. */
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["IssueBulkEditPayload"];
+      };
+    };
+    responses: {
+      /** @description Returned if the request is successful. */
+      201: {
+        content: {
+          "application/json": components["schemas"]["SubmittedBulkOperation"];
+        };
+      };
+      /** @description Returned if the request is invalid. */
+      400: {
+        content: {
+          "application/json": components["schemas"]["BulkOperationErrorResponse"];
+        };
+      };
+      /** @description Returned if the authentication credentials are incorrect or missing. */
+      401: {
+        content: {
+          "application/json": components["schemas"]["BulkOperationErrorResponse"];
+        };
+      };
+    };
+  };
+  /**
+   * Bulk move issues
+   * @description Use this API to submit a bulk issue move request. You can move multiple issues, but they must all be moved to and from a single project, issue type, and parent. You can't move more than 1000 issues (including subtasks) at once.
+   *
+   * #### Scenarios: ####
+   *
+   * This is an early version of the API and it doesn't have full feature parity with the Bulk Move UI experience.
+   *
+   *  *  Moving issue of type A to issue of type B in the same project or a different project: `SUPPORTED`
+   *  *  Moving multiple issues of type A in one project to multiple issues of type B in the same project or a different project: **`SUPPORTED`**
+   *  *  Moving a standard parent issue of type A with its multiple subtask issue types in one project to standard issue of type B and multiple subtask issue types in the same project or a different project: `SUPPORTED`
+   *  *  Moving an epic issue with its child issues to a different project without losing their relation: `NOT SUPPORTED`
+   *     (Workaround: Move them individually and stitch the relationship back with the Bulk Edit API)
+   *
+   * #### Limits applied to bulk issue moves: ####
+   *
+   * When using the bulk move, keep in mind that there are limits on the number of issues and fields you can include.
+   *
+   *  *  You can move up to 1,000 issues in a single operation, including any subtasks.
+   *  *  All issues must originate from the same project and share the same issue type and parent.
+   *  *  The total combined number of fields across all issues must not exceed 1,500,000. For example, if each issue includes 15,000 fields, then the maximum number of issues that can be moved is 100.
+   *
+   * **[Permissions](#permissions) required:**
+   *
+   *  *  Global bulk change [permission](https://support.atlassian.com/jira-cloud-administration/docs/manage-global-permissions/).
+   *  *  Move [issues permission](https://support.atlassian.com/jira-cloud-administration/docs/permissions-for-company-managed-projects/) in source projects.
+   *  *  Create [issues permission](https://support.atlassian.com/jira-cloud-administration/docs/permissions-for-company-managed-projects/) in destination projects.
+   *  *  Browse [project permission](https://support.atlassian.com/jira-cloud-administration/docs/permissions-for-company-managed-projects/) in destination projects, if moving subtasks only.
+   */
+  submitBulkMove: {
+    requestBody: {
+      content: {
+        /**
+         * @example {
+         *   "targetToSourcesMapping": {
+         *     "PROJECT-KEY,10001": {
+         *       "inferFieldDefaults": false,
+         *       "inferStatusDefaults": false,
+         *       "inferSubtaskTypeDefault": true,
+         *       "issueIdsOrKeys": [
+         *         "ISSUE-1"
+         *       ],
+         *       "targetMandatoryFields": [
+         *         {
+         *           "fields": {
+         *             "customfield_10000": {
+         *               "retain": false,
+         *               "type": "raw",
+         *               "value": [
+         *                 "value-1",
+         *                 "value-2"
+         *               ]
+         *             },
+         *             "description": {
+         *               "retain": true,
+         *               "type": "adf",
+         *               "value": {
+         *                 "content": [
+         *                   {
+         *                     "content": [
+         *                       {
+         *                         "text": "New description value",
+         *                         "type": "text"
+         *                       }
+         *                     ],
+         *                     "type": "paragraph"
+         *                   }
+         *                 ],
+         *                 "type": "doc",
+         *                 "version": 1
+         *               }
+         *             },
+         *             "fixVersions": {
+         *               "retain": false,
+         *               "type": "raw",
+         *               "value": [
+         *                 "10009"
+         *               ]
+         *             },
+         *             "labels": {
+         *               "retain": false,
+         *               "type": "raw",
+         *               "value": [
+         *                 "label-1",
+         *                 "label-2"
+         *               ]
+         *             }
+         *           }
+         *         }
+         *       ],
+         *       "targetStatus": [
+         *         {
+         *           "statuses": {
+         *             "10001": [
+         *               "10002",
+         *               "10003"
+         *             ]
+         *           }
+         *         }
+         *       ]
+         *     }
+         *   }
+         * }
+         */
+        "application/json": components["schemas"]["IssueBulkMovePayload"];
+      };
+    };
+    responses: {
+      /** @description Returned if the request is successful. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["SubmittedBulkOperation"];
+        };
+      };
+      /** @description Returned if the request is invalid. */
+      400: {
+        content: {
+          "application/json": components["schemas"]["BulkOperationErrorResponse"];
+        };
+      };
+      /** @description Returned if the authentication credentials are incorrect or missing. */
+      401: {
+        content: {
+          "application/json": components["schemas"]["BulkOperationErrorResponse"];
+        };
+      };
+    };
+  };
+  /**
+   * Get bulk issue operation progress
+   * @description Use this to get the progress state for the specified bulk operation `taskId`.
+   *
+   * **[Permissions](#permissions) required:**
+   *
+   *  *  Global bulk change [permission](https://support.atlassian.com/jira-cloud-administration/docs/manage-global-permissions/).
+   *  *  Administer Jira [global permission](https://support.atlassian.com/jira-cloud-administration/docs/manage-global-permissions/), or be the creator of the task.
+   *
+   * If the task is running, this resource will return:
+   *
+   *     {"taskId":"10779","status":"RUNNING","progressPercent":65,"submittedBy":{"accountId":"5b10a2844c20165700ede21g"},"created":1690180055963,"started":1690180056206,"updated":169018005829}
+   *
+   * If the task has completed, then this resource will return:
+   *
+   *     {"processedAccessibleIssues":[10001,10002],"created":1709189449954,"progressPercent":100,"started":1709189450154,"status":"COMPLETE","submittedBy":{"accountId":"5b10a2844c20165700ede21g"},"invalidOrInaccessibleIssueCount":0,"taskId":"10000","totalIssueCount":2,"updated":1709189450354}
+   *
+   * **Note:** You can view task progress for up to 14 days from creation.
+   */
+  getBulkOperationProgress: {
+    parameters: {
+      path: {
+        /** @description The ID of the task. */
+        taskId: string;
+      };
+    };
+    responses: {
+      /** @description Returned if the request is successful. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["BulkOperationProgress"];
+        };
+      };
+      /** @description Returned if the request is invalid. */
+      400: {
+        content: {
+          "application/json": components["schemas"]["ErrorCollection"];
+        };
+      };
+      /** @description Returned if the authentication credentials are incorrect or missing. */
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorCollection"];
+        };
+      };
+    };
+  };
+  /**
+   * Get all classification levels
+   * @description Returns all classification levels.
+   *
+   * **[Permissions](#permissions) required:** None.
+   */
+  getAllUserDataClassificationLevels: {
+    parameters: {
+      query?: {
+        /** @description Optional set of statuses to filter by. */
+        status?: ("PUBLISHED" | "ARCHIVED" | "DRAFT")[];
+        /** @description Ordering of the results by a given field. If not provided, values will not be sorted. */
+        orderBy?: "rank" | "-rank" | "+rank";
+      };
+    };
+    responses: {
+      /** @description Returned if the request is successful. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["DataClassificationLevelsBean"];
+        };
+      };
+      /** @description Returned if the authentication credentials are incorrect or missing. */
+      401: {
+        content: never;
+      };
+    };
+  };
+  /**
    * Get comments by IDs
    * @description Returns a [paginated](#pagination) list of comments specified by a list of comment IDs.
    *
@@ -18547,6 +19877,7 @@ export interface operations {
         propertyKey: string;
       };
     };
+    /** @description The value of the property. The value has to be a valid, non-empty [JSON](https://tools.ietf.org/html/rfc4627) value. The maximum length of the property value is 32768 bytes. */
     requestBody: {
       content: {
         "application/json": unknown;
@@ -18621,6 +19952,51 @@ export interface operations {
         content: never;
       };
       /** @description Returned if the comment or the property is not found or the user has the necessary project permissions but isn't a member of the role or group visibility of the comment is restricted to. */
+      404: {
+        content: never;
+      };
+    };
+  };
+  /**
+   * Find components for projects
+   * @description Returns a [paginated](#pagination) list of all components in a project, including global (Compass) components when applicable.
+   *
+   * This operation can be accessed anonymously.
+   *
+   * **[Permissions](#permissions) required:** *Browse Projects* [project permission](https://confluence.atlassian.com/x/yodKLg) for the project.
+   */
+  findComponentsForProjects: {
+    parameters: {
+      query?: {
+        /** @description The project IDs and/or project keys (case sensitive). */
+        projectIdsOrKeys?: string[];
+        /** @description The index of the first item to return in a page of results (page offset). */
+        startAt?: number;
+        /** @description The maximum number of items to return per page. */
+        maxResults?: number;
+        /**
+         * @description [Order](#ordering) the results by a field:
+         *
+         *  *  `description` Sorts by the component description.
+         *  *  `name` Sorts by component name.
+         */
+        orderBy?: "description" | "-description" | "+description" | "name" | "-name" | "+name";
+        /** @description Filter the results using a literal string. Components with a matching `name` or `description` are returned (case insensitive). */
+        query?: string;
+      };
+    };
+    responses: {
+      /** @description Returned if the request is successful. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["PageBean2ComponentJsonBean"];
+        };
+      };
+      /** @description Returned if the authentication credentials are incorrect or missing. */
+      401: {
+        content: never;
+      };
+      /** @description Returned if the project is not found or the user does not have permission to view it. */
       404: {
         content: never;
       };
@@ -19127,6 +20503,12 @@ export interface operations {
    * **[Permissions](#permissions) required:** None.
    */
   createDashboard: {
+    parameters: {
+      query?: {
+        /** @description Whether admin level permissions are used. It should only be true if the user has *Administer Jira* [global permission](https://confluence.atlassian.com/x/x4dKLg) */
+        extendAdminPermissions?: boolean;
+      };
+    };
     /** @description Dashboard details. */
     requestBody: {
       content: {
@@ -19298,25 +20680,7 @@ export interface operations {
          *  *  `name` Sorts by dashboard name.
          *  *  `owner` Sorts by dashboard owner name.
          */
-        orderBy?:
-          | "description"
-          | "-description"
-          | "+description"
-          | "favorite_count"
-          | "-favorite_count"
-          | "+favorite_count"
-          | "id"
-          | "-id"
-          | "+id"
-          | "is_favorite"
-          | "-is_favorite"
-          | "+is_favorite"
-          | "name"
-          | "-name"
-          | "+name"
-          | "owner"
-          | "-owner"
-          | "+owner";
+        orderBy?: "description" | "-description" | "+description" | "favorite_count" | "-favorite_count" | "+favorite_count" | "id" | "-id" | "+id" | "is_favorite" | "-is_favorite" | "+is_favorite" | "name" | "-name" | "+name" | "owner" | "-owner" | "+owner";
         /** @description The index of the first item to return in a page of results (page offset). */
         startAt?: number;
         /** @description The maximum number of items to return per page. */
@@ -19672,7 +21036,7 @@ export interface operations {
         propertyKey: string;
       };
     };
-    /** @description The request containing the value of the dashboard item's property. */
+    /** @description The value of the property. The value has to be a valid, non-empty [JSON](https://tools.ietf.org/html/rfc4627) value. The maximum length of the property value is 32768 bytes. */
     requestBody: {
       content: {
         /**
@@ -19836,6 +21200,10 @@ export interface operations {
    */
   updateDashboard: {
     parameters: {
+      query?: {
+        /** @description Whether admin level permissions are used. It should only be true if the user has *Administer Jira* [global permission](https://confluence.atlassian.com/x/x4dKLg) */
+        extendAdminPermissions?: boolean;
+      };
       path: {
         /** @description The ID of the dashboard to update. */
         id: string;
@@ -19930,6 +21298,10 @@ export interface operations {
    */
   copyDashboard: {
     parameters: {
+      query?: {
+        /** @description Whether admin level permissions are used. It should only be true if the user has *Administer Jira* [global permission](https://confluence.atlassian.com/x/x4dKLg) */
+        extendAdminPermissions?: boolean;
+      };
       path: {
         id: string;
       };
@@ -19973,6 +21345,70 @@ export interface operations {
       };
       /** @description Returned if the dashboard is not found or the dashboard is not owned by or shared with the user. */
       404: {
+        content: {
+          "application/json": components["schemas"]["ErrorCollection"];
+        };
+      };
+    };
+  };
+  /**
+   * Get data policy for the workspace
+   * @description Returns data policy for the workspace.
+   */
+  getPolicy: {
+    responses: {
+      /** @description Returned if the request is successful */
+      200: {
+        content: {
+          "application/json": components["schemas"]["WorkspaceDataPolicy"];
+        };
+      };
+      /** @description Returned if the authentication credentials are incorrect or missing. */
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorCollection"];
+        };
+      };
+      /** @description Returned if the client is not authorized to make the request. */
+      403: {
+        content: {
+          "application/json": components["schemas"]["ErrorCollection"];
+        };
+      };
+    };
+  };
+  /**
+   * Get data policy for projects
+   * @description Returns data policies for the projects specified in the request.
+   */
+  getPolicies: {
+    parameters: {
+      query?: {
+        /** @description A list of project identifiers. This parameter accepts a comma-separated list. */
+        ids?: string;
+      };
+    };
+    responses: {
+      /** @description Returned if the request is successful. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["ProjectDataPolicies"];
+        };
+      };
+      /** @description Returned if the request is not valid or includes invalid or not-permitted project identifiers. */
+      400: {
+        content: {
+          "application/json": components["schemas"]["ErrorCollection"];
+        };
+      };
+      /** @description Returned if the authentication credentials are incorrect or missing. */
+      401: {
+        content: {
+          "application/json": components["schemas"]["ErrorCollection"];
+        };
+      };
+      /** @description Returned if the client is not authorized to make the request. */
+      403: {
         content: {
           "application/json": components["schemas"]["ErrorCollection"];
         };
@@ -20297,26 +21733,12 @@ export interface operations {
          *  *  `name` sorts by the field name
          *  *  `screensCount` sorts by the number of screens related to a field
          */
-        orderBy?:
-          | "contextsCount"
-          | "-contextsCount"
-          | "+contextsCount"
-          | "lastUsed"
-          | "-lastUsed"
-          | "+lastUsed"
-          | "name"
-          | "-name"
-          | "+name"
-          | "screensCount"
-          | "-screensCount"
-          | "+screensCount"
-          | "projectsCount"
-          | "-projectsCount"
-          | "+projectsCount";
+        orderBy?: "contextsCount" | "-contextsCount" | "+contextsCount" | "lastUsed" | "-lastUsed" | "+lastUsed" | "name" | "-name" | "+name" | "screensCount" | "-screensCount" | "+screensCount" | "projectsCount" | "-projectsCount" | "+projectsCount";
         /**
          * @description Use [expand](#expansion) to include additional information in the response. This parameter accepts a comma-separated list. Expand options include:
          *
          *  *  `key` returns the key for each field
+         *  *  `stableId` returns the stableId for each field
          *  *  `lastUsed` returns the date when the value of the field last changed
          *  *  `screensCount` returns the number of screens related to a field
          *  *  `contextsCount` returns the number of contexts related to a field
@@ -20369,19 +21791,7 @@ export interface operations {
         id?: string[];
         /** @description String used to perform a case-insensitive partial match with field names or descriptions. */
         query?: string;
-        expand?:
-          | "name"
-          | "-name"
-          | "+name"
-          | "trashDate"
-          | "-trashDate"
-          | "+trashDate"
-          | "plannedDeletionDate"
-          | "-plannedDeletionDate"
-          | "+plannedDeletionDate"
-          | "projectsCount"
-          | "-projectsCount"
-          | "+projectsCount";
+        expand?: "name" | "-name" | "+name" | "trashDate" | "-trashDate" | "+trashDate" | "plannedDeletionDate" | "-plannedDeletionDate" | "+plannedDeletionDate" | "projectsCount" | "-projectsCount" | "+projectsCount";
         /**
          * @description [Order](#ordering) the results by a field:
          *
@@ -21489,6 +22899,54 @@ export interface operations {
     };
   };
   /**
+   * Replace custom field options
+   * @description Replaces the options of a custom field.
+   *
+   * Note that this operation **only works for issue field select list options created in Jira or using operations from the [Issue custom field options](#api-group-Issue-custom-field-options) resource**, it cannot be used with issue field select list options created by Connect or Forge apps.
+   *
+   * **[Permissions](#permissions) required:** *Administer Jira* [global permission](https://confluence.atlassian.com/x/x4dKLg).
+   */
+  replaceCustomFieldOption: {
+    parameters: {
+      query?: {
+        /** @description The ID of the option that will replace the currently selected option. */
+        replaceWith?: number;
+        /** @description A JQL query that specifies the issues to be updated. For example, *project=10000*. */
+        jql?: string;
+      };
+      path: {
+        /** @description The ID of the custom field. */
+        fieldId: string;
+        /** @description The ID of the option to be deselected. */
+        optionId: number;
+        /** @description The ID of the context. */
+        contextId: number;
+      };
+    };
+    responses: {
+      /** @description Returned if the long-running task to deselect the option is started. */
+      303: {
+        content: {
+          "application/json": components["schemas"]["TaskProgressBeanRemoveOptionFromIssuesResult"];
+        };
+      };
+      /** @description Returned if the request is not valid. */
+      400: {
+        content: never;
+      };
+      /** @description Returned if the user does not have the necessary permission. */
+      403: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Returned if the field is not found or does not support options, or the options to be replaced are not found. */
+      404: {
+        content: never;
+      };
+    };
+  };
+  /**
    * Assign custom field context to projects
    * @description Assigns a custom field context to projects.
    *
@@ -22574,14 +24032,14 @@ export interface operations {
     };
   };
   /**
-   * Get all fieldg rnfiguration schemes
+   * Get all field configuration schemes
    * @description Returns a [paginated](#pagination) list of field configuration schemes.
    *
    * Only field configuration schemes used in classic projects are returned.
    *
    * **[Permissions](#permissions) required:** *Administer Jira* [global permission](https://confluence.atlassian.com/x/x4dKLg).
    */
-  getAllFieldgRnfigurationSchemes: {
+  getAllFieldConfigurationSchemes: {
     parameters: {
       query?: {
         /** @description The index of the first item to return in a page of results (page offset). */
@@ -23251,28 +24709,7 @@ export interface operations {
          *  *  `owner` Sorts by the ID of the filter owner.
          *  *  `is_shared` Sorts by whether the filter is shared.
          */
-        orderBy?:
-          | "description"
-          | "-description"
-          | "+description"
-          | "favourite_count"
-          | "-favourite_count"
-          | "+favourite_count"
-          | "id"
-          | "-id"
-          | "+id"
-          | "is_favourite"
-          | "-is_favourite"
-          | "+is_favourite"
-          | "name"
-          | "-name"
-          | "+name"
-          | "owner"
-          | "-owner"
-          | "+owner"
-          | "is_shared"
-          | "-is_shared"
-          | "+is_shared";
+        orderBy?: "description" | "-description" | "+description" | "favourite_count" | "-favourite_count" | "+favourite_count" | "id" | "-id" | "+id" | "is_favourite" | "-is_favourite" | "+is_favourite" | "name" | "-name" | "+name" | "owner" | "-owner" | "+owner" | "is_shared" | "-is_shared" | "+is_shared";
         /** @description The index of the first item to return in a page of results (page offset). */
         startAt?: number;
         /** @description The maximum number of items to return per page. */
@@ -23289,6 +24726,7 @@ export interface operations {
          *  *  `sharePermissions` Returns the share permissions defined for the filter.
          *  *  `editPermissions` Returns the edit permissions defined for the filter.
          *  *  `isWritable` Returns whether the current user has permission to edit the filter.
+         *  *  `approximateLastUsed` \[Experimental\] Returns the approximate date and time when the filter was last evaluated.
          *  *  `subscriptions` Returns the users that are subscribed to the filter.
          *  *  `viewUrl` Returns a URL to view the filter.
          */
@@ -23520,10 +24958,11 @@ export interface operations {
       };
     };
     /** @description The IDs of the fields to set as columns. In the form data, specify each field as `columns=id`, where `id` is the *id* of a field (as seen in the response for [Get fields](#api-rest-api-<ver>-field-get)). For example, `columns=summary`. */
-    requestBody?: {
+    requestBody: {
       content: {
-        "*/*": string[];
-        "multipart/form-data": string[];
+        "*/*": components["schemas"]["ColumnRequestBody"];
+        "application/json": components["schemas"]["ColumnRequestBody"];
+        "multipart/form-data": components["schemas"]["ColumnRequestBody"];
       };
     };
     responses: {
@@ -23913,7 +25352,10 @@ export interface operations {
    *
    * Returns all users in a group.
    *
-   * **[Permissions](#permissions) required:** *Administer Jira* [global permission](https://confluence.atlassian.com/x/x4dKLg).
+   * **[Permissions](#permissions) required:** either of:
+   *
+   *  *  *Browse users and groups* [global permission](https://confluence.atlassian.com/x/x4dKLg).
+   *  *  *Administer Jira* [global permission](https://confluence.atlassian.com/x/x4dKLg).
    */
   getGroup: {
     parameters: {
@@ -24095,7 +25537,10 @@ export interface operations {
    *
    * Note that users are ordered by username, however the username is not returned in the results due to privacy reasons.
    *
-   * **[Permissions](#permissions) required:** *Administer Jira* [global permission](https://confluence.atlassian.com/x/x4dKLg).
+   * **[Permissions](#permissions) required:** either of:
+   *
+   *  *  *Browse users and groups* [global permission](https://confluence.atlassian.com/x/x4dKLg).
+   *  *  *Administer Jira* [global permission](https://confluence.atlassian.com/x/x4dKLg).
    */
   getUsersFromGroup: {
     parameters: {
@@ -24336,28 +25781,7 @@ export interface operations {
         /** @description The ID of an issue type that returned users and groups must have permission to view. To include multiple issue types, provide an ampersand-separated list. For example, `issueTypeId=10000&issueTypeId=10001`. Special values, such as `-1` (all standard issue types) and `-2` (all subtask issue types), are supported. This parameter is only used when `fieldId` is present. */
         issueTypeId?: string[];
         /** @description The size of the avatar to return. If an invalid value is provided, the default value is used. */
-        avatarSize?:
-          | "xsmall"
-          | "xsmall@2x"
-          | "xsmall@3x"
-          | "small"
-          | "small@2x"
-          | "small@3x"
-          | "medium"
-          | "medium@2x"
-          | "medium@3x"
-          | "large"
-          | "large@2x"
-          | "large@3x"
-          | "xlarge"
-          | "xlarge@2x"
-          | "xlarge@3x"
-          | "xxlarge"
-          | "xxlarge@2x"
-          | "xxlarge@3x"
-          | "xxxlarge"
-          | "xxxlarge@2x"
-          | "xxxlarge@3x";
+        avatarSize?: "xsmall" | "xsmall@2x" | "xsmall@3x" | "small" | "small@2x" | "small@3x" | "medium" | "medium@2x" | "medium@3x" | "large" | "large@2x" | "large@3x" | "xlarge" | "xlarge@2x" | "xlarge@3x" | "xxlarge" | "xxlarge@2x" | "xxlarge@3x" | "xxxlarge" | "xxxlarge@2x" | "xxxlarge@3x";
         /** @description Whether the search for groups should be case insensitive. */
         caseInsensitive?: boolean;
         /** @description Whether Connect app users and groups should be excluded from the search results. If an invalid value is provided, the default value is used. */
@@ -25062,6 +26486,8 @@ export interface operations {
    * @deprecated
    * @description Returns details of projects, issue types within projects, and, when requested, the create screen fields for each issue type for the user. Use the information to populate the requests in [ Create issue](#api-rest-api-3-issue-post) and [Create issues](#api-rest-api-3-issue-bulk-post).
    *
+   * Deprecated, see [Create Issue Meta Endpoint Deprecation Notice](https://developer.atlassian.com/cloud/jira/platform/changelog/#CHANGE-1304).
+   *
    * The request can be restricted to specific projects or issue types using the query parameters. The response will contain information for the valid projects, issue types, or project and issue type combinations requested. Note that invalid project, issue type, or project and issue type combinations do not generate errors.
    *
    * This operation can be accessed anonymously.
@@ -25174,6 +26600,57 @@ export interface operations {
       };
       /** @description Returned if the authentication credentials are incorrect or missing. */
       401: {
+        content: never;
+      };
+    };
+  };
+  /**
+   * Get issue limit report
+   * @description Returns all issues breaching and approaching per-issue limits.
+   *
+   * **[Permissions](#permissions) required:**
+   *
+   *  *  *Browse projects* [project permission](https://confluence.atlassian.com/x/yodKLg) is required for the project the issues are in. Results may be incomplete otherwise
+   *  *  *Administer Jira* [global permission](https://confluence.atlassian.com/x/x4dKLg).
+   */
+  getIssueLimitReport: {
+    parameters: {
+      query?: {
+        /**
+         * @description Return issue keys instead of issue ids in the response.
+         *
+         * Usage: Add `?isReturningKeys=true` to the end of the path to request issue keys.
+         */
+        isReturningKeys?: boolean;
+      };
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["IssueLimitReportRequest"];
+      };
+    };
+    responses: {
+      /** @description Returned if the request is successful. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["IssueLimitReportResponseBean"];
+        };
+      };
+      /**
+       * @description Returned if the request is invalid. Other possible reasons:
+       *
+       *  *  the field queried is not supported
+       *  *  the threshold is not within the supported range
+       */
+      400: {
+        content: never;
+      };
+      /** @description Returned if the authentication credentials are incorrect or missing. */
+      401: {
+        content: never;
+      };
+      /** @description Returned if the user does not have permission to complete this request. */
+      403: {
         content: never;
       };
     };
@@ -25658,6 +27135,8 @@ export interface operations {
         properties?: string[];
         /** @description Whether the project in which the issue is created is added to the user's **Recently viewed** project list, as shown under **Projects** in Jira. This also populates the [JQL issues search](#api-rest-api-3-search-get) `lastViewed` field. */
         updateHistory?: boolean;
+        /** @description Whether to fail the request quickly in case of an error while loading fields for an issue. For `failFast=true`, if one field fails, the entire operation fails. For `failFast=false`, the operation will continue even if a field fails. It will return a valid response, but without values for the failed field(s). */
+        failFast?: boolean;
       };
       path: {
         /** @description The ID or key of the issue. */
@@ -25683,7 +27162,7 @@ export interface operations {
   };
   /**
    * Edit issue
-   * @description Edits an issue. A transition may be applied and issue properties updated as part of the edit.
+   * @description Edits an issue. Issue properties may be updated as part of the edit. Please note that issue transition will be ignored as it is not supported yet.
    *
    * The edits to the issue's fields are defined using `update` and `fields`. The fields that can be edited are determined using [ Get edit issue metadata](#api-rest-api-3-issue-issueIdOrKey-editmeta-get).
    *
@@ -26145,7 +27624,15 @@ export interface operations {
       404: {
         content: never;
       };
-      /** @description The attachments exceed the maximum attachment size for issues, or more than 60 files are requested to be uploaded. See [Configuring file attachments](https://confluence.atlassian.com/x/wIXKM) for details. */
+      /**
+       * @description Returned if any of the following is true:
+       *
+       *  *  the attachments exceed the maximum attachment size for issues.
+       *  *  more than 60 files are requested to be uploaded.
+       *  *  the per-issue limit for attachments has been breached.
+       *
+       * See [Configuring file attachments](https://confluence.atlassian.com/x/wIXKM) for details.
+       */
       413: {
         content: never;
       };
@@ -26354,6 +27841,15 @@ export interface operations {
       };
       /** @description Returned if the issue is not found or the user does not have permission to view it. */
       404: {
+        content: never;
+      };
+      /**
+       * @description Returned if the per-issue limit has been breached for one of the following fields:
+       *
+       *  *  comments
+       *  *  attachments
+       */
+      413: {
         content: never;
       };
     };
@@ -26771,6 +28267,7 @@ export interface operations {
         propertyKey: string;
       };
     };
+    /** @description The value of the property. The value has to be a valid, non-empty [JSON](https://tools.ietf.org/html/rfc4627) value. The maximum length of the property value is 32768 bytes. */
     requestBody: {
       content: {
         "application/json": unknown;
@@ -26889,6 +28386,10 @@ export interface operations {
       404: {
         content: never;
       };
+      /** @description Returned if the per-issue limit for remote links has been breached. */
+      413: {
+        content: never;
+      };
     };
   };
   /**
@@ -26936,7 +28437,7 @@ export interface operations {
          *       "resolved": true
          *     },
          *     "summary": "Customer support issue",
-         *     "title": "TSTSUP-111",board
+         *     "title": "TSTSUP-111",
          *     "url": "http://www.mycompany.com/support?id=1"
          *   },
          *   "relationship": "causes"
@@ -27375,6 +28876,18 @@ export interface operations {
       409: {
         content: never;
       };
+      /**
+       * @description Returned if a per-issue limit has been breached for one of the following fields:
+       *
+       *  *  comments
+       *  *  worklogs
+       *  *  attachments
+       *  *  issue links
+       *  *  remote issue links
+       */
+      413: {
+        content: never;
+      };
       /** @description Returned if a configuration problem prevents the creation of the issue. (refer to the [changelog](https://developer.atlassian.com/changelog/#CHANGE-1364) *for more details.* */
       422: {
         content: never;
@@ -27647,7 +29160,7 @@ export interface operations {
   };
   /**
    * Get issue worklogs
-   * @description Returns worklogs for an issue, starting from the oldest worklog or from the worklog started on or after a date and time.
+   * @description Returns worklogs for an issue (ordered by created time), starting from the oldest worklog or from the worklog started on or after a date and time.
    *
    * Time tracking must be enabled in Jira, otherwise this operation returns an error. For more information, see [Configuring time tracking](https://confluence.atlassian.com/x/qoXKM).
    *
@@ -27796,6 +29309,15 @@ export interface operations {
       };
       /** @description Returned if the issue is not found or the user does not have permission to view it. */
       404: {
+        content: never;
+      };
+      /**
+       * @description Returned if the per-issue limit has been breached for one of the following fields:
+       *
+       *  *  worklogs
+       *  *  attachments
+       */
+      413: {
         content: never;
       };
     };
@@ -28157,6 +29679,7 @@ export interface operations {
         propertyKey: string;
       };
     };
+    /** @description The value of the property. The value has to be a valid, non-empty [JSON](https://tools.ietf.org/html/rfc4627) value. The maximum length of the property value is 32768 bytes. */
     requestBody: {
       content: {
         "application/json": unknown;
@@ -28333,6 +29856,10 @@ export interface operations {
        *  *  the issue link type is not found.
        */
       404: {
+        content: never;
+      };
+      /** @description Returned if the per-issue limit for issue links has been breached. */
+      413: {
         content: never;
       };
     };
@@ -29229,7 +30756,7 @@ export interface operations {
     };
   };
   /**
-   * Get issue security level members
+   * Get issue security level members by issue security scheme
    * @description Returns issue security level members.
    *
    * Only issue security level members in context of classic projects are returned.
@@ -30125,6 +31652,7 @@ export interface operations {
         propertyKey: string;
       };
     };
+    /** @description The value of the property. The value has to be a valid, non-empty [JSON](https://tools.ietf.org/html/rfc4627) value. The maximum length of the property value is 32768 bytes. */
     requestBody: {
       content: {
         /**
@@ -31593,7 +33121,7 @@ export interface operations {
    */
   parseJqlQueries: {
     parameters: {
-      query?: {
+      query: {
         /**
          * @description How to validate the JQL query and treat the validation results. Validation options include:
          *
@@ -31601,7 +33129,7 @@ export interface operations {
          *  *  `warn` Returns all errors. If validation fails but the JQL query is correctly formed, the query structure is returned.
          *  *  `none` No validation is performed. If JQL query is correctly formed, the query structure is returned.
          */
-        validation?: "strict" | "warn" | "none";
+        validation: "strict" | "warn" | "none";
       };
     };
     requestBody: {
@@ -31847,12 +33375,9 @@ export interface operations {
    *
    * This means that users may be shown as having an issue permission (such as EDIT\_ISSUES) in the global context or a project context but may not have the permission for any or all issues. For example, if Reporters have the EDIT\_ISSUES permission a user would be shown as having this permission in the global context or the context of a project, because any user can be a reporter. However, if they are not the user who reported the issue queried they would not have EDIT\_ISSUES permission for that issue.
    *
+   * For [Jira Service Management project permissions](https://support.atlassian.com/jira-cloud-administration/docs/customize-jira-service-management-permissions/), this will be evaluated similarly to a user in the customer portal. For example, if the BROWSE\_PROJECTS permission is granted to Service Project Customer - Portal Access, any users with access to the customer portal will have the BROWSE\_PROJECTS permission.
+   *
    * Global permissions are unaffected by context.
-   *
-   * **Deprecation notice:** The required OAuth 2.0 scopes will be updated on February 15, 2024.
-   *
-   *  *  **Classic**: `read:jira-work`
-   *  *  **Granular**: `read:permission:jira`
    *
    * This operation can be accessed anonymously.
    *
@@ -31915,7 +33440,6 @@ export interface operations {
    *
    * These system preferences keys will be deprecated by 15/07/2024. You can still retrieve these keys, but it will not have any impact on Notification behaviour.
    *
-   *  *  *user.notifiy.own.changes* Whether the user gets notified of their own changes.
    *  *  *user.notifications.watcher* Whether the user gets notified when they are watcher.
    *  *  *user.notifications.assignee* Whether the user gets notified when they are assignee.
    *  *  *user.notifications.reporter* Whether the user gets notified when they are reporter.
@@ -31957,6 +33481,7 @@ export interface operations {
    *  *  *user.default.share.private* Whether new [ filters](https://confluence.atlassian.com/x/eQiiLQ) are set to private. Defaults to `true`.
    *  *  *user.keyboard.shortcuts.disabled* Whether keyboard shortcuts are disabled. Defaults to `false`.
    *  *  *user.autowatch.disabled* Whether the user automatically watches issues they create or add a comment to. By default, not set: the user takes the instance autowatch setting.
+   *  *  *user.notifiy.own.changes* Whether the user gets notified of their own changes.
    *
    * Note that these keys are deprecated:
    *
@@ -31965,7 +33490,6 @@ export interface operations {
    *
    * These system preferences keys will be deprecated by 15/07/2024. You can still use these keys to create arbitrary preferences, but it will not have any impact on Notification behaviour.
    *
-   *  *  *user.notifiy.own.changes* Whether the user gets notified of their own changes.
    *  *  *user.notifications.watcher* Whether the user gets notified when they are watcher.
    *  *  *user.notifications.assignee* Whether the user gets notified when they are assignee.
    *  *  *user.notifications.reporter* Whether the user gets notified when they are reporter.
@@ -32584,7 +34108,9 @@ export interface operations {
    *  *  project permissions.
    *  *  global permissions added by plugins.
    *
-   * **[Permissions](#permissions) required:** *Administer Jira* [global permission](https://confluence.atlassian.com/x/x4dKLg).
+   * This operation can be accessed anonymously.
+   *
+   * **[Permissions](#permissions) required:** None.
    */
   getAllPermissions: {
     responses: {
@@ -32693,11 +34219,6 @@ export interface operations {
   /**
    * Get permitted projects
    * @description Returns all the projects where the user is granted a list of project permissions.
-   *
-   * **Deprecation notice:** The required OAuth 2.0 scopes will be updated on February 15, 2024.
-   *
-   *  *  **Classic**: `read:jira-work`
-   *  *  **Granular**: `read:permission:jira`, `read:project:jira`
    *
    * This operation can be accessed anonymously.
    *
@@ -33425,6 +34946,7 @@ export interface operations {
   };
   /**
    * Search priorities
+   * @deprecated
    * @description Returns a [paginated](#pagination) list of priorities. The list can contain all priorities or a subset determined by any combination of these criteria:
    *
    *  *  a list of priority IDs. Any invalid priority IDs are ignored.
@@ -33448,6 +34970,8 @@ export interface operations {
         priorityName?: string;
         /** @description Whether only the default priority is returned. */
         onlyDefault?: boolean;
+        /** @description Use `schemes` to return the associated priority schemes for each priority. Limited to returning first 15 priority schemes per priority. */
+        expand?: string;
       };
     };
     responses: {
@@ -33556,10 +35080,7 @@ export interface operations {
   };
   /**
    * Delete priority
-   * @deprecated
-   * @description *Deprecated: please refer to the* [changelog](https://developer.atlassian.com/changelog/#CHANGE-1066) *for more details.*
-   *
-   * Deletes an issue priority.
+   * @description Deletes an issue priority.
    *
    * This operation is [asynchronous](#async). Follow the `location` link in the response to determine the status of the task and use [Get task](#api-rest-api-3-task-taskId-get) to obtain subsequent updates.
    *
@@ -33567,10 +35088,6 @@ export interface operations {
    */
   deletePriority: {
     parameters: {
-      query: {
-        /** @description The ID of the issue priority that will replace the currently selected resolution. */
-        replaceWith: string;
-      };
       path: {
         /** @description The ID of the issue priority. */
         id: string;
@@ -33612,6 +35129,415 @@ export interface operations {
         content: {
           "application/json": components["schemas"]["ErrorCollection"];
         };
+      };
+    };
+  };
+  /**
+   * Get priority schemes
+   * @description Returns a [paginated](#pagination) list of priority schemes.
+   *
+   * **[Permissions](#permissions) required:** Permission to access Jira.
+   */
+  getPrioritySchemes: {
+    parameters: {
+      query?: {
+        /** @description The index of the first item to return in a page of results (page offset). */
+        startAt?: string;
+        /** @description The maximum number of items to return per page. */
+        maxResults?: string;
+        /** @description A set of priority IDs to filter by. To include multiple IDs, provide an ampersand-separated list. For example, `priorityId=10000&priorityId=10001`. */
+        priorityId?: number[];
+        /** @description A set of priority scheme IDs. To include multiple IDs, provide an ampersand-separated list. For example, `schemeId=10000&schemeId=10001`. */
+        schemeId?: number[];
+        /** @description The name of scheme to search for. */
+        schemeName?: string;
+        /** @description Whether only the default priority is returned. */
+        onlyDefault?: boolean;
+        /** @description The ordering to return the priority schemes by. */
+        orderBy?: "name" | "+name" | "-name";
+        /** @description A comma separated list of additional information to return. "priorities" will return priorities associated with the priority scheme. "projects" will return projects associated with the priority scheme. `expand=priorities,projects`. */
+        expand?: string;
+      };
+    };
+    responses: {
+      /** @description Returned if the request is successful. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["PageBeanPrioritySchemeWithPaginatedPrioritiesAndProjects"];
+        };
+      };
+      /** @description Returned if the request isn't valid. */
+      400: {
+        content: never;
+      };
+      /** @description Returned if the authentication credentials are incorrect. */
+      401: {
+        content: never;
+      };
+    };
+  };
+  /**
+   * Create priority scheme
+   * @description Creates a new priority scheme.
+   *
+   * **[Permissions](#permissions) required:** *Administer Jira* [global permission](https://confluence.atlassian.com/x/x4dKLg).
+   */
+  createPriorityScheme: {
+    requestBody: {
+      content: {
+        /**
+         * @example {
+         *   "defaultPriorityId": 10001,
+         *   "description": "My priority scheme description",
+         *   "mappings": {
+         *     "in": {
+         *       "10002": 10000,
+         *       "10005": 10001,
+         *       "10006": 10001,
+         *       "10008": 10003
+         *     },
+         *     "out": {}
+         *   },
+         *   "name": "My new priority scheme",
+         *   "priorityIds": [
+         *     10000,
+         *     10001,
+         *     10003
+         *   ],
+         *   "projectIds": [
+         *     10005,
+         *     10006,
+         *     10007
+         *   ]
+         * }
+         */
+        "application/json": components["schemas"]["CreatePrioritySchemeDetails"];
+      };
+    };
+    responses: {
+      /** @description Returned if the request is completed. */
+      201: {
+        content: {
+          "application/json": components["schemas"]["PrioritySchemeId"];
+        };
+      };
+      /** @description Returned if the request is accepted. */
+      202: {
+        content: {
+          "application/json": components["schemas"]["PrioritySchemeId"];
+        };
+      };
+      /** @description Returned if the request isn't valid. */
+      400: {
+        content: never;
+      };
+      /** @description Returned if the authentication credentials are incorrect. */
+      401: {
+        content: never;
+      };
+      /** @description Returned if the user doesn't have the necessary permissions. */
+      403: {
+        content: never;
+      };
+      /** @description Returned if an action with this priority scheme is still in progress. */
+      409: {
+        content: never;
+      };
+    };
+  };
+  /**
+   * Suggested priorities for mappings
+   * @description Returns a [paginated](#pagination) list of priorities that would require mapping, given a change in priorities or projects associated with a priority scheme.
+   *
+   * **[Permissions](#permissions) required:** Permission to access Jira.
+   */
+  suggestedPrioritiesForMappings: {
+    requestBody: {
+      content: {
+        /**
+         * @example {
+         *   "maxResults": 50,
+         *   "priorities": {
+         *     "add": [
+         *       10001,
+         *       10002
+         *     ],
+         *     "remove": [
+         *       10003
+         *     ]
+         *   },
+         *   "projects": {
+         *     "add": [
+         *       10021
+         *     ]
+         *   },
+         *   "schemeId": 10005,
+         *   "startAt": 0
+         * }
+         */
+        "application/json": components["schemas"]["SuggestedMappingsRequestBean"];
+      };
+    };
+    responses: {
+      /** @description Returned if the request is successful. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["PageBeanPriorityWithSequence"];
+        };
+      };
+      /** @description Returned if the request isn't valid. */
+      400: {
+        content: never;
+      };
+      /** @description Returned if the authentication credentials are incorrect. */
+      401: {
+        content: never;
+      };
+    };
+  };
+  /**
+   * Get available priorities by priority scheme
+   * @description Returns a [paginated](#pagination) list of priorities available for adding to a priority scheme.
+   *
+   * **[Permissions](#permissions) required:** Permission to access Jira.
+   */
+  getAvailablePrioritiesByPriorityScheme: {
+    parameters: {
+      query: {
+        /** @description The index of the first item to return in a page of results (page offset). */
+        startAt?: string;
+        /** @description The maximum number of items to return per page. */
+        maxResults?: string;
+        /** @description The string to query priorities on by name. */
+        query?: string;
+        /** @description The priority scheme ID. */
+        schemeId: string;
+        /** @description A list of priority IDs to exclude from the results. */
+        exclude?: string[];
+      };
+    };
+    responses: {
+      /** @description Returned if the request is successful. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["PageBeanPriorityWithSequence"];
+        };
+      };
+      /** @description Returned if the request isn't valid. */
+      400: {
+        content: never;
+      };
+      /** @description Returned if the authentication credentials are incorrect. */
+      401: {
+        content: never;
+      };
+    };
+  };
+  /**
+   * Update priority scheme
+   * @description Updates a priority scheme. This includes its details, the lists of priorities and projects in it
+   *
+   * **[Permissions](#permissions) required:** *Administer Jira* [global permission](https://confluence.atlassian.com/x/x4dKLg).
+   */
+  updatePriorityScheme: {
+    parameters: {
+      path: {
+        /** @description The ID of the priority scheme. */
+        schemeId: number;
+      };
+    };
+    requestBody: {
+      content: {
+        /**
+         * @example {
+         *   "defaultPriorityId": 10001,
+         *   "description": "My priority scheme description",
+         *   "mappings": {
+         *     "in": {
+         *       "10005": 10002
+         *     },
+         *     "out": {
+         *       "10004": 10001
+         *     }
+         *   },
+         *   "name": "My new priority scheme",
+         *   "priorities": {
+         *     "add": {
+         *       "ids": [
+         *         10001,
+         *         10002
+         *       ]
+         *     },
+         *     "remove": {
+         *       "ids": [
+         *         10003,
+         *         10004
+         *       ],
+         *       "mappings": [
+         *         {
+         *           "in": {
+         *             "10001": 10011
+         *           },
+         *           "out": {
+         *             "10012": 10002
+         *           }
+         *         }
+         *       ]
+         *     }
+         *   },
+         *   "projects": {
+         *     "add": {
+         *       "ids": [
+         *         10101,
+         *         10102
+         *       ]
+         *     },
+         *     "remove": {
+         *       "ids": [
+         *         10103,
+         *         10104
+         *       ]
+         *     }
+         *   }
+         * }
+         */
+        "application/json": components["schemas"]["UpdatePrioritySchemeRequestBean"];
+      };
+    };
+    responses: {
+      /** @description Returned if the request is accepted. */
+      202: {
+        content: {
+          "application/json": components["schemas"]["UpdatePrioritySchemeResponseBean"];
+        };
+      };
+      /** @description Returned if the request isn't valid. */
+      400: {
+        content: never;
+      };
+      /** @description Returned if the authentication credentials are incorrect or missing. */
+      401: {
+        content: never;
+      };
+      /** @description Returned if the user doesn't have the necessary permissions. */
+      403: {
+        content: never;
+      };
+      /** @description Returned if an action with this priority scheme is still in progress. */
+      409: {
+        content: never;
+      };
+    };
+  };
+  /**
+   * Delete priority scheme
+   * @description Deletes a priority scheme.
+   *
+   * This operation is only available for priority schemes without any associated projects. Any associated projects must be removed from the priority scheme before this operation can be performed.
+   *
+   * **[Permissions](#permissions) required:** *Administer Jira* [global permission](https://confluence.atlassian.com/x/x4dKLg).
+   */
+  deletePriorityScheme: {
+    parameters: {
+      path: {
+        /** @description The priority scheme ID. */
+        schemeId: number;
+      };
+    };
+    responses: {
+      /** @description Returned if the request is successful. */
+      204: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Returned if the request isn't valid. */
+      400: {
+        content: never;
+      };
+      /** @description Returned if the authentication credentials are incorrect or missing. */
+      401: {
+        content: never;
+      };
+      /** @description Returned if the user doesn't have the necessary permissions. */
+      403: {
+        content: never;
+      };
+    };
+  };
+  /**
+   * Get priorities by priority scheme
+   * @description Returns a [paginated](#pagination) list of priorities by scheme.
+   *
+   * **[Permissions](#permissions) required:** Permission to access Jira.
+   */
+  getPrioritiesByPriorityScheme: {
+    parameters: {
+      query?: {
+        /** @description The index of the first item to return in a page of results (page offset). */
+        startAt?: string;
+        /** @description The maximum number of items to return per page. */
+        maxResults?: string;
+      };
+      path: {
+        /** @description The priority scheme ID. */
+        schemeId: string;
+      };
+    };
+    responses: {
+      /** @description Returned if the request is successful. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["PageBeanPriorityWithSequence"];
+        };
+      };
+      /** @description Returned if the request isn't valid. */
+      400: {
+        content: never;
+      };
+      /** @description Returned if the authentication credentials are incorrect. */
+      401: {
+        content: never;
+      };
+    };
+  };
+  /**
+   * Get projects by priority scheme
+   * @description Returns a [paginated](#pagination) list of projects by scheme.
+   *
+   * **[Permissions](#permissions) required:** Permission to access Jira.
+   */
+  getProjectsByPriorityScheme: {
+    parameters: {
+      query?: {
+        /** @description The index of the first item to return in a page of results (page offset). */
+        startAt?: string;
+        /** @description The maximum number of items to return per page. */
+        maxResults?: string;
+        /** @description The project IDs to filter by. For example, `projectId=10000&projectId=10001`. */
+        projectId?: number[];
+        /** @description The string to query projects on by name. */
+        query?: string;
+      };
+      path: {
+        /** @description The priority scheme ID. */
+        schemeId: string;
+      };
+    };
+    responses: {
+      /** @description Returned if the request is successful. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["PageBeanProject"];
+        };
+      };
+      /** @description Returned if the request isn't valid. */
+      400: {
+        content: never;
+      };
+      /** @description Returned if the authentication credentials are incorrect. */
+      401: {
+        content: never;
       };
     };
   };
@@ -33799,31 +35725,7 @@ export interface operations {
          *  *  `archivedDate` EXPERIMENTAL. Sorts by project archived date.
          *  *  `deletedDate` EXPERIMENTAL. Sorts by project deleted date.
          */
-        orderBy?:
-          | "category"
-          | "-category"
-          | "+category"
-          | "key"
-          | "-key"
-          | "+key"
-          | "name"
-          | "-name"
-          | "+name"
-          | "owner"
-          | "-owner"
-          | "+owner"
-          | "issueCount"
-          | "-issueCount"
-          | "+issueCount"
-          | "lastIssueUpdatedDate"
-          | "-lastIssueUpdatedDate"
-          | "+lastIssueUpdatedDate"
-          | "archivedDate"
-          | "+archivedDate"
-          | "-archivedDate"
-          | "deletedDate"
-          | "+deletedDate"
-          | "-deletedDate";
+        orderBy?: "category" | "-category" | "+category" | "key" | "-key" | "+key" | "name" | "-name" | "+name" | "owner" | "-owner" | "+owner" | "issueCount" | "-issueCount" | "+issueCount" | "lastIssueUpdatedDate" | "-lastIssueUpdatedDate" | "+lastIssueUpdatedDate" | "archivedDate" | "+archivedDate" | "-archivedDate" | "deletedDate" | "+deletedDate" | "-deletedDate";
         /** @description The project IDs to filter the results by. To include multiple IDs, provide an ampersand-separated list. For example, `id=10000&id=10001`. Up to 50 project IDs can be provided. */
         id?: number[];
         /** @description The project keys to filter the results by. To include multiple keys, provide an ampersand-separated list. For example, `keys=PA&keys=PB`. Up to 50 project keys can be provided. */
@@ -34383,6 +36285,124 @@ export interface operations {
     };
   };
   /**
+   * Get the default data classification level of a project
+   * @description Returns the default data classification for a project.
+   *
+   * **[Permissions](#permissions) required:**
+   *
+   *  *  *Browse Projects* [project permission](https://confluence.atlassian.com/x/yodKLg) for the project.
+   *  *  *Administer projects* [project permission](https://confluence.atlassian.com/x/yodKLg) for the project.
+   *  *  *Administer jira* [global permission](https://confluence.atlassian.com/x/x4dKLg).
+   */
+  getDefaultProjectClassification: {
+    parameters: {
+      path: {
+        /** @description The project ID or project key (case-sensitive). */
+        projectIdOrKey: string;
+      };
+    };
+    responses: {
+      /** @description Returned if the request is successful. */
+      200: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Returned if the user does not have the necessary permission. */
+      401: {
+        content: never;
+      };
+      /** @description Returned if the project is not found. */
+      404: {
+        content: never;
+      };
+    };
+  };
+  /**
+   * Update the default data classification level of a project
+   * @description Updates the default data classification level for a project.
+   *
+   * **[Permissions](#permissions) required:**
+   *
+   *  *  *Administer projects* [project permission](https://confluence.atlassian.com/x/yodKLg) for the project.
+   *  *  *Administer jira* [global permission](https://confluence.atlassian.com/x/x4dKLg).
+   */
+  updateDefaultProjectClassification: {
+    parameters: {
+      path: {
+        /** @description The project ID or project key (case-sensitive). */
+        projectIdOrKey: string;
+      };
+    };
+    requestBody: {
+      content: {
+        /**
+         * @example {
+         *   "id": "ari:cloud:platform::classification-tag/dec24c48-5073-4c25-8fef-9d81a992c30c"
+         * }
+         */
+        "application/json": components["schemas"]["UpdateDefaultProjectClassificationBean"];
+      };
+    };
+    responses: {
+      /** @description Returned if the request is successful. */
+      204: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Returned if the request is invalid. */
+      400: {
+        content: never;
+      };
+      /** @description Returned if the user does not have the necessary permission. */
+      401: {
+        content: never;
+      };
+      /** @description Returned if the project is not found. */
+      404: {
+        content: never;
+      };
+    };
+  };
+  /**
+   * Remove the default data classification level from a project
+   * @description Remove the default data classification level for a project.
+   *
+   * **[Permissions](#permissions) required:**
+   *
+   *  *  *Administer projects* [project permission](https://confluence.atlassian.com/x/yodKLg) for the project.
+   *  *  *Administer jira* [global permission](https://confluence.atlassian.com/x/x4dKLg).
+   */
+  removeDefaultProjectClassification: {
+    parameters: {
+      path: {
+        /** @description The project ID or project key (case-sensitive). */
+        projectIdOrKey: string;
+      };
+    };
+    responses: {
+      /** @description Returned if the request is successful. */
+      204: {
+        content: {
+          "application/json": unknown;
+        };
+      };
+      /** @description Returned if the request is invalid. */
+      400: {
+        content: never;
+      };
+      /** @description Returned if the user does not have the necessary permission. */
+      401: {
+        content: never;
+      };
+      /** @description Returned if the project is not found. */
+      404: {
+        content: never;
+      };
+    };
+  };
+  /**
    * Get project components paginated
    * @description Returns a [paginated](#pagination) list of all components in a project. See the [Get project components](#api-rest-api-3-project-projectIdOrKey-components-get) resource if you want to get a full list of versions without pagination.
    *
@@ -34407,19 +36427,7 @@ export interface operations {
          *  *  `lead` Sorts by the user key of the component's project lead.
          *  *  `name` Sorts by component name.
          */
-        orderBy?:
-          | "description"
-          | "-description"
-          | "+description"
-          | "issueCount"
-          | "-issueCount"
-          | "+issueCount"
-          | "lead"
-          | "-lead"
-          | "+lead"
-          | "name"
-          | "-name"
-          | "+name";
+        orderBy?: "description" | "-description" | "+description" | "issueCount" | "-issueCount" | "+issueCount" | "lead" | "-lead" | "+lead" | "name" | "-name" | "+name";
         /** @description The source of the components to return. Can be `jira` (default), `compass` or `auto`. When `auto` is specified, the API will return connected Compass components if the project is opted into Compass, otherwise it will return Jira components. Defaults to `jira`. */
         componentSource?: "jira" | "compass" | "auto";
         /** @description Filter the results using a literal string. Components with a matching `name` or `description` are returned (case insensitive). */
@@ -34710,6 +36718,7 @@ export interface operations {
         propertyKey: string;
       };
     };
+    /** @description The value of the property. The value has to be a valid, non-empty [JSON](https://tools.ietf.org/html/rfc4627) value. The maximum length of the property value is 32768 bytes. */
     requestBody: {
       content: {
         /**
@@ -35179,22 +37188,7 @@ export interface operations {
          *  *  `sequence` Sorts by the order of appearance in the user interface.
          *  *  `startDate` Sorts by start date, starting with the oldest date. Versions with no start date are listed last.
          */
-        orderBy?:
-          | "description"
-          | "-description"
-          | "+description"
-          | "name"
-          | "-name"
-          | "+name"
-          | "releaseDate"
-          | "-releaseDate"
-          | "+releaseDate"
-          | "sequence"
-          | "-sequence"
-          | "+sequence"
-          | "startDate"
-          | "-startDate"
-          | "+startDate";
+        orderBy?: "description" | "-description" | "+description" | "name" | "-name" | "+name" | "releaseDate" | "-releaseDate" | "+releaseDate" | "sequence" | "-sequence" | "+sequence" | "startDate" | "-startDate" | "+startDate";
         /** @description Filter the results using a literal string. Versions with matching `name` or `description` are returned (case insensitive). */
         query?: string;
         /** @description A list of status values used to filter the results by version status. This parameter accepts a comma-separated list. The status values are `released`, `unreleased`, and `archived`. */
@@ -35346,7 +37340,6 @@ export interface operations {
   };
   /**
    * Get project issue type hierarchy
-   * @deprecated
    * @description Get the issue type hierarchy for a next-gen project.
    *
    * The issue type hierarchy for a project consists of:
@@ -37602,6 +39595,8 @@ export interface operations {
         properties?: string[];
         /** @description Reference fields by their key (rather than ID). */
         fieldsByKeys?: boolean;
+        /** @description Whether to fail the request quickly in case of an error while loading fields for an issue. For `failFast=true`, if one field fails, the entire operation fails. For `failFast=false`, the operation will continue even if a field fails. It will return a valid response, but without values for the failed field(s). */
+        failFast?: boolean;
       };
     };
     responses: {
@@ -37671,6 +39666,50 @@ export interface operations {
         content: never;
       };
       /** @description Returned if the authentication credentials are incorrect or missing. */
+      401: {
+        content: never;
+      };
+    };
+  };
+  /**
+   * Search issue IDs using JQL
+   * @description Searches for IDs of issues using [JQL](https://confluence.atlassian.com/x/egORLQ).
+   *
+   * Use the [Search](#api-rest-api-3-search-post) endpoint if you need to fetch more than just issue IDs. The Search endpoint returns more information, but may take much longer to respond to requests. This is because it uses a different mechanism for ordering results than this endpoint and doesn't provide the total number of results for your query.
+   *
+   * This operation can be accessed anonymously.
+   *
+   * **[Permissions](#permissions) required:** Issues are included in the response where the user has:
+   *
+   *  *  *Browse projects* [project permission](https://confluence.atlassian.com/x/yodKLg) for the project containing the issue.
+   *  *  If [issue-level security](https://confluence.atlassian.com/x/J4lKLg) is configured, issue-level security permission to view the issue.
+   */
+  searchForIssuesIds: {
+    /** @description A JSON object containing the search request. */
+    requestBody: {
+      content: {
+        /**
+         * @example {
+         *   "jql": "project = HSP",
+         *   "maxResults": 1000,
+         *   "nextPageToken": "EgQIlMIC"
+         * }
+         */
+        "application/json": components["schemas"]["IdSearchRequestBean"];
+      };
+    };
+    responses: {
+      /** @description Returned if the request is successful. */
+      200: {
+        content: {
+          "application/json": components["schemas"]["IdSearchResults"];
+        };
+      };
+      /** @description Returned if the JQL query is invalid. */
+      400: {
+        content: never;
+      };
+      /** @description Returned if the authentication credentials are incorrect. */
       401: {
         content: never;
       };
@@ -39689,7 +41728,7 @@ export interface operations {
         propertyKey: string;
       };
     };
-    /** @description The request containing the value of the property. The value has to a valid, non-empty JSON array. The maximum length is 32768 characters. */
+    /** @description The value of the property. The value has to be a valid, non-empty [JSON](https://tools.ietf.org/html/rfc4627) value. The maximum length of the property value is 32768 bytes. */
     requestBody: {
       content: {
         "application/json": unknown;
@@ -40513,6 +42552,14 @@ export interface operations {
     };
     requestBody: {
       content: {
+        /**
+         * @example {
+         *   "category": "Design",
+         *   "relatedWorkId": "fabcdef6-7878-1234-beaf-43211234abcd",
+         *   "title": "Design link",
+         *   "url": "https://www.atlassian.com"
+         * }
+         */
         "application/json": components["schemas"]["VersionRelatedWork"];
       };
     };
@@ -40557,6 +42604,13 @@ export interface operations {
     };
     requestBody: {
       content: {
+        /**
+         * @example {
+         *   "category": "Design",
+         *   "title": "Design link",
+         *   "url": "https://www.atlassian.com"
+         * }
+         */
         "application/json": components["schemas"]["VersionRelatedWork"];
       };
     };
@@ -41879,629 +43933,6 @@ export interface operations {
         expand?: string;
       };
     };
-    requestBody: {
-      content: {
-        "application/json": {
-          asyncContext?: {
-            request?: {
-              asyncStarted?: boolean;
-              asyncSupported?: boolean;
-              attributeNames?: Record<string, never>;
-              characterEncoding?: string;
-              /** Format: int32 */
-              contentLength?: number;
-              /** Format: int64 */
-              contentLengthLong?: number;
-              contentType?: string;
-              /** @enum {string} */
-              dispatcherType?: "FORWARD" | "INCLUDE" | "REQUEST" | "ASYNC" | "ERROR";
-              inputStream?: {
-                finished?: boolean;
-                readListener?: Record<string, never>;
-                ready?: boolean;
-              };
-              localAddr?: string;
-              localName?: string;
-              /** Format: int32 */
-              localPort?: number;
-              locale?: {
-                country?: string;
-                displayCountry?: string;
-                displayLanguage?: string;
-                displayName?: string;
-                displayScript?: string;
-                displayVariant?: string;
-                extensionKeys?: string[];
-                iso3Country?: string;
-                iso3Language?: string;
-                language?: string;
-                script?: string;
-                unicodeLocaleAttributes?: string[];
-                unicodeLocaleKeys?: string[];
-                variant?: string;
-              };
-              locales?: Record<string, never>;
-              parameterMap?: {
-                [key: string]: string[];
-              };
-              parameterNames?: Record<string, never>;
-              protocol?: string;
-              reader?: Record<string, never>;
-              remoteAddr?: string;
-              remoteHost?: string;
-              /** Format: int32 */
-              remotePort?: number;
-              scheme?: string;
-              secure?: boolean;
-              serverName?: string;
-              /** Format: int32 */
-              serverPort?: number;
-              servletContext?: {
-                attributeNames?: Record<string, never>;
-                classLoader?: {
-                  defaultAssertionStatus?: boolean;
-                  definedPackages?: {
-                    annotations?: Record<string, never>[];
-                    declaredAnnotations?: Record<string, never>[];
-                    implementationTitle?: string;
-                    implementationVendor?: string;
-                    implementationVersion?: string;
-                    name?: string;
-                    sealed?: boolean;
-                    specificationTitle?: string;
-                    specificationVendor?: string;
-                    specificationVersion?: string;
-                  }[];
-                  name?: string;
-                  parent?: {
-                    defaultAssertionStatus?: boolean;
-                    definedPackages?: {
-                      annotations?: Record<string, never>[];
-                      declaredAnnotations?: Record<string, never>[];
-                      implementationTitle?: string;
-                      implementationVendor?: string;
-                      implementationVersion?: string;
-                      name?: string;
-                      sealed?: boolean;
-                      specificationTitle?: string;
-                      specificationVendor?: string;
-                      specificationVersion?: string;
-                    }[];
-                    name?: string;
-                    registeredAsParallelCapable?: boolean;
-                    unnamedModule?: {
-                      annotations?: Record<string, never>[];
-                      declaredAnnotations?: Record<string, never>[];
-                      descriptor?: {
-                        automatic?: boolean;
-                        open?: boolean;
-                      };
-                      layer?: Record<string, never>;
-                      name?: string;
-                      named?: boolean;
-                      packages?: string[];
-                    };
-                  };
-                  registeredAsParallelCapable?: boolean;
-                  unnamedModule?: {
-                    annotations?: Record<string, never>[];
-                    declaredAnnotations?: Record<string, never>[];
-                    descriptor?: {
-                      automatic?: boolean;
-                      open?: boolean;
-                    };
-                    layer?: Record<string, never>;
-                    name?: string;
-                    named?: boolean;
-                    packages?: string[];
-                  };
-                };
-                contextPath?: string;
-                defaultSessionTrackingModes?: ("COOKIE" | "URL" | "SSL")[];
-                /** Format: int32 */
-                effectiveMajorVersion?: number;
-                /** Format: int32 */
-                effectiveMinorVersion?: number;
-                effectiveSessionTrackingModes?: ("COOKIE" | "URL" | "SSL")[];
-                filterRegistrations?: {
-                  [key: string]: {
-                    className?: string;
-                    initParameters?: {
-                      [key: string]: string;
-                    };
-                    name?: string;
-                    servletNameMappings?: string[];
-                    urlPatternMappings?: string[];
-                  };
-                };
-                initParameterNames?: Record<string, never>;
-                jspConfigDescriptor?: {
-                  jspPropertyGroups?: {
-                    buffer?: string;
-                    defaultContentType?: string;
-                    deferredSyntaxAllowedAsLiteral?: string;
-                    elIgnored?: string;
-                    errorOnUndeclaredNamespace?: string;
-                    includeCodas?: string[];
-                    includePreludes?: string[];
-                    isXml?: string;
-                    pageEncoding?: string;
-                    scriptingInvalid?: string;
-                    trimDirectiveWhitespaces?: string;
-                    urlPatterns?: string[];
-                  }[];
-                  taglibs?: {
-                    taglibLocation?: string;
-                    taglibURI?: string;
-                  }[];
-                };
-                /** Format: int32 */
-                majorVersion?: number;
-                /** Format: int32 */
-                minorVersion?: number;
-                requestCharacterEncoding?: string;
-                responseCharacterEncoding?: string;
-                serverInfo?: string;
-                servletContextName?: string;
-                servletNames?: Record<string, never>;
-                servletRegistrations?: {
-                  [key: string]: {
-                    className?: string;
-                    initParameters?: {
-                      [key: string]: string;
-                    };
-                    mappings?: string[];
-                    name?: string;
-                    runAsRole?: string;
-                  };
-                };
-                servlets?: Record<string, never>;
-                sessionCookieConfig?: {
-                  comment?: string;
-                  domain?: string;
-                  httpOnly?: boolean;
-                  /** Format: int32 */
-                  maxAge?: number;
-                  name?: string;
-                  path?: string;
-                  secure?: boolean;
-                };
-                /** Format: int32 */
-                sessionTimeout?: number;
-                sessionTrackingModes?: ("COOKIE" | "URL" | "SSL")[];
-                virtualServerName?: string;
-              };
-            };
-            response?: {
-              /** Format: int32 */
-              bufferSize?: number;
-              characterEncoding?: string;
-              committed?: boolean;
-              /** Format: int32 */
-              contentLength?: number;
-              /** Format: int64 */
-              contentLengthLong?: number;
-              contentType?: string;
-              locale?: {
-                country?: string;
-                displayCountry?: string;
-                displayLanguage?: string;
-                displayName?: string;
-                displayScript?: string;
-                displayVariant?: string;
-                extensionKeys?: string[];
-                iso3Country?: string;
-                iso3Language?: string;
-                language?: string;
-                script?: string;
-                unicodeLocaleAttributes?: string[];
-                unicodeLocaleKeys?: string[];
-                variant?: string;
-              };
-              outputStream?: {
-                ready?: boolean;
-                writeListener?: Record<string, never>;
-              };
-              writer?: Record<string, never>;
-            };
-            /** Format: int64 */
-            timeout?: number;
-          };
-          asyncStarted?: boolean;
-          asyncSupported?: boolean;
-          attributeNames?: Record<string, never>;
-          authType?: string;
-          characterEncoding?: string;
-          /** Format: int32 */
-          contentLength?: number;
-          /** Format: int64 */
-          contentLengthLong?: number;
-          contentType?: string;
-          contextPath?: string;
-          cookies?: {
-            comment?: string;
-            domain?: string;
-            httpOnly?: boolean;
-            /** Format: int32 */
-            maxAge?: number;
-            name?: string;
-            path?: string;
-            secure?: boolean;
-            value?: string;
-            /** Format: int32 */
-            version?: number;
-          }[];
-          /** @enum {string} */
-          dispatcherType?: "FORWARD" | "INCLUDE" | "REQUEST" | "ASYNC" | "ERROR";
-          headerNames?: Record<string, never>;
-          httpServletMapping?: {
-            /** @enum {string} */
-            mappingMatch?: "CONTEXT_ROOT" | "DEFAULT" | "EXACT" | "EXTENSION" | "PATH";
-            matchValue?: string;
-            pattern?: string;
-            servletName?: string;
-          };
-          inputStream?: {
-            finished?: boolean;
-            readListener?: Record<string, never>;
-            ready?: boolean;
-          };
-          localAddr?: string;
-          localName?: string;
-          /** Format: int32 */
-          localPort?: number;
-          locale?: {
-            country?: string;
-            displayCountry?: string;
-            displayLanguage?: string;
-            displayName?: string;
-            displayScript?: string;
-            displayVariant?: string;
-            extensionKeys?: string[];
-            iso3Country?: string;
-            iso3Language?: string;
-            language?: string;
-            script?: string;
-            unicodeLocaleAttributes?: string[];
-            unicodeLocaleKeys?: string[];
-            variant?: string;
-          };
-          locales?: Record<string, never>;
-          method?: string;
-          parameterMap?: {
-            [key: string]: string[];
-          };
-          parameterNames?: Record<string, never>;
-          parts?: {
-            contentType?: string;
-            headerNames?: string[];
-            inputStream?: Record<string, never>;
-            name?: string;
-            /** Format: int64 */
-            size?: number;
-            submittedFileName?: string;
-          }[];
-          pathInfo?: string;
-          pathTranslated?: string;
-          protocol?: string;
-          queryString?: string;
-          reader?: Record<string, never>;
-          remoteAddr?: string;
-          remoteHost?: string;
-          /** Format: int32 */
-          remotePort?: number;
-          remoteUser?: string;
-          requestURI?: string;
-          requestURL?: {
-            /** Format: int32 */
-            length?: number;
-          };
-          requestedSessionId?: string;
-          requestedSessionIdFromCookie?: boolean;
-          requestedSessionIdFromURL?: boolean;
-          requestedSessionIdFromUrl?: boolean;
-          requestedSessionIdValid?: boolean;
-          scheme?: string;
-          secure?: boolean;
-          serverName?: string;
-          /** Format: int32 */
-          serverPort?: number;
-          servletContext?: {
-            attributeNames?: Record<string, never>;
-            classLoader?: {
-              defaultAssertionStatus?: boolean;
-              definedPackages?: {
-                annotations?: Record<string, never>[];
-                declaredAnnotations?: Record<string, never>[];
-                implementationTitle?: string;
-                implementationVendor?: string;
-                implementationVersion?: string;
-                name?: string;
-                sealed?: boolean;
-                specificationTitle?: string;
-                specificationVendor?: string;
-                specificationVersion?: string;
-              }[];
-              name?: string;
-              parent?: {
-                defaultAssertionStatus?: boolean;
-                definedPackages?: {
-                  annotations?: Record<string, never>[];
-                  declaredAnnotations?: Record<string, never>[];
-                  implementationTitle?: string;
-                  implementationVendor?: string;
-                  implementationVersion?: string;
-                  name?: string;
-                  sealed?: boolean;
-                  specificationTitle?: string;
-                  specificationVendor?: string;
-                  specificationVersion?: string;
-                }[];
-                name?: string;
-                registeredAsParallelCapable?: boolean;
-                unnamedModule?: {
-                  annotations?: Record<string, never>[];
-                  declaredAnnotations?: Record<string, never>[];
-                  descriptor?: {
-                    automatic?: boolean;
-                    open?: boolean;
-                  };
-                  layer?: Record<string, never>;
-                  name?: string;
-                  named?: boolean;
-                  packages?: string[];
-                };
-              };
-              registeredAsParallelCapable?: boolean;
-              unnamedModule?: {
-                annotations?: Record<string, never>[];
-                declaredAnnotations?: Record<string, never>[];
-                descriptor?: {
-                  automatic?: boolean;
-                  open?: boolean;
-                };
-                layer?: Record<string, never>;
-                name?: string;
-                named?: boolean;
-                packages?: string[];
-              };
-            };
-            contextPath?: string;
-            defaultSessionTrackingModes?: ("COOKIE" | "URL" | "SSL")[];
-            /** Format: int32 */
-            effectiveMajorVersion?: number;
-            /** Format: int32 */
-            effectiveMinorVersion?: number;
-            effectiveSessionTrackingModes?: ("COOKIE" | "URL" | "SSL")[];
-            filterRegistrations?: {
-              [key: string]: {
-                className?: string;
-                initParameters?: {
-                  [key: string]: string;
-                };
-                name?: string;
-                servletNameMappings?: string[];
-                urlPatternMappings?: string[];
-              };
-            };
-            initParameterNames?: Record<string, never>;
-            jspConfigDescriptor?: {
-              jspPropertyGroups?: {
-                buffer?: string;
-                defaultContentType?: string;
-                deferredSyntaxAllowedAsLiteral?: string;
-                elIgnored?: string;
-                errorOnUndeclaredNamespace?: string;
-                includeCodas?: string[];
-                includePreludes?: string[];
-                isXml?: string;
-                pageEncoding?: string;
-                scriptingInvalid?: string;
-                trimDirectiveWhitespaces?: string;
-                urlPatterns?: string[];
-              }[];
-              taglibs?: {
-                taglibLocation?: string;
-                taglibURI?: string;
-              }[];
-            };
-            /** Format: int32 */
-            majorVersion?: number;
-            /** Format: int32 */
-            minorVersion?: number;
-            requestCharacterEncoding?: string;
-            responseCharacterEncoding?: string;
-            serverInfo?: string;
-            servletContextName?: string;
-            servletNames?: Record<string, never>;
-            servletRegistrations?: {
-              [key: string]: {
-                className?: string;
-                initParameters?: {
-                  [key: string]: string;
-                };
-                mappings?: string[];
-                name?: string;
-                runAsRole?: string;
-              };
-            };
-            servlets?: Record<string, never>;
-            sessionCookieConfig?: {
-              comment?: string;
-              domain?: string;
-              httpOnly?: boolean;
-              /** Format: int32 */
-              maxAge?: number;
-              name?: string;
-              path?: string;
-              secure?: boolean;
-            };
-            /** Format: int32 */
-            sessionTimeout?: number;
-            sessionTrackingModes?: ("COOKIE" | "URL" | "SSL")[];
-            virtualServerName?: string;
-          };
-          servletPath?: string;
-          session?: {
-            attributeNames?: Record<string, never>;
-            /** Format: int64 */
-            creationTime?: number;
-            id?: string;
-            /** Format: int64 */
-            lastAccessedTime?: number;
-            /** Format: int32 */
-            maxInactiveInterval?: number;
-            new?: boolean;
-            servletContext?: {
-              attributeNames?: Record<string, never>;
-              classLoader?: {
-                defaultAssertionStatus?: boolean;
-                definedPackages?: {
-                  annotations?: Record<string, never>[];
-                  declaredAnnotations?: Record<string, never>[];
-                  implementationTitle?: string;
-                  implementationVendor?: string;
-                  implementationVersion?: string;
-                  name?: string;
-                  sealed?: boolean;
-                  specificationTitle?: string;
-                  specificationVendor?: string;
-                  specificationVersion?: string;
-                }[];
-                name?: string;
-                parent?: {
-                  defaultAssertionStatus?: boolean;
-                  definedPackages?: {
-                    annotations?: Record<string, never>[];
-                    declaredAnnotations?: Record<string, never>[];
-                    implementationTitle?: string;
-                    implementationVendor?: string;
-                    implementationVersion?: string;
-                    name?: string;
-                    sealed?: boolean;
-                    specificationTitle?: string;
-                    specificationVendor?: string;
-                    specificationVersion?: string;
-                  }[];
-                  name?: string;
-                  registeredAsParallelCapable?: boolean;
-                  unnamedModule?: {
-                    annotations?: Record<string, never>[];
-                    declaredAnnotations?: Record<string, never>[];
-                    descriptor?: {
-                      automatic?: boolean;
-                      open?: boolean;
-                    };
-                    layer?: Record<string, never>;
-                    name?: string;
-                    named?: boolean;
-                    packages?: string[];
-                  };
-                };
-                registeredAsParallelCapable?: boolean;
-                unnamedModule?: {
-                  annotations?: Record<string, never>[];
-                  declaredAnnotations?: Record<string, never>[];
-                  descriptor?: {
-                    automatic?: boolean;
-                    open?: boolean;
-                  };
-                  layer?: Record<string, never>;
-                  name?: string;
-                  named?: boolean;
-                  packages?: string[];
-                };
-              };
-              contextPath?: string;
-              defaultSessionTrackingModes?: ("COOKIE" | "URL" | "SSL")[];
-              /** Format: int32 */
-              effectiveMajorVersion?: number;
-              /** Format: int32 */
-              effectiveMinorVersion?: number;
-              effectiveSessionTrackingModes?: ("COOKIE" | "URL" | "SSL")[];
-              filterRegistrations?: {
-                [key: string]: {
-                  className?: string;
-                  initParameters?: {
-                    [key: string]: string;
-                  };
-                  name?: string;
-                  servletNameMappings?: string[];
-                  urlPatternMappings?: string[];
-                };
-              };
-              initParameterNames?: Record<string, never>;
-              jspConfigDescriptor?: {
-                jspPropertyGroups?: {
-                  buffer?: string;
-                  defaultContentType?: string;
-                  deferredSyntaxAllowedAsLiteral?: string;
-                  elIgnored?: string;
-                  errorOnUndeclaredNamespace?: string;
-                  includeCodas?: string[];
-                  includePreludes?: string[];
-                  isXml?: string;
-                  pageEncoding?: string;
-                  scriptingInvalid?: string;
-                  trimDirectiveWhitespaces?: string;
-                  urlPatterns?: string[];
-                }[];
-                taglibs?: {
-                  taglibLocation?: string;
-                  taglibURI?: string;
-                }[];
-              };
-              /** Format: int32 */
-              majorVersion?: number;
-              /** Format: int32 */
-              minorVersion?: number;
-              requestCharacterEncoding?: string;
-              responseCharacterEncoding?: string;
-              serverInfo?: string;
-              servletContextName?: string;
-              servletNames?: Record<string, never>;
-              servletRegistrations?: {
-                [key: string]: {
-                  className?: string;
-                  initParameters?: {
-                    [key: string]: string;
-                  };
-                  mappings?: string[];
-                  name?: string;
-                  runAsRole?: string;
-                };
-              };
-              servlets?: Record<string, never>;
-              sessionCookieConfig?: {
-                comment?: string;
-                domain?: string;
-                httpOnly?: boolean;
-                /** Format: int32 */
-                maxAge?: number;
-                name?: string;
-                path?: string;
-                secure?: boolean;
-              };
-              /** Format: int32 */
-              sessionTimeout?: number;
-              sessionTrackingModes?: ("COOKIE" | "URL" | "SSL")[];
-              virtualServerName?: string;
-            };
-            sessionContext?: {
-              ids?: Record<string, never>;
-            };
-            valueNames?: string[];
-          };
-          trailerFields?: {
-            [key: string]: string;
-          };
-          trailerFieldsReady?: boolean;
-          userPrincipal?: {
-            name?: string;
-          };
-        };
-      };
-    };
     responses: {
       /** @description Returned if the request is successful. */
       200: {
@@ -42719,16 +44150,7 @@ export interface operations {
          *  *  `created` Sorts by create time.
          *  *  `updated` Sorts by update time.
          */
-        orderBy?:
-          | "name"
-          | "-name"
-          | "+name"
-          | "created"
-          | "-created"
-          | "+created"
-          | "updated"
-          | "+updated"
-          | "-updated";
+        orderBy?: "name" | "-name" | "+name" | "created" | "-created" | "+created" | "updated" | "+updated" | "-updated";
         /** @description Filters active and inactive workflows. */
         isActive?: boolean;
       };
@@ -43032,6 +44454,8 @@ export interface operations {
          *  *  `statuses.usages` Returns the project and issue types that each status is associated with.
          */
         expand?: string;
+        /** @description Return the new fields (`toStatusReference`/`links`) instead of the deprecated fields (`to`/`from`) for workflow transition port mappings. */
+        useTransitionLinksFormat?: boolean;
       };
     };
     requestBody: {
@@ -46026,7 +47450,7 @@ export interface operations {
    * @description Gets all the properties of an app.
    *
    * **[Permissions](#permissions) required:** Only a Connect app whose key matches `addonKey` can make this request.
-   * Additionally, Forge apps published on the Marketplace can access properties of Connect apps they were [migrated from](https://developer.atlassian.com/platform/forge/build-a-connect-on-forge-app/).
+   * Additionally, Forge apps can access Connect app properties (stored against the same `app.connect.key`).
    */
   "AddonPropertiesResource.getAddonProperties_get": {
     parameters: {
@@ -46055,7 +47479,7 @@ export interface operations {
    * @description Returns the key and value of an app's property.
    *
    * **[Permissions](#permissions) required:** Only a Connect app whose key matches `addonKey` can make this request.
-   * Additionally, Forge apps published on the Marketplace can access properties of Connect apps they were [migrated from](https://developer.atlassian.com/platform/forge/build-a-connect-on-forge-app/).
+   * Additionally, Forge apps can access Connect app properties (stored against the same `app.connect.key`).
    */
   "AddonPropertiesResource.getAddonProperty_get": {
     parameters: {
@@ -46100,6 +47524,7 @@ export interface operations {
    * The value of the request body must be a [valid](http://tools.ietf.org/html/rfc4627), non-empty JSON blob. The maximum length is 32768 characters.
    *
    * **[Permissions](#permissions) required:** Only a Connect app whose key matches `addonKey` can make this request.
+   * Additionally, Forge apps can access Connect app properties (stored against the same `app.connect.key`).
    */
   "AddonPropertiesResource.putAddonProperty_put": {
     parameters: {
@@ -46152,6 +47577,7 @@ export interface operations {
    * @description Deletes an app's property.
    *
    * **[Permissions](#permissions) required:** Only a Connect app whose key matches `addonKey` can make this request.
+   * Additionally, Forge apps can access Connect app properties (stored against the same `app.connect.key`).
    */
   "AddonPropertiesResource.deleteAddonProperty_delete": {
     parameters: {
@@ -46370,16 +47796,7 @@ export interface operations {
       };
       path: {
         /** @description The type indicating the object that contains the entity properties. */
-        entityType:
-          | "IssueProperty"
-          | "CommentProperty"
-          | "DashboardItemProperty"
-          | "IssueTypeProperty"
-          | "ProjectProperty"
-          | "UserProperty"
-          | "WorklogProperty"
-          | "BoardProperty"
-          | "SprintProperty";
+        entityType: "IssueProperty" | "CommentProperty" | "DashboardItemProperty" | "IssueTypeProperty" | "ProjectProperty" | "UserProperty" | "WorklogProperty" | "BoardProperty" | "SprintProperty";
       };
     };
     requestBody: {
@@ -46496,7 +47913,7 @@ export interface operations {
    *
    * **[Permissions](#permissions) required:** Only Forge apps can make this request.
    */
-  "AddonPropertiesResource.putAppProperty_put": {
+  putForgeAppProperty: {
     parameters: {
       path: {
         /** @description The key of the property. */
@@ -46550,7 +47967,7 @@ export interface operations {
    *
    * **[Permissions](#permissions) required:** Only Forge apps can make this request.
    */
-  "AddonPropertiesResource.deleteAppProperty_delete": {
+  deleteForgeAppProperty: {
     parameters: {
       path: {
         /** @description The key of the property. */

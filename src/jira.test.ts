@@ -14,7 +14,7 @@ function createTestInstance(actualOptions: Partial<JiraApiOptions> = {}) {
     timeout: actualOptions.timeout || undefined,
     base: actualOptions.base || "",
     intermediatePath: actualOptions.intermediatePath,
-    bearer: actualOptions.bearer || null,
+    bearer: actualOptions.bearer || undefined,
   };
   if ("axios" in actualOptions) {
     finalOptions.axios = actualOptions.axios;
@@ -40,8 +40,8 @@ describe("Jira API Tests", () => {
       expect(jira.protocol).to.eql("http");
       expect(jira.host).to.eql("jira.somehost.com");
       expect(jira.port).to.eql(8080);
-      expect(jira.baseOptions.auth.username).to.eql("someusername");
-      expect(jira.baseOptions.auth.password).to.eql("somepassword");
+      expect(jira.baseOptions.auth?.username).to.eql("someusername");
+      expect(jira.baseOptions.auth?.password).to.eql("somepassword");
       expect(jira.apiVersion).to.eql(2);
     });
 
@@ -59,7 +59,7 @@ describe("Jira API Tests", () => {
         bearer: "testBearer",
       });
 
-      expect(jira.baseOptions.headers.Authorization).to.eql("Bearer testBearer");
+      expect(jira.baseOptions.headers?.Authorization).to.eql("Bearer testBearer");
     });
 
     it("Constructor with timeout", () => {
@@ -263,7 +263,11 @@ describe("Jira API Tests", () => {
       try {
         const result = await jira.doRequest({});
       } catch (e) {
-        expect(e.message).toBe("timeout of 1ms exceeded");
+        if (e instanceof Error) {
+          expect(e?.message).toBe("timeout of 1ms exceeded");
+        } else {
+          throw new Error("Expected an error")
+        }
       }
     });
 
@@ -280,8 +284,11 @@ describe("Jira API Tests", () => {
       try {
         await jira.doRequest({});
       } catch (error) {
-        expect(axios.isAxiosError(error)).toBe(true);
-        expect(error.response?.status).toBe(400);
+        if (error && axios.isAxiosError(error)) {
+          expect(error.response?.status).toBe(400);
+        } else {
+          expect(axios.isAxiosError(error)).toBe(true);
+        }
       }
     });
 

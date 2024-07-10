@@ -20,3 +20,4 @@ npm-debug.log
 *.iml
 
 tmp-docs-repo
+openapi.json

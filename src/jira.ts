@@ -2,10 +2,11 @@ import axios, { Axios, AxiosInstance, AxiosRequestConfig } from "axios";
 import { Agent } from "https";
 import { components, operations as cloudOperations } from "./generated/openapi-cloud";
 import { operations } from "./generated/openapi-software";
+import { BinaryLike } from "node:crypto";
 
 export interface MakeUrlParams {
   pathname?: string;
-  query?: Record<string, string | number | boolean>;
+  query?: Record<string, string | number | boolean | undefined>;
   intermediatePath?: string;
   encode?: boolean;
 }
@@ -52,10 +53,10 @@ export type PaginationParams = {
 export class JiraApi {
   protocol: string;
   host: string;
-  port: number;
+  port?: number;
   apiVersion: number;
   base: string;
-  intermediatePath: string;
+  intermediatePath?: string;
   axios: AxiosInstance;
   httpsAgent?: Agent;
   webhookVersion: string;
@@ -69,13 +70,13 @@ export class JiraApi {
   constructor(options: JiraApiOptions) {
     this.protocol = options.protocol || "https";
     this.host = options.host;
-    this.port = options.port || null;
+    this.port = options.port;
     this.apiVersion = options.apiVersion || 2;
     this.base = options.base || "";
     this.intermediatePath = options.intermediatePath;
 
     // This is so we can fake during unit tests
-    if ("axios" in options) {
+    if ("axios" in options && options.axios) {
       this.axios = options.axios;
     } else if ("strictSSL" in options || "ca" in options) {
       this.httpsAgent = new Agent({ rejectUnauthorized: options.strictSSL ?? true, ca: options.ca });
@@ -128,11 +129,17 @@ export class JiraApi {
     const uri = new URL("http://localhost");
     uri.protocol = this.protocol;
     uri.hostname = this.host;
-    uri.port = this.port?.toString();
+    if (this.port) {
+      uri.port = this.port.toString();
+    }
+
     uri.pathname = `${this.base}${tempPath}${pathname}`;
 
     for (const key in query) {
-      uri.searchParams.append(key, query[key].toString());
+      const value = query[key]
+      if (value) {
+        uri.searchParams.append(key, value.toString());
+      }
     }
     return uri.toString();
   }
@@ -253,7 +260,7 @@ export class JiraApi {
     );
     return {
       mimeType: response.headers["content-type"],
-      content: response.data,
+      content: Buffer.from(response.data),
     };
   }
 
@@ -678,16 +685,15 @@ export class JiraApi {
    *
    * [Jira Doc](http://docs.atlassian.com/jira/REST/latest/#d2e3756)
    */
-  searchUsers({ username, query, startAt, maxResults }: cloudOperations["findUsers"]["parameters"]["query"]): Promise<(components["schemas"]["User"][])> {
+  searchUsers(parameters: cloudOperations["findUsers"]["parameters"]["query"]): Promise<(components["schemas"]["User"][])> {
     return this.doRequest(
       this.makeRequestHeader(
         this.makeUri({
           pathname: "/user/search",
           query: {
-            username,
-            query,
-            startAt: startAt || 0,
-            maxResults: maxResults || 50,
+            ...parameters,
+            startAt: parameters?.startAt || 0,
+            maxResults: parameters?.maxResults || 50,
           },
         }),
       ),
@@ -980,7 +986,7 @@ export class JiraApi {
       this.makeRequestHeader(
         this.makeUri({
           pathname: `/component/${id}`,
-          query: moveIssuesTo ? { moveIssuesTo } : null,
+          query: moveIssuesTo ? { moveIssuesTo } : undefined,
         }),
         {
           method: "DELETE",
@@ -1608,10 +1614,12 @@ export class JiraApi {
    * [Jira Doc](https://docs.atlassian.com/jira/REST/latest/#api/2/issue/{issueIdOrKey}/attachments-addAttachment)
    * @param issueId - issue id
    * @param readStream - readStream object from fs
+   * @param mimeType - mime type of attachment, this used by jira to preview files
+   * @param originalFileName - the original (or new) file name for the attachment
    */
-  addAttachmentOnIssue(issueId: string, readStream: Buffer) {
+  addAttachmentOnIssue(issueId: string, readStream: Buffer | BinaryLike, mimeType?: string, originalFileName?: string) {
     const formData = new FormData();
-    formData.append("file", new Blob([readStream], { type: "application/octet-stream" }));
+    formData.append("file", new Blob([readStream], { type: mimeType ?? "application/octet-stream" }), originalFileName);
     return this.doRequest<unknown>(
       this.makeRequestHeader(
         this.makeUri({

@@ -3,14 +3,11 @@
  * Do not make direct changes to the file.
  */
 
+
 /** OneOf type helpers */
 type Without<T, U> = { [P in Exclude<keyof T, keyof U>]?: never };
-type XOR<T, U> = T | U extends object ? (Without<T, U> & U) | (Without<U, T> & T) : T | U;
-type OneOf<T extends any[]> = T extends [infer Only]
-  ? Only
-  : T extends [infer A, infer B, ...infer Rest]
-    ? OneOf<[XOR<A, B>, ...Rest]>
-    : never;
+type XOR<T, U> = (T | U) extends object ? (Without<T, U> & U) | (Without<U, T> & T) : T | U;
+type OneOf<T extends any[]> = T extends [infer Only] ? Only : T extends [infer A, infer B, ...infer Rest] ? OneOf<[XOR<A, B>, ...Rest]> : never;
 
 export interface paths {
   "/rest/agile/1.0/backlog/issue": {
@@ -335,7 +332,7 @@ export interface paths {
      *
      * Notes:
      *
-     *  *  Sprints that are in a closed state cannot be updated.
+     *  *  For closed sprints, only the name and goal can be updated; changes to other fields will be ignored.
      *  *  A sprint can be started by updating the state to 'active'. This requires the sprint to be in the 'future' state and have a startDate and endDate set.
      *  *  A sprint can be completed by updating the state to 'closed'. This action requires the sprint to be in the 'active' state. This sets the completeDate to the time of the request.
      *  *  Other changes to state are not allowed.
@@ -348,7 +345,7 @@ export interface paths {
      *
      * Notes:
      *
-     *  *  Sprints that are in a closed state cannot be updated.
+     *  *  For closed sprints, only the name and goal can be updated; changes to other fields will be ignored.
      *  *  A sprint can be started by updating the state to 'active'. This requires the sprint to be in the 'future' state and have a startDate and endDate set.
      *  *  A sprint can be completed by updating the state to 'closed'. This action requires the sprint to be in the 'active' state. This sets the completeDate to the time of the request.
      *  *  Other changes to state are not allowed.
@@ -428,14 +425,14 @@ export interface paths {
   "/rest/devinfo/0.10/bulkByProperties": {
     /**
      * Delete development information by properties
-     * @description Deletes development information entities which have all the provided properties. Entities will be deleted that match ALL of the properties (i.e. treated as an AND). For example if request is `DELETE bulk?accountId=123&projectId=ABC` entities which have properties `accountId=123` and `projectId=ABC` will be deleted. Special property `_updateSequenceId` can be used to delete all entities with updateSequenceId less or equal than the value specified. In addition to the optional `_updateSequenceId`, one or more query params must be supplied to specify properties to delete by. Deletion is performed asynchronously: specified entities will eventually be removed from Jira.
+     * @description Deletes development information entities which have all the provided properties. Repositories which have properties that match ALL of the properties (i.e. treated as an AND), and all their related development information (such as commits, branches and pull requests), will be deleted. For example if request is `DELETE bulk?accountId=123&projectId=ABC` entities which have properties `accountId=123` and `projectId=ABC` will be deleted. Optional param `_updateSequenceId` is no longer supported. Deletion is performed asynchronously: specified entities will eventually be removed from Jira.
      */
     delete: operations["deleteByProperties"];
   };
   "/rest/devinfo/0.10/existsByProperties": {
     /**
      * Check if data exists for the supplied properties
-     * @description Checks if development information which have all the provided properties exists. For example, if request is `GET existsByProperties?accountId=123&projectId=ABC` then result will be positive only if there is at least one entity or repository with both properties `accountId=123` and `projectId=ABC`. Special property `_updateSequenceId` can be used to filter all entities with updateSequenceId less or equal than the value specified. In addition to the optional `_updateSequenceId`, one or more query params must be supplied to specify properties to search by.
+     * @description Checks if repositories which have all the provided properties exists. For example, if request is `GET existsByProperties?accountId=123&projectId=ABC` then result will be positive only if there is at least one repository with both properties `accountId=123` and `projectId=ABC`. Special property `_updateSequenceId` can be used to filter all entities with updateSequenceId less or equal than the value specified. In addition to the optional `_updateSequenceId`, one or more query params must be supplied to specify properties to search by.
      */
     get: operations["existsByProperties"];
   };
@@ -1025,487 +1022,292 @@ export interface paths {
       };
     };
   };
+  "/rest/operations/1.0/linkedWorkspaces/bulk": {
+    /**
+     * Submit Operations Workspace Ids
+     * @description Insert Operations Workspace IDs to establish a relationship between them and the Jira site the app is installed in. If a relationship between the Workspace ID and Jira already exists then the workspace ID will be ignored and Jira will process the rest of the entries.
+     *
+     * Only Connect apps that define the `jiraOperationsInfoProvider` module can access this resource.
+     * This resource requires the 'WRITE' scope for Connect apps.
+     */
+    post: operations["submitOperationsWorkspaces"];
+    /**
+     * Delete Operations Workpaces by Id
+     * @description Bulk delete all Operations Workspaces that match the given request.
+     *
+     * Only Connect apps that define the `jiraOperationsInfoProvider` module can access this resource.
+     * This resource requires the 'DELETE' scope for Connect apps.
+     *
+     * e.g. DELETE /bulk?workspaceIds=111-222-333,444-555-666
+     */
+    delete: operations["deleteWorkspaces"];
+    parameters: {
+      header: {
+        /**
+         * @description All requests must be signed with a Connect JWT token that corresponds to the Provider app installed in Jira.
+         *
+         * If the JWT token corresponds to an app that does not define the Operations module it will be rejected with a 403.
+         *
+         * See https://developer.atlassian.com/blog/2015/01/understanding-jwt/ for more details.
+         */
+        Authorization: string;
+      };
+    };
+  };
+  "/rest/operations/1.0/linkedWorkspaces": {
+    /**
+     * Get all Operations Workspace IDs or a specific Operations Workspace by ID
+     * @description Retrieve the either all Operations Workspace IDs associated with the Jira site or a specific Operations Workspace ID for the given ID.
+     *
+     * The result will be what is currently stored, ignoring any pending updates or deletes.
+     *
+     * e.g. GET /workspace?workspaceId=111-222-333
+     *
+     * Only Connect apps that define the `jiraOperationsInfoProvider` module can access this resource.
+     * This resource requires the 'READ' scope for Connect apps.
+     */
+    get: operations["getWorkspaces"];
+    parameters: {
+      header: {
+        /**
+         * @description All requests must be signed with a Connect JWT token that corresponds to the Provider app installed in Jira.
+         *
+         * If the JWT token corresponds to an app that does not define the Operations Information module it will be rejected with a 403.
+         *
+         * See https://developer.atlassian.com/blog/2015/01/understanding-jwt/ for more details.
+         */
+        Authorization: string;
+      };
+    };
+  };
+  "/rest/operations/1.0/bulk": {
+    /**
+     * Submit Incident or Review data
+     * @description Update / insert Incident or Review data.
+     *
+     * Incidents and reviews are identified by their ID, and existing Incident and Review data for the same ID will be replaced if it exists and the updateSequenceNumber of existing data is less than the incoming data.
+     *
+     * Submissions are performed asynchronously. Submitted data will eventually be available in Jira; most updates are available within a short period of time, but may take some time during peak load and/or maintenance times. The getIncidentById or getReviewById operation can be used to confirm that data has been stored successfully (if needed).
+     *
+     * In the case of multiple Incidents and Reviews being submitted in one request, each is validated individually prior to submission. Details of which entities failed submission (if any) are available in the response object.
+     *
+     * A maximum of 1000 incidents can be submitted in one request.
+     *
+     * Only Connect apps that define the `jiraOperationsInfoProvider` module can access this resource.
+     * This resource requires the 'WRITE' scope for Connect apps.
+     */
+    post: operations["submitEntity"];
+    parameters: {
+      header: {
+        /**
+         * @description All requests must be signed with a Connect JWT token that corresponds to the Provider app installed in Jira.
+         *
+         * If the JWT token corresponds to an app that does not define the Operations Information module it will be rejected with a 403.
+         *
+         * See https://developer.atlassian.com/blog/2015/01/understanding-jwt/ for more details.
+         */
+        Authorization: string;
+      };
+    };
+  };
+  "/rest/operations/1.0/bulkByProperties": {
+    /**
+     * Delete Incidents or Review by Property
+     * @description Bulk delete all Entties that match the given request.
+     *
+     * One or more query params must be supplied to specify Properties to delete by.
+     * If more than one Property is provided, data will be deleted that matches ALL of the Properties (e.g. treated as an AND).
+     * See the documentation for the submitEntity operation for more details.
+     *
+     * e.g. DELETE /bulkByProperties?accountId=account-123&createdBy=user-456
+     *
+     * Deletion is performed asynchronously. The getIncidentById operation can be used to confirm that data has been deleted successfully (if needed).
+     *
+     * Only Connect apps that define the `jiraOperationsInfoProvider` module can access this resource.
+     * This resource requires the 'DELETE' scope for Connect apps.
+     */
+    delete: operations["deleteEntityByProperty"];
+    parameters: {
+      header: {
+        /**
+         * @description All requests must be signed with a Connect JWT token that corresponds to the Provider app installed in Jira.
+         *
+         * If the JWT token corresponds to an app that does not define Operations Information module it will be rejected with a 403.
+         *
+         * See https://developer.atlassian.com/blog/2015/01/understanding-jwt/ for more details.
+         */
+        Authorization: string;
+      };
+    };
+  };
+  "/rest/operations/1.0/incidents/{incidentId}": {
+    /**
+     * Get a Incident by ID
+     * @description Retrieve the currently stored Incident data for the given ID.
+     *
+     * The result will be what is currently stored, ignoring any pending updates or deletes.
+     *
+     * Only Connect apps that define the `jiraOperationsInfoProvider` module can access this resource.
+     * This resource requires the 'READ' scope for Connect apps.
+     */
+    get: operations["getIncidentById"];
+    /**
+     * Delete a Incident by ID
+     * @description Delete the Incident data currently stored for the given ID.
+     *
+     * Deletion is performed asynchronously. The getIncidentById operation can be used to confirm that data has been deleted successfully (if needed).
+     *
+     * Only Connect apps that define the `jiraOperationsInfoProvider` module can access this resource.
+     * This resource requires the 'DELETE' scope for Connect apps.
+     */
+    delete: operations["deleteIncidentById"];
+    parameters: {
+      header: {
+        /**
+         * @description All requests must be signed with a Connect JWT token that corresponds to the Provider app installed in Jira.
+         *
+         * If the JWT token corresponds to an app that does not define Operations Information module it will be rejected with a 403.
+         *
+         * See https://developer.atlassian.com/blog/2015/01/understanding-jwt/ for more details.
+         */
+        Authorization: string;
+      };
+    };
+  };
+  "/rest/operations/1.0/post-incident-reviews/{reviewId}": {
+    /**
+     * Get a Review by ID
+     * @description Retrieve the currently stored Review data for the given ID.
+     *
+     * The result will be what is currently stored, ignoring any pending updates or deletes.
+     *
+     * Only Connect apps that define the `jiraOperationsInfoProvider` module can access this resource.
+     * This resource requires the 'READ' scope for Connect apps.
+     */
+    get: operations["getReviewById"];
+    /**
+     * Delete a Review by ID
+     * @description Delete the Review data currently stored for the given ID.
+     *
+     * Deletion is performed asynchronously. The getReviewById operation can be used to confirm that data has been deleted successfully (if needed).
+     *
+     * Only Connect apps that define the `jiraOperationsInfoProvider` module can access this resource.
+     * This resource requires the 'DELETE' scope for Connect apps.
+     */
+    delete: operations["deleteReviewById"];
+    parameters: {
+      header: {
+        /**
+         * @description All requests must be signed with a Connect JWT token that corresponds to the Provider app installed in Jira.
+         *
+         * If the JWT token corresponds to an app that does not define Operations Information module it will be rejected with a 403.
+         *
+         * See https://developer.atlassian.com/blog/2015/01/understanding-jwt/ for more details.
+         */
+        Authorization: string;
+      };
+    };
+  };
+  "/rest/devopscomponents/1.0/bulk": {
+    /**
+     * Submit DevOps Components
+     * @description Update / insert DevOps Component data.
+     *
+     * Components are identified by their ID, and existing Component data for the same ID will be replaced if it exists and the updateSequenceNumber of existing data is less than the incoming data.
+     *
+     * Submissions are performed asynchronously. Submitted data will eventually be available in Jira; most updates are available within a short period of time, but may take some time during peak load and/or maintenance times. The getComponentById operation can be used to confirm that data has been stored successfully (if needed).
+     *
+     * In the case of multiple Components being submitted in one request, each is validated individually prior to submission. Details of which Components failed submission (if any) are available in the response object.
+     *
+     * A maximum of 1000 components can be submitted in one request.
+     *
+     * Only Connect apps that define the `jiraDevOpsComponentProvider` module can access this resource.
+     * This resource requires the 'WRITE' scope for Connect apps.
+     */
+    post: operations["submitComponents"];
+    parameters: {
+      header: {
+        /**
+         * @description All requests must be signed with a Connect JWT token that corresponds to the Provider app installed in Jira.
+         *
+         * If the JWT token corresponds to an app that does not define the DevOps Information module it will be rejected with a 403.
+         *
+         * See https://developer.atlassian.com/blog/2015/01/understanding-jwt/ for more details.
+         */
+        Authorization: string;
+      };
+    };
+  };
+  "/rest/devopscomponents/1.0/bulkByProperties": {
+    /**
+     * Delete DevOps Components by Property
+     * @description Bulk delete all Components that match the given request.
+     *
+     * One or more query params must be supplied to specify Properties to delete by.
+     * If more than one Property is provided, data will be deleted that matches ALL of the Properties (e.g. treated as an AND).
+     * See the documentation for the submitComponents operation for more details.
+     *
+     * e.g. DELETE /bulkByProperties?accountId=account-123&createdBy=user-456
+     *
+     * Deletion is performed asynchronously. The getComponentById operation can be used to confirm that data has been deleted successfully (if needed).
+     *
+     * Only Connect apps that define the `jiraDevOpsComponentProvider` module can access this resource.
+     * This resource requires the 'DELETE' scope for Connect apps.
+     */
+    delete: operations["deleteComponentsByProperty"];
+    parameters: {
+      header: {
+        /**
+         * @description All requests must be signed with a Connect JWT token that corresponds to the Provider app installed in Jira.
+         *
+         * If the JWT token corresponds to an app that does not define the Operations Information module it will be rejected with a 403.
+         *
+         * See https://developer.atlassian.com/blog/2015/01/understanding-jwt/ for more details.
+         */
+        Authorization: string;
+      };
+    };
+  };
+  "/rest/devopscomponents/1.0/{componentId}": {
+    /**
+     * Get a Component by ID
+     * @description Retrieve the currently stored Component data for the given ID.
+     *
+     * The result will be what is currently stored, ignoring any pending updates or deletes.
+     *
+     * Only Connect apps that define the `jiraDevOpsComponentProvider` module can access this resource.
+     * This resource requires the 'READ' scope for Connect apps.
+     */
+    get: operations["getComponentById"];
+    /**
+     * Delete a Component by ID
+     * @description Delete the Component data currently stored for the given ID.
+     *
+     * Deletion is performed asynchronously. The getComponentById operation can be used to confirm that data has been deleted successfully (if needed).
+     *
+     * Only Connect apps that define the `jiraDevOpsComponentProvider` module can access this resource.
+     * This resource requires the 'DELETE' scope for Connect apps.
+     */
+    delete: operations["deleteComponentById"];
+    parameters: {
+      header: {
+        /**
+         * @description All requests must be signed with a Connect JWT token that corresponds to the Provider app installed in Jira.
+         *
+         * If the JWT token corresponds to an app that does not define Operations Information module it will be rejected with a 403.
+         *
+         * See https://developer.atlassian.com/blog/2015/01/understanding-jwt/ for more details.
+         */
+        Authorization: string;
+      };
+    };
+  };
 }
 
 export type webhooks = Record<string, never>;
 
 export interface components {
   schemas: {
-    StringList: Record<string, never>;
-    IssueAssignRequestBean: {
-      issues?: string[];
-    };
-    EpicRankRequestBean: {
-      rankBeforeEpic?: string;
-      rankAfterEpic?: string;
-      /** Format: int64 */
-      rankCustomFieldId?: number;
-    };
-    ColorBean: {
-      /** @enum {string} */
-      key?:
-        | "color_1"
-        | "color_2"
-        | "color_3"
-        | "color_4"
-        | "color_5"
-        | "color_6"
-        | "color_7"
-        | "color_8"
-        | "color_9"
-        | "color_10"
-        | "color_11"
-        | "color_12"
-        | "color_13"
-        | "color_14";
-    };
-    EpicUpdateBean: {
-      name?: string;
-      summary?: string;
-      color?: {
-        /** @enum {string} */
-        key?:
-          | "color_1"
-          | "color_2"
-          | "color_3"
-          | "color_4"
-          | "color_5"
-          | "color_6"
-          | "color_7"
-          | "color_8"
-          | "color_9"
-          | "color_10"
-          | "color_11"
-          | "color_12"
-          | "color_13"
-          | "color_14";
-      };
-      done?: boolean;
-    };
-    ReportBean: Record<string, never>;
-    ReportsResponseBean: {
-      reports?: Record<string, never>[];
-    };
-    SprintCreateBean: {
-      name?: string;
-      startDate?: string;
-      endDate?: string;
-      /** Format: int64 */
-      originBoardId?: number;
-      goal?: string;
-    };
-    SprintBean: {
-      /** Format: int64 */
-      id?: number;
-      /** Format: uri */
-      self?: string;
-      state?: string;
-      name?: string;
-      startDate?: string;
-      endDate?: string;
-      completeDate?: string;
-      createdDate?: string;
-      /** Format: int64 */
-      originBoardId?: number;
-      goal?: string;
-    };
-    IssueRankRequestBean: {
-      issues?: string[];
-      rankBeforeIssue?: string;
-      rankAfterIssue?: string;
-      /** Format: int64 */
-      rankCustomFieldId?: number;
-    };
-    SprintSwapBean: {
-      /** Format: int64 */
-      sprintToSwapWith?: number;
-    };
-    PageBeanQuickFilterBean: {
-      /** Format: int32 */
-      maxResults?: number;
-      /** Format: int64 */
-      startAt?: number;
-      /** Format: int64 */
-      total?: number;
-      isLast?: boolean;
-      values?: {
-        /** Format: int64 */
-        id?: number;
-        /** Format: int64 */
-        boardId?: number;
-        name?: string;
-        jql?: string;
-        description?: string;
-        /** Format: int32 */
-        position?: number;
-      }[];
-    };
-    QuickFilterBean: {
-      /** Format: int64 */
-      id?: number;
-      /** Format: int64 */
-      boardId?: number;
-      name?: string;
-      jql?: string;
-      description?: string;
-      /** Format: int32 */
-      position?: number;
-    };
-    /** @description Details about a board. */
-    Board: {
-      /**
-       * Format: int64
-       * @description The ID of the board.
-       */
-      id?: number;
-      /**
-       * Format: uri
-       * @description The URL of the board.
-       */
-      self?: string;
-      /** @description The name of the board. */
-      name?: string;
-      /** @description The type the board. */
-      type?: string;
-      admins?: {
-        users?: {
-          /**
-           * @description This property is deprecated in favor of `accountId` because of privacy changes. See the [migration guide](https://developer.atlassian.com/cloud/jira/platform/deprecation-notice-user-privacy-api-migration-guide/) for details.
-           * The key of the user.
-           */
-          key?: string;
-          /**
-           * Format: uri
-           * @description The URL of the user.
-           */
-          self?: string;
-          /**
-           * @description This property is deprecated in favor of `accountId` because of privacy changes. See the [migration guide](https://developer.atlassian.com/cloud/jira/platform/deprecation-notice-user-privacy-api-migration-guide/) for details.
-           * The username of the user.
-           */
-          name?: string;
-          /** @description The display name of the user. Depending on the user’s privacy setting, this may return an alternative value. */
-          displayName?: string;
-          /** @description Whether the user is active. */
-          active?: boolean;
-          /** @description The account ID of the user, which uniquely identifies the user across all Atlassian products. For example, *5b10ac8d82e05b22cc7d4ef5*. */
-          accountId?: string;
-          /** @description The avatars of the user. */
-          avatarUrls?: {
-            /**
-             * Format: uri
-             * @description The URL of the user's 24x24 pixel avatar.
-             */
-            "24x24"?: string;
-            /**
-             * Format: uri
-             * @description The URL of the user's 32x32 pixel avatar.
-             */
-            "32x32"?: string;
-            /**
-             * Format: uri
-             * @description The URL of the user's 48x48 pixel avatar.
-             */
-            "48x48"?: string;
-            /**
-             * Format: uri
-             * @description The URL of the user's 16x16 pixel avatar.
-             */
-            "16x16"?: string;
-          };
-        }[];
-        groups?: {
-          name?: string;
-          /** Format: uri */
-          self?: string;
-        }[];
-      };
-      /** @description The container that the board is located in. */
-      location?: {
-        /** Format: int64 */
-        projectId?: number;
-        /** Format: int64 */
-        userId?: number;
-        userAccountId?: string;
-        displayName?: string;
-        projectName?: string;
-        projectKey?: string;
-        projectTypeKey?: string;
-        /** Format: uri */
-        avatarURI?: string;
-        name?: string;
-      };
-      /** @description Whether the board can be edited. */
-      canEdit?: boolean;
-      /** @description Whether the board is private. */
-      isPrivate?: boolean;
-      /** @description Whether the board is selected as a favorite. */
-      favourite?: boolean;
-    };
-    /** @description The users and groups who own the board. */
-    BoardAdminsBean: {
-      users?: {
-        /**
-         * @description This property is deprecated in favor of `accountId` because of privacy changes. See the [migration guide](https://developer.atlassian.com/cloud/jira/platform/deprecation-notice-user-privacy-api-migration-guide/) for details.
-         * The key of the user.
-         */
-        key?: string;
-        /**
-         * Format: uri
-         * @description The URL of the user.
-         */
-        self?: string;
-        /**
-         * @description This property is deprecated in favor of `accountId` because of privacy changes. See the [migration guide](https://developer.atlassian.com/cloud/jira/platform/deprecation-notice-user-privacy-api-migration-guide/) for details.
-         * The username of the user.
-         */
-        name?: string;
-        /** @description The display name of the user. Depending on the user’s privacy setting, this may return an alternative value. */
-        displayName?: string;
-        /** @description Whether the user is active. */
-        active?: boolean;
-        /** @description The account ID of the user, which uniquely identifies the user across all Atlassian products. For example, *5b10ac8d82e05b22cc7d4ef5*. */
-        accountId?: string;
-        /** @description The avatars of the user. */
-        avatarUrls?: {
-          /**
-           * Format: uri
-           * @description The URL of the user's 24x24 pixel avatar.
-           */
-          "24x24"?: string;
-          /**
-           * Format: uri
-           * @description The URL of the user's 32x32 pixel avatar.
-           */
-          "32x32"?: string;
-          /**
-           * Format: uri
-           * @description The URL of the user's 48x48 pixel avatar.
-           */
-          "48x48"?: string;
-          /**
-           * Format: uri
-           * @description The URL of the user's 16x16 pixel avatar.
-           */
-          "16x16"?: string;
-        };
-      }[];
-      groups?: {
-        name?: string;
-        /** Format: uri */
-        self?: string;
-      }[];
-    };
-    /** @description The container that the board is located in. */
-    BoardLocationBean: {
-      /** Format: int64 */
-      projectId?: number;
-      /** Format: int64 */
-      userId?: number;
-      userAccountId?: string;
-      displayName?: string;
-      projectName?: string;
-      projectKey?: string;
-      projectTypeKey?: string;
-      /** Format: uri */
-      avatarURI?: string;
-      name?: string;
-    };
-    GroupBean: {
-      name?: string;
-      /** Format: uri */
-      self?: string;
-    };
-    PageBeanBoard: {
-      /** Format: int32 */
-      maxResults?: number;
-      /** Format: int64 */
-      startAt?: number;
-      /** Format: int64 */
-      total?: number;
-      isLast?: boolean;
-      values?: {
-        /**
-         * Format: int64
-         * @description The ID of the board.
-         */
-        id?: number;
-        /**
-         * Format: uri
-         * @description The URL of the board.
-         */
-        self?: string;
-        /** @description The name of the board. */
-        name?: string;
-        /** @description The type the board. */
-        type?: string;
-        admins?: {
-          users?: {
-            /**
-             * @description This property is deprecated in favor of `accountId` because of privacy changes. See the [migration guide](https://developer.atlassian.com/cloud/jira/platform/deprecation-notice-user-privacy-api-migration-guide/) for details.
-             * The key of the user.
-             */
-            key?: string;
-            /**
-             * Format: uri
-             * @description The URL of the user.
-             */
-            self?: string;
-            /**
-             * @description This property is deprecated in favor of `accountId` because of privacy changes. See the [migration guide](https://developer.atlassian.com/cloud/jira/platform/deprecation-notice-user-privacy-api-migration-guide/) for details.
-             * The username of the user.
-             */
-            name?: string;
-            /** @description The display name of the user. Depending on the user’s privacy setting, this may return an alternative value. */
-            displayName?: string;
-            /** @description Whether the user is active. */
-            active?: boolean;
-            /** @description The account ID of the user, which uniquely identifies the user across all Atlassian products. For example, *5b10ac8d82e05b22cc7d4ef5*. */
-            accountId?: string;
-            /** @description The avatars of the user. */
-            avatarUrls?: {
-              /**
-               * Format: uri
-               * @description The URL of the user's 24x24 pixel avatar.
-               */
-              "24x24"?: string;
-              /**
-               * Format: uri
-               * @description The URL of the user's 32x32 pixel avatar.
-               */
-              "32x32"?: string;
-              /**
-               * Format: uri
-               * @description The URL of the user's 48x48 pixel avatar.
-               */
-              "48x48"?: string;
-              /**
-               * Format: uri
-               * @description The URL of the user's 16x16 pixel avatar.
-               */
-              "16x16"?: string;
-            };
-          }[];
-          groups?: {
-            name?: string;
-            /** Format: uri */
-            self?: string;
-          }[];
-        };
-        /** @description The container that the board is located in. */
-        location?: {
-          /** Format: int64 */
-          projectId?: number;
-          /** Format: int64 */
-          userId?: number;
-          userAccountId?: string;
-          displayName?: string;
-          projectName?: string;
-          projectKey?: string;
-          projectTypeKey?: string;
-          /** Format: uri */
-          avatarURI?: string;
-          name?: string;
-        };
-        /** @description Whether the board can be edited. */
-        canEdit?: boolean;
-        /** @description Whether the board is private. */
-        isPrivate?: boolean;
-        /** @description Whether the board is selected as a favorite. */
-        favourite?: boolean;
-      }[];
-    };
-    UserBean: {
-      /**
-       * @description This property is deprecated in favor of `accountId` because of privacy changes. See the [migration guide](https://developer.atlassian.com/cloud/jira/platform/deprecation-notice-user-privacy-api-migration-guide/) for details.
-       * The key of the user.
-       */
-      key?: string;
-      /**
-       * Format: uri
-       * @description The URL of the user.
-       */
-      self?: string;
-      /**
-       * @description This property is deprecated in favor of `accountId` because of privacy changes. See the [migration guide](https://developer.atlassian.com/cloud/jira/platform/deprecation-notice-user-privacy-api-migration-guide/) for details.
-       * The username of the user.
-       */
-      name?: string;
-      /** @description The display name of the user. Depending on the user’s privacy setting, this may return an alternative value. */
-      displayName?: string;
-      /** @description Whether the user is active. */
-      active?: boolean;
-      /** @description The account ID of the user, which uniquely identifies the user across all Atlassian products. For example, *5b10ac8d82e05b22cc7d4ef5*. */
-      accountId?: string;
-      /** @description The avatars of the user. */
-      avatarUrls?: {
-        /**
-         * Format: uri
-         * @description The URL of the user's 24x24 pixel avatar.
-         */
-        "24x24"?: string;
-        /**
-         * Format: uri
-         * @description The URL of the user's 32x32 pixel avatar.
-         */
-        "32x32"?: string;
-        /**
-         * Format: uri
-         * @description The URL of the user's 48x48 pixel avatar.
-         */
-        "48x48"?: string;
-        /**
-         * Format: uri
-         * @description The URL of the user's 16x16 pixel avatar.
-         */
-        "16x16"?: string;
-      };
-    };
-    UserBeanAvatarUrls: {
-      /**
-       * Format: uri
-       * @description The URL of the user's 24x24 pixel avatar.
-       */
-      "24x24"?: string;
-      /**
-       * Format: uri
-       * @description The URL of the user's 32x32 pixel avatar.
-       */
-      "32x32"?: string;
-      /**
-       * Format: uri
-       * @description The URL of the user's 48x48 pixel avatar.
-       */
-      "48x48"?: string;
-      /**
-       * Format: uri
-       * @description The URL of the user's 16x16 pixel avatar.
-       */
-      "16x16"?: string;
-    };
-    BoardFilterBean: {
-      /** Format: int64 */
-      id?: number;
-      /** Format: uri */
-      self?: string;
-      name?: string;
-    };
-    PageBeanBoardFilterBean: {
-      /** Format: int32 */
-      maxResults?: number;
-      /** Format: int64 */
-      startAt?: number;
-      /** Format: int64 */
-      total?: number;
-      isLast?: boolean;
-      values?: {
-        /** Format: int64 */
-        id?: number;
-        /** Format: uri */
-        self?: string;
-        name?: string;
-      }[];
-    };
     AvatarUrlsBean: {
       /**
        * Format: uri
@@ -1528,14 +1330,240 @@ export interface components {
        */
       "48x48"?: string;
     };
+    /** @description Details about a board. */
+    Board: {
+      admins?: {
+        groups?: {
+            name?: string;
+            /** Format: uri */
+            self?: string;
+          }[];
+        users?: {
+            /** @description The account ID of the user, which uniquely identifies the user across all Atlassian products. For example, *5b10ac8d82e05b22cc7d4ef5*. */
+            accountId?: string;
+            /** @description Whether the user is active. */
+            active?: boolean;
+            /** @description The avatars of the user. */
+            avatarUrls?: {
+              /**
+               * Format: uri
+               * @description The URL of the user's 16x16 pixel avatar.
+               */
+              "16x16"?: string;
+              /**
+               * Format: uri
+               * @description The URL of the user's 24x24 pixel avatar.
+               */
+              "24x24"?: string;
+              /**
+               * Format: uri
+               * @description The URL of the user's 32x32 pixel avatar.
+               */
+              "32x32"?: string;
+              /**
+               * Format: uri
+               * @description The URL of the user's 48x48 pixel avatar.
+               */
+              "48x48"?: string;
+            };
+            /** @description The display name of the user. Depending on the user’s privacy setting, this may return an alternative value. */
+            displayName?: string;
+            /**
+             * @description This property is deprecated in favor of `accountId` because of privacy changes. See the [migration guide](https://developer.atlassian.com/cloud/jira/platform/deprecation-notice-user-privacy-api-migration-guide/) for details.
+             * The key of the user.
+             */
+            key?: string;
+            /**
+             * @description This property is deprecated in favor of `accountId` because of privacy changes. See the [migration guide](https://developer.atlassian.com/cloud/jira/platform/deprecation-notice-user-privacy-api-migration-guide/) for details.
+             * The username of the user.
+             */
+            name?: string;
+            /**
+             * Format: uri
+             * @description The URL of the user.
+             */
+            self?: string;
+          }[];
+      };
+      /** @description Whether the board can be edited. */
+      canEdit?: boolean;
+      /** @description Whether the board is selected as a favorite. */
+      favourite?: boolean;
+      /**
+       * Format: int64
+       * @description The ID of the board.
+       */
+      id?: number;
+      /** @description Whether the board is private. */
+      isPrivate?: boolean;
+      /** @description The container that the board is located in. */
+      location?: {
+        /** Format: uri */
+        avatarURI?: string;
+        displayName?: string;
+        name?: string;
+        /** Format: int64 */
+        projectId?: number;
+        projectKey?: string;
+        projectName?: string;
+        projectTypeKey?: string;
+        userAccountId?: string;
+        /** Format: int64 */
+        userId?: number;
+      };
+      /** @description The name of the board. */
+      name?: string;
+      /**
+       * Format: uri
+       * @description The URL of the board.
+       */
+      self?: string;
+      /** @description The type the board. */
+      type?: string;
+    };
+    /** @description The users and groups who own the board. */
+    BoardAdminsBean: {
+      groups?: {
+          name?: string;
+          /** Format: uri */
+          self?: string;
+        }[];
+      users?: {
+          /** @description The account ID of the user, which uniquely identifies the user across all Atlassian products. For example, *5b10ac8d82e05b22cc7d4ef5*. */
+          accountId?: string;
+          /** @description Whether the user is active. */
+          active?: boolean;
+          /** @description The avatars of the user. */
+          avatarUrls?: {
+            /**
+             * Format: uri
+             * @description The URL of the user's 16x16 pixel avatar.
+             */
+            "16x16"?: string;
+            /**
+             * Format: uri
+             * @description The URL of the user's 24x24 pixel avatar.
+             */
+            "24x24"?: string;
+            /**
+             * Format: uri
+             * @description The URL of the user's 32x32 pixel avatar.
+             */
+            "32x32"?: string;
+            /**
+             * Format: uri
+             * @description The URL of the user's 48x48 pixel avatar.
+             */
+            "48x48"?: string;
+          };
+          /** @description The display name of the user. Depending on the user’s privacy setting, this may return an alternative value. */
+          displayName?: string;
+          /**
+           * @description This property is deprecated in favor of `accountId` because of privacy changes. See the [migration guide](https://developer.atlassian.com/cloud/jira/platform/deprecation-notice-user-privacy-api-migration-guide/) for details.
+           * The key of the user.
+           */
+          key?: string;
+          /**
+           * @description This property is deprecated in favor of `accountId` because of privacy changes. See the [migration guide](https://developer.atlassian.com/cloud/jira/platform/deprecation-notice-user-privacy-api-migration-guide/) for details.
+           * The username of the user.
+           */
+          name?: string;
+          /**
+           * Format: uri
+           * @description The URL of the user.
+           */
+          self?: string;
+        }[];
+    };
+    BoardConfigBean: {
+      columnConfig?: {
+        columns?: {
+            /** Format: int32 */
+            max?: number;
+            /** Format: int32 */
+            min?: number;
+            name?: string;
+            statuses?: {
+                id?: string;
+                /** Format: uri */
+                self?: string;
+              }[];
+          }[];
+        constraintType?: string;
+      };
+      estimation?: {
+        field?: {
+          displayName?: string;
+          fieldId?: string;
+        };
+        type?: string;
+      };
+      filter?: {
+        id?: string;
+        /** Format: uri */
+        self?: string;
+      };
+      /** Format: int64 */
+      id?: number;
+      location?: {
+        projectKeyOrId?: string;
+        /** @enum {string} */
+        type?: "project" | "user";
+      };
+      name?: string;
+      ranking?: {
+        /** Format: int64 */
+        rankCustomFieldId?: number;
+      };
+      /** Format: uri */
+      self?: string;
+      subQuery?: {
+        query?: string;
+      };
+      type?: string;
+    };
+    BoardCreateBean: {
+      /** Format: int64 */
+      filterId?: number;
+      location?: {
+        projectKeyOrId?: string;
+        /** @enum {string} */
+        type?: "project" | "user";
+      };
+      name?: string;
+      /** @enum {string} */
+      type?: "kanban" | "scrum" | "agility";
+    };
+    BoardFilterBean: {
+      /** Format: int64 */
+      id?: number;
+      name?: string;
+      /** Format: uri */
+      self?: string;
+    };
+    /** @description The container that the board is located in. */
+    BoardLocationBean: {
+      /** Format: uri */
+      avatarURI?: string;
+      displayName?: string;
+      name?: string;
+      /** Format: int64 */
+      projectId?: number;
+      projectKey?: string;
+      projectName?: string;
+      projectTypeKey?: string;
+      userAccountId?: string;
+      /** Format: int64 */
+      userId?: number;
+    };
     /** @description A change item. */
     ChangeDetails: {
       /** @description The name of the field changed. */
       field?: string;
-      /** @description The type of the field changed. */
-      fieldtype?: string;
       /** @description The ID of the field changed. */
       fieldId?: string;
+      /** @description The type of the field changed. */
+      fieldtype?: string;
       /** @description The details of the original value. */
       from?: string;
       /** @description The details of the original value as a string. */
@@ -1545,22 +1573,16 @@ export interface components {
       /** @description The details of the new value as a string. */
       toString?: string;
     };
-    /** @description A changelog. */
+    /** @description A log of changes made to issue fields. Changelogs related to workflow associations are currently being deprecated. */
     Changelog: {
-      /** @description The ID of the changelog. */
-      id?: string;
       /** @description The user who made the change. */
       author?: {
-        /** @description The URL of the user. */
-        self?: string;
-        /** @description This property is no longer available and will be removed from the documentation soon. See the [deprecation notice](https://developer.atlassian.com/cloud/jira/platform/deprecation-notice-user-privacy-api-migration-guide/) for details. */
-        name?: string;
-        /** @description This property is no longer available and will be removed from the documentation soon. See the [deprecation notice](https://developer.atlassian.com/cloud/jira/platform/deprecation-notice-user-privacy-api-migration-guide/) for details. */
-        key?: string;
         /** @description The account ID of the user, which uniquely identifies the user across all Atlassian products. For example, *5b10ac8d82e05b22cc7d4ef5*. */
         accountId?: string;
-        /** @description The email address of the user. Depending on the user’s privacy settings, this may be returned as null. */
-        emailAddress?: string;
+        /** @description The type of account represented by this user. This will be one of 'atlassian' (normal users), 'app' (application user) or 'customer' (Jira Service Desk customer user) */
+        accountType?: string;
+        /** @description Whether the user is active. */
+        active?: boolean;
         /** @description The avatars of the user. */
         avatarUrls?: {
           /**
@@ -1586,118 +1608,270 @@ export interface components {
         };
         /** @description The display name of the user. Depending on the user’s privacy settings, this may return an alternative value. */
         displayName?: string;
-        /** @description Whether the user is active. */
-        active?: boolean;
+        /** @description The email address of the user. Depending on the user’s privacy settings, this may be returned as null. */
+        emailAddress?: string;
+        /** @description This property is no longer available and will be removed from the documentation soon. See the [deprecation notice](https://developer.atlassian.com/cloud/jira/platform/deprecation-notice-user-privacy-api-migration-guide/) for details. */
+        key?: string;
+        /** @description This property is no longer available and will be removed from the documentation soon. See the [deprecation notice](https://developer.atlassian.com/cloud/jira/platform/deprecation-notice-user-privacy-api-migration-guide/) for details. */
+        name?: string;
+        /** @description The URL of the user. */
+        self?: string;
         /** @description The time zone specified in the user's profile. Depending on the user’s privacy settings, this may be returned as null. */
         timeZone?: string;
-        /** @description The type of account represented by this user. This will be one of 'atlassian' (normal users), 'app' (application user) or 'customer' (Jira Service Desk customer user) */
-        accountType?: string;
       };
       /**
        * Format: date-time
        * @description The date on which the change took place.
        */
       created?: string;
-      /** @description The list of items changed. */
-      items?: readonly {
-        /** @description The name of the field changed. */
-        field?: string;
-        /** @description The type of the field changed. */
-        fieldtype?: string;
-        /** @description The ID of the field changed. */
-        fieldId?: string;
-        /** @description The details of the original value. */
-        from?: string;
-        /** @description The details of the original value as a string. */
-        fromString?: string;
-        /** @description The details of the new value. */
-        to?: string;
-        /** @description The details of the new value as a string. */
-        toString?: string;
-      }[];
       /** @description The history metadata associated with the changed. */
       historyMetadata?: {
-        /** @description The type of the history record. */
-        type?: string;
-        /** @description The description of the history record. */
-        description?: string;
-        /** @description The description key of the history record. */
-        descriptionKey?: string;
         /** @description The activity described in the history record. */
         activityDescription?: string;
         /** @description The key of the activity described in the history record. */
         activityDescriptionKey?: string;
-        /** @description The description of the email address associated the history record. */
-        emailDescription?: string;
-        /** @description The description key of the email address associated the history record. */
-        emailDescriptionKey?: string;
         /** @description Details of the user whose action created the history record. */
         actor?: {
-          /** @description The ID of the user or system associated with a history record. */
-          id?: string;
+          /** @description The URL to an avatar for the user or system associated with a history record. */
+          avatarUrl?: string;
           /** @description The display name of the user or system associated with a history record. */
           displayName?: string;
           /** @description The key of the display name of the user or system associated with a history record. */
           displayNameKey?: string;
-          /** @description The type of the user or system associated with a history record. */
-          type?: string;
-          /** @description The URL to an avatar for the user or system associated with a history record. */
-          avatarUrl?: string;
-          /** @description The URL of the user or system associated with a history record. */
-          url?: string;
-          [key: string]: unknown;
-        };
-        /** @description Details of the system that generated the history record. */
-        generator?: {
           /** @description The ID of the user or system associated with a history record. */
           id?: string;
-          /** @description The display name of the user or system associated with a history record. */
-          displayName?: string;
-          /** @description The key of the display name of the user or system associated with a history record. */
-          displayNameKey?: string;
           /** @description The type of the user or system associated with a history record. */
           type?: string;
-          /** @description The URL to an avatar for the user or system associated with a history record. */
-          avatarUrl?: string;
           /** @description The URL of the user or system associated with a history record. */
           url?: string;
           [key: string]: unknown;
         };
         /** @description Details of the cause that triggered the creation the history record. */
         cause?: {
-          /** @description The ID of the user or system associated with a history record. */
-          id?: string;
+          /** @description The URL to an avatar for the user or system associated with a history record. */
+          avatarUrl?: string;
           /** @description The display name of the user or system associated with a history record. */
           displayName?: string;
           /** @description The key of the display name of the user or system associated with a history record. */
           displayNameKey?: string;
+          /** @description The ID of the user or system associated with a history record. */
+          id?: string;
           /** @description The type of the user or system associated with a history record. */
           type?: string;
-          /** @description The URL to an avatar for the user or system associated with a history record. */
-          avatarUrl?: string;
           /** @description The URL of the user or system associated with a history record. */
           url?: string;
           [key: string]: unknown;
         };
+        /** @description The description of the history record. */
+        description?: string;
+        /** @description The description key of the history record. */
+        descriptionKey?: string;
+        /** @description The description of the email address associated the history record. */
+        emailDescription?: string;
+        /** @description The description key of the email address associated the history record. */
+        emailDescriptionKey?: string;
         /** @description Additional arbitrary information about the history record. */
         extraData?: {
           [key: string]: string;
         };
+        /** @description Details of the system that generated the history record. */
+        generator?: {
+          /** @description The URL to an avatar for the user or system associated with a history record. */
+          avatarUrl?: string;
+          /** @description The display name of the user or system associated with a history record. */
+          displayName?: string;
+          /** @description The key of the display name of the user or system associated with a history record. */
+          displayNameKey?: string;
+          /** @description The ID of the user or system associated with a history record. */
+          id?: string;
+          /** @description The type of the user or system associated with a history record. */
+          type?: string;
+          /** @description The URL of the user or system associated with a history record. */
+          url?: string;
+          [key: string]: unknown;
+        };
+        /** @description The type of the history record. */
+        type?: string;
         [key: string]: unknown;
       };
+      /** @description The ID of the changelog. */
+      id?: string;
+      /** @description The list of items changed. */
+      items?: readonly {
+          /** @description The name of the field changed. */
+          field?: string;
+          /** @description The ID of the field changed. */
+          fieldId?: string;
+          /** @description The type of the field changed. */
+          fieldtype?: string;
+          /** @description The details of the original value. */
+          from?: string;
+          /** @description The details of the original value as a string. */
+          fromString?: string;
+          /** @description The details of the new value. */
+          to?: string;
+          /** @description The details of the new value as a string. */
+          toString?: string;
+        }[];
+    };
+    ColorBean: {
+      /** @enum {string} */
+      key?: "color_1" | "color_2" | "color_3" | "color_4" | "color_5" | "color_6" | "color_7" | "color_8" | "color_9" | "color_10" | "color_11" | "color_12" | "color_13" | "color_14";
+    };
+    ColumnBean: {
+      /** Format: int32 */
+      max?: number;
+      /** Format: int32 */
+      min?: number;
+      name?: string;
+      statuses?: {
+          id?: string;
+          /** Format: uri */
+          self?: string;
+        }[];
+    };
+    ColumnConfigBean: {
+      columns?: {
+          /** Format: int32 */
+          max?: number;
+          /** Format: int32 */
+          min?: number;
+          name?: string;
+          statuses?: {
+              id?: string;
+              /** Format: uri */
+              self?: string;
+            }[];
+        }[];
+      constraintType?: string;
+    };
+    Entry: {
+      errors?: string[];
+      /** Format: int64 */
+      issueId?: number;
+      issueKey?: string;
+      /** Format: int32 */
+      status?: number;
+    };
+    EpicRankRequestBean: {
+      rankAfterEpic?: string;
+      rankBeforeEpic?: string;
+      /** Format: int64 */
+      rankCustomFieldId?: number;
+    };
+    EpicUpdateBean: {
+      color?: {
+        /** @enum {string} */
+        key?: "color_1" | "color_2" | "color_3" | "color_4" | "color_5" | "color_6" | "color_7" | "color_8" | "color_9" | "color_10" | "color_11" | "color_12" | "color_13" | "color_14";
+      };
+      done?: boolean;
+      name?: string;
+      summary?: string;
+    };
+    EstimationConfigBean: {
+      field?: {
+        displayName?: string;
+        fieldId?: string;
+      };
+      type?: string;
+    };
+    EstimationConfigurationBean: {
+      localisedDescription?: string;
+      localisedName?: string;
+      /** @enum {string} */
+      value?: "STORY_POINTS" | "ORIGINAL_ESTIMATE";
+    };
+    EstimationFieldBean: {
+      displayName?: string;
+      fieldId?: string;
+    };
+    FeatureBean: {
+      /** @enum {string} */
+      boardFeature?: "SIMPLE_ROADMAP" | "BACKLOG" | "SPRINTS" | "CALENDAR" | "DEVTOOLS" | "REPORTS" | "ESTIMATION" | "PAGES" | "CODE" | "SECURITY" | "REQUESTS" | "INCIDENTS" | "RELEASES" | "DEPLOYMENTS" | "ISSUE_NAVIGATOR" | "ON_CALL_SCHEDULE" | "BOARD" | "GOALS" | "LIST_VIEW";
+      /** Format: int64 */
+      boardId?: number;
+      featureId?: string;
+      /** @enum {string} */
+      featureType?: "BASIC" | "ESTIMATION";
+      imageUri?: string;
+      learnMoreArticleId?: string;
+      learnMoreLink?: string;
+      localisedDescription?: string;
+      localisedGroup?: string;
+      localisedName?: string;
+      permissibleEstimationTypes?: ({
+          localisedDescription?: string;
+          localisedName?: string;
+          /** @enum {string} */
+          value?: "STORY_POINTS" | "ORIGINAL_ESTIMATE";
+        })[];
+      /** @enum {string} */
+      state?: "ENABLED" | "DISABLED" | "COMING_SOON";
+      toggleLocked?: boolean;
+    };
+    FeatureResponseBean: {
+      features?: ({
+          /** @enum {string} */
+          boardFeature?: "SIMPLE_ROADMAP" | "BACKLOG" | "SPRINTS" | "CALENDAR" | "DEVTOOLS" | "REPORTS" | "ESTIMATION" | "PAGES" | "CODE" | "SECURITY" | "REQUESTS" | "INCIDENTS" | "RELEASES" | "DEPLOYMENTS" | "ISSUE_NAVIGATOR" | "ON_CALL_SCHEDULE" | "BOARD" | "GOALS" | "LIST_VIEW";
+          /** Format: int64 */
+          boardId?: number;
+          featureId?: string;
+          /** @enum {string} */
+          featureType?: "BASIC" | "ESTIMATION";
+          imageUri?: string;
+          learnMoreArticleId?: string;
+          learnMoreLink?: string;
+          localisedDescription?: string;
+          localisedGroup?: string;
+          localisedName?: string;
+          permissibleEstimationTypes?: ({
+              localisedDescription?: string;
+              localisedName?: string;
+              /** @enum {string} */
+              value?: "STORY_POINTS" | "ORIGINAL_ESTIMATE";
+            })[];
+          /** @enum {string} */
+          state?: "ENABLED" | "DISABLED" | "COMING_SOON";
+          toggleLocked?: boolean;
+        })[];
+    };
+    FeatureToggleRequestBean: {
+      /** Format: int64 */
+      boardId?: number;
+      enabling?: boolean;
+      feature?: string;
+    };
+    FieldEditBean: {
+      value?: string;
     };
     /** @description The metadata describing an issue field. */
     FieldMetadata: {
+      /** @description The list of values allowed in the field. */
+      allowedValues?: readonly unknown[];
+      /** @description The URL that can be used to automatically complete the field. */
+      autoCompleteUrl?: string;
+      /** @description The configuration properties. */
+      configuration?: {
+        [key: string]: unknown;
+      };
+      /** @description The default value of the field. */
+      defaultValue?: unknown;
+      /** @description Whether the field has a default value. */
+      hasDefaultValue?: boolean;
+      /** @description The key of the field. */
+      key: string;
+      /** @description The name of the field. */
+      name: string;
+      /** @description The list of operations that can be performed on the field. */
+      operations: readonly string[];
       /** @description Whether the field is required. */
       required: boolean;
       /** @description The data type of the field. */
       schema: {
-        /** @description The data type of the field. */
-        type: string;
-        /** @description When the data type is an array, the name of the field items within the array. */
-        items?: string;
-        /** @description If the field is a system field, the name of the field. */
-        system?: string;
+        /** @description If the field is a custom field, the configuration of the field. */
+        configuration?: {
+          [key: string]: unknown;
+        };
         /** @description If the field is a custom field, the URI of the field. */
         custom?: string;
         /**
@@ -1705,321 +1879,258 @@ export interface components {
          * @description If the field is a custom field, the custom ID of the field.
          */
         customId?: number;
-        /** @description If the field is a custom field, the configuration of the field. */
-        configuration?: {
-          [key: string]: unknown;
-        };
+        /** @description When the data type is an array, the name of the field items within the array. */
+        items?: string;
+        /** @description If the field is a system field, the name of the field. */
+        system?: string;
+        /** @description The data type of the field. */
+        type: string;
       };
-      /** @description The name of the field. */
-      name: string;
-      /** @description The key of the field. */
-      key: string;
-      /** @description The URL that can be used to automatically complete the field. */
-      autoCompleteUrl?: string;
-      /** @description Whether the field has a default value. */
-      hasDefaultValue?: boolean;
-      /** @description The list of operations that can be performed on the field. */
-      operations: readonly string[];
-      /** @description The list of values allowed in the field. */
-      allowedValues?: readonly unknown[];
-      /** @description The default value of the field. */
-      defaultValue?: unknown;
-      /** @description The configuration properties. */
-      configuration?: {
-        [key: string]: unknown;
-      };
+    };
+    GroupBean: {
+      name?: string;
+      /** Format: uri */
+      self?: string;
     };
     /** @description Details of issue history metadata. */
     HistoryMetadata: {
-      /** @description The type of the history record. */
-      type?: string;
-      /** @description The description of the history record. */
-      description?: string;
-      /** @description The description key of the history record. */
-      descriptionKey?: string;
       /** @description The activity described in the history record. */
       activityDescription?: string;
       /** @description The key of the activity described in the history record. */
       activityDescriptionKey?: string;
-      /** @description The description of the email address associated the history record. */
-      emailDescription?: string;
-      /** @description The description key of the email address associated the history record. */
-      emailDescriptionKey?: string;
       /** @description Details of the user whose action created the history record. */
       actor?: {
-        /** @description The ID of the user or system associated with a history record. */
-        id?: string;
+        /** @description The URL to an avatar for the user or system associated with a history record. */
+        avatarUrl?: string;
         /** @description The display name of the user or system associated with a history record. */
         displayName?: string;
         /** @description The key of the display name of the user or system associated with a history record. */
         displayNameKey?: string;
-        /** @description The type of the user or system associated with a history record. */
-        type?: string;
-        /** @description The URL to an avatar for the user or system associated with a history record. */
-        avatarUrl?: string;
-        /** @description The URL of the user or system associated with a history record. */
-        url?: string;
-        [key: string]: unknown;
-      };
-      /** @description Details of the system that generated the history record. */
-      generator?: {
         /** @description The ID of the user or system associated with a history record. */
         id?: string;
-        /** @description The display name of the user or system associated with a history record. */
-        displayName?: string;
-        /** @description The key of the display name of the user or system associated with a history record. */
-        displayNameKey?: string;
         /** @description The type of the user or system associated with a history record. */
         type?: string;
-        /** @description The URL to an avatar for the user or system associated with a history record. */
-        avatarUrl?: string;
         /** @description The URL of the user or system associated with a history record. */
         url?: string;
         [key: string]: unknown;
       };
       /** @description Details of the cause that triggered the creation the history record. */
       cause?: {
-        /** @description The ID of the user or system associated with a history record. */
-        id?: string;
+        /** @description The URL to an avatar for the user or system associated with a history record. */
+        avatarUrl?: string;
         /** @description The display name of the user or system associated with a history record. */
         displayName?: string;
         /** @description The key of the display name of the user or system associated with a history record. */
         displayNameKey?: string;
+        /** @description The ID of the user or system associated with a history record. */
+        id?: string;
         /** @description The type of the user or system associated with a history record. */
         type?: string;
-        /** @description The URL to an avatar for the user or system associated with a history record. */
-        avatarUrl?: string;
         /** @description The URL of the user or system associated with a history record. */
         url?: string;
         [key: string]: unknown;
       };
+      /** @description The description of the history record. */
+      description?: string;
+      /** @description The description key of the history record. */
+      descriptionKey?: string;
+      /** @description The description of the email address associated the history record. */
+      emailDescription?: string;
+      /** @description The description key of the email address associated the history record. */
+      emailDescriptionKey?: string;
       /** @description Additional arbitrary information about the history record. */
       extraData?: {
         [key: string]: string;
       };
+      /** @description Details of the system that generated the history record. */
+      generator?: {
+        /** @description The URL to an avatar for the user or system associated with a history record. */
+        avatarUrl?: string;
+        /** @description The display name of the user or system associated with a history record. */
+        displayName?: string;
+        /** @description The key of the display name of the user or system associated with a history record. */
+        displayNameKey?: string;
+        /** @description The ID of the user or system associated with a history record. */
+        id?: string;
+        /** @description The type of the user or system associated with a history record. */
+        type?: string;
+        /** @description The URL of the user or system associated with a history record. */
+        url?: string;
+        [key: string]: unknown;
+      };
+      /** @description The type of the history record. */
+      type?: string;
       [key: string]: unknown;
     };
     /** @description Details of user or system associated with a issue history metadata item. */
     HistoryMetadataParticipant: {
-      /** @description The ID of the user or system associated with a history record. */
-      id?: string;
+      /** @description The URL to an avatar for the user or system associated with a history record. */
+      avatarUrl?: string;
       /** @description The display name of the user or system associated with a history record. */
       displayName?: string;
       /** @description The key of the display name of the user or system associated with a history record. */
       displayNameKey?: string;
+      /** @description The ID of the user or system associated with a history record. */
+      id?: string;
       /** @description The type of the user or system associated with a history record. */
       type?: string;
-      /** @description The URL to an avatar for the user or system associated with a history record. */
-      avatarUrl?: string;
       /** @description The URL of the user or system associated with a history record. */
       url?: string;
       [key: string]: unknown;
     };
     IncludedFields: {
-      included?: string[];
       actuallyIncluded?: string[];
       excluded?: string[];
+      included?: string[];
+    };
+    IssueAssignRequestBean: {
+      issues?: string[];
     };
     /** @description Details about an issue. */
     IssueBean: {
-      /** @description Expand options that include additional issue details in the response. */
-      expand?: string;
-      /** @description The ID of the issue. */
-      id?: string;
-      /**
-       * Format: uri
-       * @description The URL of the issue details.
-       */
-      self?: string;
-      /** @description The key of the issue. */
-      key?: string;
-      /** @description The rendered value of each field present on the issue. */
-      renderedFields?: {
-        [key: string]: unknown;
-      };
-      /** @description Details of the issue properties identified in the request. */
-      properties?: {
-        [key: string]: unknown;
-      };
-      /** @description The ID and name of each field present on the issue. */
-      names?: {
-        [key: string]: string;
-      };
-      /** @description The schema describing each field present on the issue. */
-      schema?: {
-        [key: string]: {
-          /** @description The data type of the field. */
-          type: string;
-          /** @description When the data type is an array, the name of the field items within the array. */
-          items?: string;
-          /** @description If the field is a system field, the name of the field. */
-          system?: string;
-          /** @description If the field is a custom field, the URI of the field. */
-          custom?: string;
-          /**
-           * Format: int64
-           * @description If the field is a custom field, the custom ID of the field.
-           */
-          customId?: number;
-          /** @description If the field is a custom field, the configuration of the field. */
-          configuration?: {
-            [key: string]: unknown;
-          };
-        };
-      };
-      /** @description The transitions that can be performed on the issue. */
-      transitions?: readonly {
-        /** @description The ID of the issue transition. Required when specifying a transition to undertake. */
-        id?: string;
-        /** @description The name of the issue transition. */
-        name?: string;
-        /** @description Details of the issue status after the transition. */
-        to?: {
-          /** @description The URL of the status. */
-          self?: string;
-          /** @description The description of the status. */
-          description?: string;
-          /** @description The URL of the icon used to represent the status. */
-          iconUrl?: string;
-          /** @description The name of the status. */
-          name?: string;
-          /** @description The ID of the status. */
-          id?: string;
-          /** @description The category assigned to the status. */
-          statusCategory?: {
-            /** @description The URL of the status category. */
-            self?: string;
-            /**
-             * Format: int64
-             * @description The ID of the status category.
-             */
-            id?: number;
-            /** @description The key of the status category. */
-            key?: string;
-            /** @description The name of the color used to represent the status category. */
-            colorName?: string;
-            /** @description The name of the status category. */
-            name?: string;
-            [key: string]: unknown;
-          };
-          [key: string]: unknown;
-        };
-        /** @description Whether there is a screen associated with the issue transition. */
-        hasScreen?: boolean;
-        /** @description Whether the issue transition is global, that is, the transition is applied to issues regardless of their status. */
-        isGlobal?: boolean;
-        /** @description Whether this is the initial issue transition for the workflow. */
-        isInitial?: boolean;
-        /** @description Whether the transition is available to be performed. */
-        isAvailable?: boolean;
-        /** @description Whether the issue has to meet criteria before the issue transition is applied. */
-        isConditional?: boolean;
-        /** @description Details of the fields associated with the issue transition screen. Use this information to populate `fields` and `update` in a transition request. */
-        fields?: {
-          [key: string]: {
-            /** @description Whether the field is required. */
-            required: boolean;
-            /** @description The data type of the field. */
-            schema: {
-              /** @description The data type of the field. */
-              type: string;
-              /** @description When the data type is an array, the name of the field items within the array. */
-              items?: string;
-              /** @description If the field is a system field, the name of the field. */
-              system?: string;
-              /** @description If the field is a custom field, the URI of the field. */
-              custom?: string;
-              /**
-               * Format: int64
-               * @description If the field is a custom field, the custom ID of the field.
-               */
-              customId?: number;
-              /** @description If the field is a custom field, the configuration of the field. */
-              configuration?: {
-                [key: string]: unknown;
-              };
-            };
-            /** @description The name of the field. */
-            name: string;
-            /** @description The key of the field. */
-            key: string;
-            /** @description The URL that can be used to automatically complete the field. */
-            autoCompleteUrl?: string;
-            /** @description Whether the field has a default value. */
-            hasDefaultValue?: boolean;
-            /** @description The list of operations that can be performed on the field. */
-            operations: readonly string[];
-            /** @description The list of values allowed in the field. */
-            allowedValues?: readonly unknown[];
-            /** @description The default value of the field. */
-            defaultValue?: unknown;
-            /** @description The configuration properties. */
-            configuration?: {
-              [key: string]: unknown;
-            };
-          };
-        };
-        /** @description Expand options that include additional transition details in the response. */
-        expand?: string;
-        looped?: boolean;
-        [key: string]: unknown;
-      }[];
-      /** @description The operations that can be performed on the issue. */
-      operations?: components["schemas"]["Operations"];
-      /** @description The metadata for the fields on the issue that can be amended. */
-      editmeta?: {
-        fields?: {
-          [key: string]: {
-            /** @description Whether the field is required. */
-            required: boolean;
-            /** @description The data type of the field. */
-            schema: {
-              /** @description The data type of the field. */
-              type: string;
-              /** @description When the data type is an array, the name of the field items within the array. */
-              items?: string;
-              /** @description If the field is a system field, the name of the field. */
-              system?: string;
-              /** @description If the field is a custom field, the URI of the field. */
-              custom?: string;
-              /**
-               * Format: int64
-               * @description If the field is a custom field, the custom ID of the field.
-               */
-              customId?: number;
-              /** @description If the field is a custom field, the configuration of the field. */
-              configuration?: {
-                [key: string]: unknown;
-              };
-            };
-            /** @description The name of the field. */
-            name: string;
-            /** @description The key of the field. */
-            key: string;
-            /** @description The URL that can be used to automatically complete the field. */
-            autoCompleteUrl?: string;
-            /** @description Whether the field has a default value. */
-            hasDefaultValue?: boolean;
-            /** @description The list of operations that can be performed on the field. */
-            operations: readonly string[];
-            /** @description The list of values allowed in the field. */
-            allowedValues?: readonly unknown[];
-            /** @description The default value of the field. */
-            defaultValue?: unknown;
-            /** @description The configuration properties. */
-            configuration?: {
-              [key: string]: unknown;
-            };
-          };
-        };
-      };
       /** @description Details of changelogs associated with the issue. */
       changelog?: {
-        /**
-         * Format: int32
-         * @description The index of the first item returned on the page.
-         */
-        startAt?: number;
+        /** @description The list of changelogs. */
+        histories?: readonly {
+            /** @description The user who made the change. */
+            author?: {
+              /** @description The account ID of the user, which uniquely identifies the user across all Atlassian products. For example, *5b10ac8d82e05b22cc7d4ef5*. */
+              accountId?: string;
+              /** @description The type of account represented by this user. This will be one of 'atlassian' (normal users), 'app' (application user) or 'customer' (Jira Service Desk customer user) */
+              accountType?: string;
+              /** @description Whether the user is active. */
+              active?: boolean;
+              /** @description The avatars of the user. */
+              avatarUrls?: {
+                /**
+                 * Format: uri
+                 * @description The URL of the item's 16x16 pixel avatar.
+                 */
+                "16x16"?: string;
+                /**
+                 * Format: uri
+                 * @description The URL of the item's 24x24 pixel avatar.
+                 */
+                "24x24"?: string;
+                /**
+                 * Format: uri
+                 * @description The URL of the item's 32x32 pixel avatar.
+                 */
+                "32x32"?: string;
+                /**
+                 * Format: uri
+                 * @description The URL of the item's 48x48 pixel avatar.
+                 */
+                "48x48"?: string;
+              };
+              /** @description The display name of the user. Depending on the user’s privacy settings, this may return an alternative value. */
+              displayName?: string;
+              /** @description The email address of the user. Depending on the user’s privacy settings, this may be returned as null. */
+              emailAddress?: string;
+              /** @description This property is no longer available and will be removed from the documentation soon. See the [deprecation notice](https://developer.atlassian.com/cloud/jira/platform/deprecation-notice-user-privacy-api-migration-guide/) for details. */
+              key?: string;
+              /** @description This property is no longer available and will be removed from the documentation soon. See the [deprecation notice](https://developer.atlassian.com/cloud/jira/platform/deprecation-notice-user-privacy-api-migration-guide/) for details. */
+              name?: string;
+              /** @description The URL of the user. */
+              self?: string;
+              /** @description The time zone specified in the user's profile. Depending on the user’s privacy settings, this may be returned as null. */
+              timeZone?: string;
+            };
+            /**
+             * Format: date-time
+             * @description The date on which the change took place.
+             */
+            created?: string;
+            /** @description The history metadata associated with the changed. */
+            historyMetadata?: {
+              /** @description The activity described in the history record. */
+              activityDescription?: string;
+              /** @description The key of the activity described in the history record. */
+              activityDescriptionKey?: string;
+              /** @description Details of the user whose action created the history record. */
+              actor?: {
+                /** @description The URL to an avatar for the user or system associated with a history record. */
+                avatarUrl?: string;
+                /** @description The display name of the user or system associated with a history record. */
+                displayName?: string;
+                /** @description The key of the display name of the user or system associated with a history record. */
+                displayNameKey?: string;
+                /** @description The ID of the user or system associated with a history record. */
+                id?: string;
+                /** @description The type of the user or system associated with a history record. */
+                type?: string;
+                /** @description The URL of the user or system associated with a history record. */
+                url?: string;
+                [key: string]: unknown;
+              };
+              /** @description Details of the cause that triggered the creation the history record. */
+              cause?: {
+                /** @description The URL to an avatar for the user or system associated with a history record. */
+                avatarUrl?: string;
+                /** @description The display name of the user or system associated with a history record. */
+                displayName?: string;
+                /** @description The key of the display name of the user or system associated with a history record. */
+                displayNameKey?: string;
+                /** @description The ID of the user or system associated with a history record. */
+                id?: string;
+                /** @description The type of the user or system associated with a history record. */
+                type?: string;
+                /** @description The URL of the user or system associated with a history record. */
+                url?: string;
+                [key: string]: unknown;
+              };
+              /** @description The description of the history record. */
+              description?: string;
+              /** @description The description key of the history record. */
+              descriptionKey?: string;
+              /** @description The description of the email address associated the history record. */
+              emailDescription?: string;
+              /** @description The description key of the email address associated the history record. */
+              emailDescriptionKey?: string;
+              /** @description Additional arbitrary information about the history record. */
+              extraData?: {
+                [key: string]: string;
+              };
+              /** @description Details of the system that generated the history record. */
+              generator?: {
+                /** @description The URL to an avatar for the user or system associated with a history record. */
+                avatarUrl?: string;
+                /** @description The display name of the user or system associated with a history record. */
+                displayName?: string;
+                /** @description The key of the display name of the user or system associated with a history record. */
+                displayNameKey?: string;
+                /** @description The ID of the user or system associated with a history record. */
+                id?: string;
+                /** @description The type of the user or system associated with a history record. */
+                type?: string;
+                /** @description The URL of the user or system associated with a history record. */
+                url?: string;
+                [key: string]: unknown;
+              };
+              /** @description The type of the history record. */
+              type?: string;
+              [key: string]: unknown;
+            };
+            /** @description The ID of the changelog. */
+            id?: string;
+            /** @description The list of items changed. */
+            items?: readonly {
+                /** @description The name of the field changed. */
+                field?: string;
+                /** @description The ID of the field changed. */
+                fieldId?: string;
+                /** @description The type of the field changed. */
+                fieldtype?: string;
+                /** @description The details of the original value. */
+                from?: string;
+                /** @description The details of the original value as a string. */
+                fromString?: string;
+                /** @description The details of the new value. */
+                to?: string;
+                /** @description The details of the new value as a string. */
+                toString?: string;
+              }[];
+          }[];
         /**
          * Format: int32
          * @description The maximum number of results that could be on the page.
@@ -2027,25 +2138,701 @@ export interface components {
         maxResults?: number;
         /**
          * Format: int32
+         * @description The index of the first item returned on the page.
+         */
+        startAt?: number;
+        /**
+         * Format: int32
          * @description The number of results on the page.
          */
         total?: number;
-        /** @description The list of changelogs. */
-        histories?: readonly {
-          /** @description The ID of the changelog. */
+      };
+      /** @description The metadata for the fields on the issue that can be amended. */
+      editmeta?: {
+        fields?: {
+          [key: string]: {
+            /** @description The list of values allowed in the field. */
+            allowedValues?: readonly unknown[];
+            /** @description The URL that can be used to automatically complete the field. */
+            autoCompleteUrl?: string;
+            /** @description The configuration properties. */
+            configuration?: {
+              [key: string]: unknown;
+            };
+            /** @description The default value of the field. */
+            defaultValue?: unknown;
+            /** @description Whether the field has a default value. */
+            hasDefaultValue?: boolean;
+            /** @description The key of the field. */
+            key: string;
+            /** @description The name of the field. */
+            name: string;
+            /** @description The list of operations that can be performed on the field. */
+            operations: readonly string[];
+            /** @description Whether the field is required. */
+            required: boolean;
+            /** @description The data type of the field. */
+            schema: {
+              /** @description If the field is a custom field, the configuration of the field. */
+              configuration?: {
+                [key: string]: unknown;
+              };
+              /** @description If the field is a custom field, the URI of the field. */
+              custom?: string;
+              /**
+               * Format: int64
+               * @description If the field is a custom field, the custom ID of the field.
+               */
+              customId?: number;
+              /** @description When the data type is an array, the name of the field items within the array. */
+              items?: string;
+              /** @description If the field is a system field, the name of the field. */
+              system?: string;
+              /** @description The data type of the field. */
+              type: string;
+            };
+          };
+        };
+      };
+      /** @description Expand options that include additional issue details in the response. */
+      expand?: string;
+      fields?: {
+        [key: string]: unknown;
+      };
+      fieldsToInclude?: {
+        actuallyIncluded?: string[];
+        excluded?: string[];
+        included?: string[];
+      };
+      /** @description The ID of the issue. */
+      id?: string;
+      /** @description The key of the issue. */
+      key?: string;
+      /** @description The ID and name of each field present on the issue. */
+      names?: {
+        [key: string]: string;
+      };
+      /** @description The operations that can be performed on the issue. */
+      operations?: components["schemas"]["Operations"];
+      /** @description Details of the issue properties identified in the request. */
+      properties?: {
+        [key: string]: unknown;
+      };
+      /** @description The rendered value of each field present on the issue. */
+      renderedFields?: {
+        [key: string]: unknown;
+      };
+      /** @description The schema describing each field present on the issue. */
+      schema?: {
+        [key: string]: {
+          /** @description If the field is a custom field, the configuration of the field. */
+          configuration?: {
+            [key: string]: unknown;
+          };
+          /** @description If the field is a custom field, the URI of the field. */
+          custom?: string;
+          /**
+           * Format: int64
+           * @description If the field is a custom field, the custom ID of the field.
+           */
+          customId?: number;
+          /** @description When the data type is an array, the name of the field items within the array. */
+          items?: string;
+          /** @description If the field is a system field, the name of the field. */
+          system?: string;
+          /** @description The data type of the field. */
+          type: string;
+        };
+      };
+      /**
+       * Format: uri
+       * @description The URL of the issue details.
+       */
+      self?: string;
+      /** @description The transitions that can be performed on the issue. */
+      transitions?: readonly ({
+          /** @description Expand options that include additional transition details in the response. */
+          expand?: string;
+          /** @description Details of the fields associated with the issue transition screen. Use this information to populate `fields` and `update` in a transition request. */
+          fields?: {
+            [key: string]: {
+              /** @description The list of values allowed in the field. */
+              allowedValues?: readonly unknown[];
+              /** @description The URL that can be used to automatically complete the field. */
+              autoCompleteUrl?: string;
+              /** @description The configuration properties. */
+              configuration?: {
+                [key: string]: unknown;
+              };
+              /** @description The default value of the field. */
+              defaultValue?: unknown;
+              /** @description Whether the field has a default value. */
+              hasDefaultValue?: boolean;
+              /** @description The key of the field. */
+              key: string;
+              /** @description The name of the field. */
+              name: string;
+              /** @description The list of operations that can be performed on the field. */
+              operations: readonly string[];
+              /** @description Whether the field is required. */
+              required: boolean;
+              /** @description The data type of the field. */
+              schema: {
+                /** @description If the field is a custom field, the configuration of the field. */
+                configuration?: {
+                  [key: string]: unknown;
+                };
+                /** @description If the field is a custom field, the URI of the field. */
+                custom?: string;
+                /**
+                 * Format: int64
+                 * @description If the field is a custom field, the custom ID of the field.
+                 */
+                customId?: number;
+                /** @description When the data type is an array, the name of the field items within the array. */
+                items?: string;
+                /** @description If the field is a system field, the name of the field. */
+                system?: string;
+                /** @description The data type of the field. */
+                type: string;
+              };
+            };
+          };
+          /** @description Whether there is a screen associated with the issue transition. */
+          hasScreen?: boolean;
+          /** @description The ID of the issue transition. Required when specifying a transition to undertake. */
           id?: string;
+          /** @description Whether the transition is available to be performed. */
+          isAvailable?: boolean;
+          /** @description Whether the issue has to meet criteria before the issue transition is applied. */
+          isConditional?: boolean;
+          /** @description Whether the issue transition is global, that is, the transition is applied to issues regardless of their status. */
+          isGlobal?: boolean;
+          /** @description Whether this is the initial issue transition for the workflow. */
+          isInitial?: boolean;
+          looped?: boolean;
+          /** @description The name of the issue transition. */
+          name?: string;
+          /** @description Details of the issue status after the transition. */
+          to?: {
+            /** @description The description of the status. */
+            description?: string;
+            /** @description The URL of the icon used to represent the status. */
+            iconUrl?: string;
+            /** @description The ID of the status. */
+            id?: string;
+            /** @description The name of the status. */
+            name?: string;
+            /** @description The scope of the field. */
+            scope?: {
+              /** @description The project the item has scope in. */
+              project?: {
+                /** @description The URLs of the project's avatars. */
+                avatarUrls?: {
+                  /**
+                   * Format: uri
+                   * @description The URL of the item's 16x16 pixel avatar.
+                   */
+                  "16x16"?: string;
+                  /**
+                   * Format: uri
+                   * @description The URL of the item's 24x24 pixel avatar.
+                   */
+                  "24x24"?: string;
+                  /**
+                   * Format: uri
+                   * @description The URL of the item's 32x32 pixel avatar.
+                   */
+                  "32x32"?: string;
+                  /**
+                   * Format: uri
+                   * @description The URL of the item's 48x48 pixel avatar.
+                   */
+                  "48x48"?: string;
+                };
+                /** @description The ID of the project. */
+                id?: string;
+                /** @description The key of the project. */
+                key?: string;
+                /** @description The name of the project. */
+                name?: string;
+                /** @description The category the project belongs to. */
+                projectCategory?: {
+                  /** @description The name of the project category. */
+                  description?: string;
+                  /** @description The ID of the project category. */
+                  id?: string;
+                  /** @description The description of the project category. */
+                  name?: string;
+                  /** @description The URL of the project category. */
+                  self?: string;
+                };
+                /**
+                 * @description The [project type](https://confluence.atlassian.com/x/GwiiLQ#Jiraapplicationsoverview-Productfeaturesandprojecttypes) of the project.
+                 * @enum {string}
+                 */
+                projectTypeKey?: "software" | "service_desk" | "business";
+                /** @description The URL of the project details. */
+                self?: string;
+                /** @description Whether or not the project is simplified. */
+                simplified?: boolean;
+              };
+              /**
+               * @description The type of scope.
+               * @enum {string}
+               */
+              type?: "PROJECT" | "TEMPLATE";
+              [key: string]: unknown;
+            };
+            /** @description The URL of the status. */
+            self?: string;
+            /** @description The category assigned to the status. */
+            statusCategory?: {
+              /** @description The name of the color used to represent the status category. */
+              colorName?: string;
+              /**
+               * Format: int64
+               * @description The ID of the status category.
+               */
+              id?: number;
+              /** @description The key of the status category. */
+              key?: string;
+              /** @description The name of the status category. */
+              name?: string;
+              /** @description The URL of the status category. */
+              self?: string;
+              [key: string]: unknown;
+            };
+            [key: string]: unknown;
+          };
+          [key: string]: unknown;
+        })[];
+      /** @description The versions of each field on the issue. */
+      versionedRepresentations?: {
+        [key: string]: {
+          [key: string]: unknown;
+        };
+      };
+    };
+    IssueRankRequestBean: {
+      issues?: string[];
+      rankAfterIssue?: string;
+      rankBeforeIssue?: string;
+      /** Format: int64 */
+      rankCustomFieldId?: number;
+    };
+    /** @description Details of an issue transition. */
+    IssueTransition: {
+      /** @description Expand options that include additional transition details in the response. */
+      expand?: string;
+      /** @description Details of the fields associated with the issue transition screen. Use this information to populate `fields` and `update` in a transition request. */
+      fields?: {
+        [key: string]: {
+          /** @description The list of values allowed in the field. */
+          allowedValues?: readonly unknown[];
+          /** @description The URL that can be used to automatically complete the field. */
+          autoCompleteUrl?: string;
+          /** @description The configuration properties. */
+          configuration?: {
+            [key: string]: unknown;
+          };
+          /** @description The default value of the field. */
+          defaultValue?: unknown;
+          /** @description Whether the field has a default value. */
+          hasDefaultValue?: boolean;
+          /** @description The key of the field. */
+          key: string;
+          /** @description The name of the field. */
+          name: string;
+          /** @description The list of operations that can be performed on the field. */
+          operations: readonly string[];
+          /** @description Whether the field is required. */
+          required: boolean;
+          /** @description The data type of the field. */
+          schema: {
+            /** @description If the field is a custom field, the configuration of the field. */
+            configuration?: {
+              [key: string]: unknown;
+            };
+            /** @description If the field is a custom field, the URI of the field. */
+            custom?: string;
+            /**
+             * Format: int64
+             * @description If the field is a custom field, the custom ID of the field.
+             */
+            customId?: number;
+            /** @description When the data type is an array, the name of the field items within the array. */
+            items?: string;
+            /** @description If the field is a system field, the name of the field. */
+            system?: string;
+            /** @description The data type of the field. */
+            type: string;
+          };
+        };
+      };
+      /** @description Whether there is a screen associated with the issue transition. */
+      hasScreen?: boolean;
+      /** @description The ID of the issue transition. Required when specifying a transition to undertake. */
+      id?: string;
+      /** @description Whether the transition is available to be performed. */
+      isAvailable?: boolean;
+      /** @description Whether the issue has to meet criteria before the issue transition is applied. */
+      isConditional?: boolean;
+      /** @description Whether the issue transition is global, that is, the transition is applied to issues regardless of their status. */
+      isGlobal?: boolean;
+      /** @description Whether this is the initial issue transition for the workflow. */
+      isInitial?: boolean;
+      looped?: boolean;
+      /** @description The name of the issue transition. */
+      name?: string;
+      /** @description Details of the issue status after the transition. */
+      to?: {
+        /** @description The description of the status. */
+        description?: string;
+        /** @description The URL of the icon used to represent the status. */
+        iconUrl?: string;
+        /** @description The ID of the status. */
+        id?: string;
+        /** @description The name of the status. */
+        name?: string;
+        /** @description The scope of the field. */
+        scope?: {
+          /** @description The project the item has scope in. */
+          project?: {
+            /** @description The URLs of the project's avatars. */
+            avatarUrls?: {
+              /**
+               * Format: uri
+               * @description The URL of the item's 16x16 pixel avatar.
+               */
+              "16x16"?: string;
+              /**
+               * Format: uri
+               * @description The URL of the item's 24x24 pixel avatar.
+               */
+              "24x24"?: string;
+              /**
+               * Format: uri
+               * @description The URL of the item's 32x32 pixel avatar.
+               */
+              "32x32"?: string;
+              /**
+               * Format: uri
+               * @description The URL of the item's 48x48 pixel avatar.
+               */
+              "48x48"?: string;
+            };
+            /** @description The ID of the project. */
+            id?: string;
+            /** @description The key of the project. */
+            key?: string;
+            /** @description The name of the project. */
+            name?: string;
+            /** @description The category the project belongs to. */
+            projectCategory?: {
+              /** @description The name of the project category. */
+              description?: string;
+              /** @description The ID of the project category. */
+              id?: string;
+              /** @description The description of the project category. */
+              name?: string;
+              /** @description The URL of the project category. */
+              self?: string;
+            };
+            /**
+             * @description The [project type](https://confluence.atlassian.com/x/GwiiLQ#Jiraapplicationsoverview-Productfeaturesandprojecttypes) of the project.
+             * @enum {string}
+             */
+            projectTypeKey?: "software" | "service_desk" | "business";
+            /** @description The URL of the project details. */
+            self?: string;
+            /** @description Whether or not the project is simplified. */
+            simplified?: boolean;
+          };
+          /**
+           * @description The type of scope.
+           * @enum {string}
+           */
+          type?: "PROJECT" | "TEMPLATE";
+          [key: string]: unknown;
+        };
+        /** @description The URL of the status. */
+        self?: string;
+        /** @description The category assigned to the status. */
+        statusCategory?: {
+          /** @description The name of the color used to represent the status category. */
+          colorName?: string;
+          /**
+           * Format: int64
+           * @description The ID of the status category.
+           */
+          id?: number;
+          /** @description The key of the status category. */
+          key?: string;
+          /** @description The name of the status category. */
+          name?: string;
+          /** @description The URL of the status category. */
+          self?: string;
+          [key: string]: unknown;
+        };
+        [key: string]: unknown;
+      };
+      [key: string]: unknown;
+    };
+    /** @description A list of editable field details. */
+    IssueUpdateMetadata: {
+      fields?: {
+        [key: string]: {
+          /** @description The list of values allowed in the field. */
+          allowedValues?: readonly unknown[];
+          /** @description The URL that can be used to automatically complete the field. */
+          autoCompleteUrl?: string;
+          /** @description The configuration properties. */
+          configuration?: {
+            [key: string]: unknown;
+          };
+          /** @description The default value of the field. */
+          defaultValue?: unknown;
+          /** @description Whether the field has a default value. */
+          hasDefaultValue?: boolean;
+          /** @description The key of the field. */
+          key: string;
+          /** @description The name of the field. */
+          name: string;
+          /** @description The list of operations that can be performed on the field. */
+          operations: readonly string[];
+          /** @description Whether the field is required. */
+          required: boolean;
+          /** @description The data type of the field. */
+          schema: {
+            /** @description If the field is a custom field, the configuration of the field. */
+            configuration?: {
+              [key: string]: unknown;
+            };
+            /** @description If the field is a custom field, the URI of the field. */
+            custom?: string;
+            /**
+             * Format: int64
+             * @description If the field is a custom field, the custom ID of the field.
+             */
+            customId?: number;
+            /** @description When the data type is an array, the name of the field items within the array. */
+            items?: string;
+            /** @description If the field is a system field, the name of the field. */
+            system?: string;
+            /** @description The data type of the field. */
+            type: string;
+          };
+        };
+      };
+    };
+    /** @description The schema of a field. */
+    JsonTypeBean: {
+      /** @description If the field is a custom field, the configuration of the field. */
+      configuration?: {
+        [key: string]: unknown;
+      };
+      /** @description If the field is a custom field, the URI of the field. */
+      custom?: string;
+      /**
+       * Format: int64
+       * @description If the field is a custom field, the custom ID of the field.
+       */
+      customId?: number;
+      /** @description When the data type is an array, the name of the field items within the array. */
+      items?: string;
+      /** @description If the field is a system field, the name of the field. */
+      system?: string;
+      /** @description The data type of the field. */
+      type: string;
+    };
+    /** @description Details a link group, which defines issue operations. */
+    LinkGroup: {
+      groups?: components["schemas"]["LinkGroup"][];
+      /** @description Details about the operations available in this version. */
+      header?: {
+        href?: string;
+        iconClass?: string;
+        id?: string;
+        label?: string;
+        styleClass?: string;
+        title?: string;
+        /** Format: int32 */
+        weight?: number;
+      };
+      id?: string;
+      links?: {
+          href?: string;
+          iconClass?: string;
+          id?: string;
+          label?: string;
+          styleClass?: string;
+          title?: string;
+          /** Format: int32 */
+          weight?: number;
+        }[];
+      styleClass?: string;
+      /** Format: int32 */
+      weight?: number;
+    };
+    LocationBean: {
+      projectKeyOrId?: string;
+      /** @enum {string} */
+      type?: "project" | "user";
+    };
+    /** @description Details of the operations that can be performed on the issue. */
+    Operations: {
+      /** @description Details of the link groups defining issue operations. */
+      linkGroups?: readonly components["schemas"]["LinkGroup"][];
+      [key: string]: unknown;
+    };
+    PageBeanBoard: {
+      isLast?: boolean;
+      /** Format: int32 */
+      maxResults?: number;
+      /** Format: int64 */
+      startAt?: number;
+      /** Format: int64 */
+      total?: number;
+      values?: {
+          admins?: {
+            groups?: {
+                name?: string;
+                /** Format: uri */
+                self?: string;
+              }[];
+            users?: {
+                /** @description The account ID of the user, which uniquely identifies the user across all Atlassian products. For example, *5b10ac8d82e05b22cc7d4ef5*. */
+                accountId?: string;
+                /** @description Whether the user is active. */
+                active?: boolean;
+                /** @description The avatars of the user. */
+                avatarUrls?: {
+                  /**
+                   * Format: uri
+                   * @description The URL of the user's 16x16 pixel avatar.
+                   */
+                  "16x16"?: string;
+                  /**
+                   * Format: uri
+                   * @description The URL of the user's 24x24 pixel avatar.
+                   */
+                  "24x24"?: string;
+                  /**
+                   * Format: uri
+                   * @description The URL of the user's 32x32 pixel avatar.
+                   */
+                  "32x32"?: string;
+                  /**
+                   * Format: uri
+                   * @description The URL of the user's 48x48 pixel avatar.
+                   */
+                  "48x48"?: string;
+                };
+                /** @description The display name of the user. Depending on the user’s privacy setting, this may return an alternative value. */
+                displayName?: string;
+                /**
+                 * @description This property is deprecated in favor of `accountId` because of privacy changes. See the [migration guide](https://developer.atlassian.com/cloud/jira/platform/deprecation-notice-user-privacy-api-migration-guide/) for details.
+                 * The key of the user.
+                 */
+                key?: string;
+                /**
+                 * @description This property is deprecated in favor of `accountId` because of privacy changes. See the [migration guide](https://developer.atlassian.com/cloud/jira/platform/deprecation-notice-user-privacy-api-migration-guide/) for details.
+                 * The username of the user.
+                 */
+                name?: string;
+                /**
+                 * Format: uri
+                 * @description The URL of the user.
+                 */
+                self?: string;
+              }[];
+          };
+          /** @description Whether the board can be edited. */
+          canEdit?: boolean;
+          /** @description Whether the board is selected as a favorite. */
+          favourite?: boolean;
+          /**
+           * Format: int64
+           * @description The ID of the board.
+           */
+          id?: number;
+          /** @description Whether the board is private. */
+          isPrivate?: boolean;
+          /** @description The container that the board is located in. */
+          location?: {
+            /** Format: uri */
+            avatarURI?: string;
+            displayName?: string;
+            name?: string;
+            /** Format: int64 */
+            projectId?: number;
+            projectKey?: string;
+            projectName?: string;
+            projectTypeKey?: string;
+            userAccountId?: string;
+            /** Format: int64 */
+            userId?: number;
+          };
+          /** @description The name of the board. */
+          name?: string;
+          /**
+           * Format: uri
+           * @description The URL of the board.
+           */
+          self?: string;
+          /** @description The type the board. */
+          type?: string;
+        }[];
+    };
+    PageBeanBoardFilterBean: {
+      isLast?: boolean;
+      /** Format: int32 */
+      maxResults?: number;
+      /** Format: int64 */
+      startAt?: number;
+      /** Format: int64 */
+      total?: number;
+      values?: {
+          /** Format: int64 */
+          id?: number;
+          name?: string;
+          /** Format: uri */
+          self?: string;
+        }[];
+    };
+    PageBeanQuickFilterBean: {
+      isLast?: boolean;
+      /** Format: int32 */
+      maxResults?: number;
+      /** Format: int64 */
+      startAt?: number;
+      /** Format: int64 */
+      total?: number;
+      values?: {
+          /** Format: int64 */
+          boardId?: number;
+          description?: string;
+          /** Format: int64 */
+          id?: number;
+          jql?: string;
+          name?: string;
+          /** Format: int32 */
+          position?: number;
+        }[];
+    };
+    /** @description A page of changelogs. */
+    PageOfChangelogs: {
+      /** @description The list of changelogs. */
+      histories?: readonly {
           /** @description The user who made the change. */
           author?: {
-            /** @description The URL of the user. */
-            self?: string;
-            /** @description This property is no longer available and will be removed from the documentation soon. See the [deprecation notice](https://developer.atlassian.com/cloud/jira/platform/deprecation-notice-user-privacy-api-migration-guide/) for details. */
-            name?: string;
-            /** @description This property is no longer available and will be removed from the documentation soon. See the [deprecation notice](https://developer.atlassian.com/cloud/jira/platform/deprecation-notice-user-privacy-api-migration-guide/) for details. */
-            key?: string;
             /** @description The account ID of the user, which uniquely identifies the user across all Atlassian products. For example, *5b10ac8d82e05b22cc7d4ef5*. */
             accountId?: string;
-            /** @description The email address of the user. Depending on the user’s privacy settings, this may be returned as null. */
-            emailAddress?: string;
+            /** @description The type of account represented by this user. This will be one of 'atlassian' (normal users), 'app' (application user) or 'customer' (Jira Service Desk customer user) */
+            accountType?: string;
+            /** @description Whether the user is active. */
+            active?: boolean;
             /** @description The avatars of the user. */
             avatarUrls?: {
               /**
@@ -2071,328 +2858,112 @@ export interface components {
             };
             /** @description The display name of the user. Depending on the user’s privacy settings, this may return an alternative value. */
             displayName?: string;
-            /** @description Whether the user is active. */
-            active?: boolean;
+            /** @description The email address of the user. Depending on the user’s privacy settings, this may be returned as null. */
+            emailAddress?: string;
+            /** @description This property is no longer available and will be removed from the documentation soon. See the [deprecation notice](https://developer.atlassian.com/cloud/jira/platform/deprecation-notice-user-privacy-api-migration-guide/) for details. */
+            key?: string;
+            /** @description This property is no longer available and will be removed from the documentation soon. See the [deprecation notice](https://developer.atlassian.com/cloud/jira/platform/deprecation-notice-user-privacy-api-migration-guide/) for details. */
+            name?: string;
+            /** @description The URL of the user. */
+            self?: string;
             /** @description The time zone specified in the user's profile. Depending on the user’s privacy settings, this may be returned as null. */
             timeZone?: string;
-            /** @description The type of account represented by this user. This will be one of 'atlassian' (normal users), 'app' (application user) or 'customer' (Jira Service Desk customer user) */
-            accountType?: string;
           };
           /**
            * Format: date-time
            * @description The date on which the change took place.
            */
           created?: string;
-          /** @description The list of items changed. */
-          items?: readonly {
-            /** @description The name of the field changed. */
-            field?: string;
-            /** @description The type of the field changed. */
-            fieldtype?: string;
-            /** @description The ID of the field changed. */
-            fieldId?: string;
-            /** @description The details of the original value. */
-            from?: string;
-            /** @description The details of the original value as a string. */
-            fromString?: string;
-            /** @description The details of the new value. */
-            to?: string;
-            /** @description The details of the new value as a string. */
-            toString?: string;
-          }[];
           /** @description The history metadata associated with the changed. */
           historyMetadata?: {
-            /** @description The type of the history record. */
-            type?: string;
-            /** @description The description of the history record. */
-            description?: string;
-            /** @description The description key of the history record. */
-            descriptionKey?: string;
             /** @description The activity described in the history record. */
             activityDescription?: string;
             /** @description The key of the activity described in the history record. */
             activityDescriptionKey?: string;
-            /** @description The description of the email address associated the history record. */
-            emailDescription?: string;
-            /** @description The description key of the email address associated the history record. */
-            emailDescriptionKey?: string;
             /** @description Details of the user whose action created the history record. */
             actor?: {
-              /** @description The ID of the user or system associated with a history record. */
-              id?: string;
+              /** @description The URL to an avatar for the user or system associated with a history record. */
+              avatarUrl?: string;
               /** @description The display name of the user or system associated with a history record. */
               displayName?: string;
               /** @description The key of the display name of the user or system associated with a history record. */
               displayNameKey?: string;
-              /** @description The type of the user or system associated with a history record. */
-              type?: string;
-              /** @description The URL to an avatar for the user or system associated with a history record. */
-              avatarUrl?: string;
-              /** @description The URL of the user or system associated with a history record. */
-              url?: string;
-              [key: string]: unknown;
-            };
-            /** @description Details of the system that generated the history record. */
-            generator?: {
               /** @description The ID of the user or system associated with a history record. */
               id?: string;
-              /** @description The display name of the user or system associated with a history record. */
-              displayName?: string;
-              /** @description The key of the display name of the user or system associated with a history record. */
-              displayNameKey?: string;
               /** @description The type of the user or system associated with a history record. */
               type?: string;
-              /** @description The URL to an avatar for the user or system associated with a history record. */
-              avatarUrl?: string;
               /** @description The URL of the user or system associated with a history record. */
               url?: string;
               [key: string]: unknown;
             };
             /** @description Details of the cause that triggered the creation the history record. */
             cause?: {
-              /** @description The ID of the user or system associated with a history record. */
-              id?: string;
+              /** @description The URL to an avatar for the user or system associated with a history record. */
+              avatarUrl?: string;
               /** @description The display name of the user or system associated with a history record. */
               displayName?: string;
               /** @description The key of the display name of the user or system associated with a history record. */
               displayNameKey?: string;
+              /** @description The ID of the user or system associated with a history record. */
+              id?: string;
               /** @description The type of the user or system associated with a history record. */
               type?: string;
-              /** @description The URL to an avatar for the user or system associated with a history record. */
-              avatarUrl?: string;
               /** @description The URL of the user or system associated with a history record. */
               url?: string;
               [key: string]: unknown;
             };
+            /** @description The description of the history record. */
+            description?: string;
+            /** @description The description key of the history record. */
+            descriptionKey?: string;
+            /** @description The description of the email address associated the history record. */
+            emailDescription?: string;
+            /** @description The description key of the email address associated the history record. */
+            emailDescriptionKey?: string;
             /** @description Additional arbitrary information about the history record. */
             extraData?: {
               [key: string]: string;
             };
+            /** @description Details of the system that generated the history record. */
+            generator?: {
+              /** @description The URL to an avatar for the user or system associated with a history record. */
+              avatarUrl?: string;
+              /** @description The display name of the user or system associated with a history record. */
+              displayName?: string;
+              /** @description The key of the display name of the user or system associated with a history record. */
+              displayNameKey?: string;
+              /** @description The ID of the user or system associated with a history record. */
+              id?: string;
+              /** @description The type of the user or system associated with a history record. */
+              type?: string;
+              /** @description The URL of the user or system associated with a history record. */
+              url?: string;
+              [key: string]: unknown;
+            };
+            /** @description The type of the history record. */
+            type?: string;
             [key: string]: unknown;
           };
+          /** @description The ID of the changelog. */
+          id?: string;
+          /** @description The list of items changed. */
+          items?: readonly {
+              /** @description The name of the field changed. */
+              field?: string;
+              /** @description The ID of the field changed. */
+              fieldId?: string;
+              /** @description The type of the field changed. */
+              fieldtype?: string;
+              /** @description The details of the original value. */
+              from?: string;
+              /** @description The details of the original value as a string. */
+              fromString?: string;
+              /** @description The details of the new value. */
+              to?: string;
+              /** @description The details of the new value as a string. */
+              toString?: string;
+            }[];
         }[];
-      };
-      /** @description The versions of each field on the issue. */
-      versionedRepresentations?: {
-        [key: string]: {
-          [key: string]: unknown;
-        };
-      };
-      fieldsToInclude?: {
-        included?: string[];
-        actuallyIncluded?: string[];
-        excluded?: string[];
-      };
-      fields?: {
-        [key: string]: unknown;
-      };
-    };
-    /** @description Details of an issue transition. */
-    IssueTransition: {
-      /** @description The ID of the issue transition. Required when specifying a transition to undertake. */
-      id?: string;
-      /** @description The name of the issue transition. */
-      name?: string;
-      /** @description Details of the issue status after the transition. */
-      to?: {
-        /** @description The URL of the status. */
-        self?: string;
-        /** @description The description of the status. */
-        description?: string;
-        /** @description The URL of the icon used to represent the status. */
-        iconUrl?: string;
-        /** @description The name of the status. */
-        name?: string;
-        /** @description The ID of the status. */
-        id?: string;
-        /** @description The category assigned to the status. */
-        statusCategory?: {
-          /** @description The URL of the status category. */
-          self?: string;
-          /**
-           * Format: int64
-           * @description The ID of the status category.
-           */
-          id?: number;
-          /** @description The key of the status category. */
-          key?: string;
-          /** @description The name of the color used to represent the status category. */
-          colorName?: string;
-          /** @description The name of the status category. */
-          name?: string;
-          [key: string]: unknown;
-        };
-        [key: string]: unknown;
-      };
-      /** @description Whether there is a screen associated with the issue transition. */
-      hasScreen?: boolean;
-      /** @description Whether the issue transition is global, that is, the transition is applied to issues regardless of their status. */
-      isGlobal?: boolean;
-      /** @description Whether this is the initial issue transition for the workflow. */
-      isInitial?: boolean;
-      /** @description Whether the transition is available to be performed. */
-      isAvailable?: boolean;
-      /** @description Whether the issue has to meet criteria before the issue transition is applied. */
-      isConditional?: boolean;
-      /** @description Details of the fields associated with the issue transition screen. Use this information to populate `fields` and `update` in a transition request. */
-      fields?: {
-        [key: string]: {
-          /** @description Whether the field is required. */
-          required: boolean;
-          /** @description The data type of the field. */
-          schema: {
-            /** @description The data type of the field. */
-            type: string;
-            /** @description When the data type is an array, the name of the field items within the array. */
-            items?: string;
-            /** @description If the field is a system field, the name of the field. */
-            system?: string;
-            /** @description If the field is a custom field, the URI of the field. */
-            custom?: string;
-            /**
-             * Format: int64
-             * @description If the field is a custom field, the custom ID of the field.
-             */
-            customId?: number;
-            /** @description If the field is a custom field, the configuration of the field. */
-            configuration?: {
-              [key: string]: unknown;
-            };
-          };
-          /** @description The name of the field. */
-          name: string;
-          /** @description The key of the field. */
-          key: string;
-          /** @description The URL that can be used to automatically complete the field. */
-          autoCompleteUrl?: string;
-          /** @description Whether the field has a default value. */
-          hasDefaultValue?: boolean;
-          /** @description The list of operations that can be performed on the field. */
-          operations: readonly string[];
-          /** @description The list of values allowed in the field. */
-          allowedValues?: readonly unknown[];
-          /** @description The default value of the field. */
-          defaultValue?: unknown;
-          /** @description The configuration properties. */
-          configuration?: {
-            [key: string]: unknown;
-          };
-        };
-      };
-      /** @description Expand options that include additional transition details in the response. */
-      expand?: string;
-      looped?: boolean;
-      [key: string]: unknown;
-    };
-    /** @description A list of editable field details. */
-    IssueUpdateMetadata: {
-      fields?: {
-        [key: string]: {
-          /** @description Whether the field is required. */
-          required: boolean;
-          /** @description The data type of the field. */
-          schema: {
-            /** @description The data type of the field. */
-            type: string;
-            /** @description When the data type is an array, the name of the field items within the array. */
-            items?: string;
-            /** @description If the field is a system field, the name of the field. */
-            system?: string;
-            /** @description If the field is a custom field, the URI of the field. */
-            custom?: string;
-            /**
-             * Format: int64
-             * @description If the field is a custom field, the custom ID of the field.
-             */
-            customId?: number;
-            /** @description If the field is a custom field, the configuration of the field. */
-            configuration?: {
-              [key: string]: unknown;
-            };
-          };
-          /** @description The name of the field. */
-          name: string;
-          /** @description The key of the field. */
-          key: string;
-          /** @description The URL that can be used to automatically complete the field. */
-          autoCompleteUrl?: string;
-          /** @description Whether the field has a default value. */
-          hasDefaultValue?: boolean;
-          /** @description The list of operations that can be performed on the field. */
-          operations: readonly string[];
-          /** @description The list of values allowed in the field. */
-          allowedValues?: readonly unknown[];
-          /** @description The default value of the field. */
-          defaultValue?: unknown;
-          /** @description The configuration properties. */
-          configuration?: {
-            [key: string]: unknown;
-          };
-        };
-      };
-    };
-    /** @description The schema of a field. */
-    JsonTypeBean: {
-      /** @description The data type of the field. */
-      type: string;
-      /** @description When the data type is an array, the name of the field items within the array. */
-      items?: string;
-      /** @description If the field is a system field, the name of the field. */
-      system?: string;
-      /** @description If the field is a custom field, the URI of the field. */
-      custom?: string;
-      /**
-       * Format: int64
-       * @description If the field is a custom field, the custom ID of the field.
-       */
-      customId?: number;
-      /** @description If the field is a custom field, the configuration of the field. */
-      configuration?: {
-        [key: string]: unknown;
-      };
-    };
-    /** @description Details a link group, which defines issue operations. */
-    LinkGroup: {
-      id?: string;
-      styleClass?: string;
-      /** @description Details about the operations available in this version. */
-      header?: {
-        id?: string;
-        styleClass?: string;
-        iconClass?: string;
-        label?: string;
-        title?: string;
-        href?: string;
-        /** Format: int32 */
-        weight?: number;
-      };
-      /** Format: int32 */
-      weight?: number;
-      links?: {
-        id?: string;
-        styleClass?: string;
-        iconClass?: string;
-        label?: string;
-        title?: string;
-        href?: string;
-        /** Format: int32 */
-        weight?: number;
-      }[];
-      groups?: components["schemas"]["LinkGroup"][];
-    };
-    /** @description Details of the operations that can be performed on the issue. */
-    Operations: {
-      /** @description Details of the link groups defining issue operations. */
-      linkGroups?: readonly components["schemas"]["LinkGroup"][];
-      [key: string]: unknown;
-    };
-    /** @description A page of changelogs. */
-    PageOfChangelogs: {
-      /**
-       * Format: int32
-       * @description The index of the first item returned on the page.
-       */
-      startAt?: number;
       /**
        * Format: int32
        * @description The maximum number of results that could be on the page.
@@ -2400,26 +2971,282 @@ export interface components {
       maxResults?: number;
       /**
        * Format: int32
+       * @description The index of the first item returned on the page.
+       */
+      startAt?: number;
+      /**
+       * Format: int32
        * @description The number of results on the page.
        */
       total?: number;
-      /** @description The list of changelogs. */
-      histories?: readonly {
-        /** @description The ID of the changelog. */
+    };
+    PartialSuccessBean: {
+      entries?: {
+          errors?: string[];
+          /** Format: int64 */
+          issueId?: number;
+          issueKey?: string;
+          /** Format: int32 */
+          status?: number;
+        }[];
+    };
+    /** @description Details about a project. */
+    ProjectDetails: {
+      /** @description The URLs of the project's avatars. */
+      avatarUrls?: {
+        /**
+         * Format: uri
+         * @description The URL of the item's 16x16 pixel avatar.
+         */
+        "16x16"?: string;
+        /**
+         * Format: uri
+         * @description The URL of the item's 24x24 pixel avatar.
+         */
+        "24x24"?: string;
+        /**
+         * Format: uri
+         * @description The URL of the item's 32x32 pixel avatar.
+         */
+        "32x32"?: string;
+        /**
+         * Format: uri
+         * @description The URL of the item's 48x48 pixel avatar.
+         */
+        "48x48"?: string;
+      };
+      /** @description The ID of the project. */
+      id?: string;
+      /** @description The key of the project. */
+      key?: string;
+      /** @description The name of the project. */
+      name?: string;
+      /** @description The category the project belongs to. */
+      projectCategory?: {
+        /** @description The name of the project category. */
+        description?: string;
+        /** @description The ID of the project category. */
         id?: string;
-        /** @description The user who made the change. */
-        author?: {
-          /** @description The URL of the user. */
-          self?: string;
-          /** @description This property is no longer available and will be removed from the documentation soon. See the [deprecation notice](https://developer.atlassian.com/cloud/jira/platform/deprecation-notice-user-privacy-api-migration-guide/) for details. */
+        /** @description The description of the project category. */
+        name?: string;
+        /** @description The URL of the project category. */
+        self?: string;
+      };
+      /**
+       * @description The [project type](https://confluence.atlassian.com/x/GwiiLQ#Jiraapplicationsoverview-Productfeaturesandprojecttypes) of the project.
+       * @enum {string}
+       */
+      projectTypeKey?: "software" | "service_desk" | "business";
+      /** @description The URL of the project details. */
+      self?: string;
+      /** @description Whether or not the project is simplified. */
+      simplified?: boolean;
+    };
+    QuickFilterBean: {
+      /** Format: int64 */
+      boardId?: number;
+      description?: string;
+      /** Format: int64 */
+      id?: number;
+      jql?: string;
+      name?: string;
+      /** Format: int32 */
+      position?: number;
+    };
+    RankingConfigBean: {
+      /** Format: int64 */
+      rankCustomFieldId?: number;
+    };
+    RelationBean: {
+      id?: string;
+      /** Format: uri */
+      self?: string;
+    };
+    ReportBean: Record<string, never>;
+    ReportsResponseBean: {
+      reports?: Record<string, never>[];
+    };
+    /** @description The projects the item is associated with. Indicated for items associated with [next-gen projects](https://confluence.atlassian.com/x/loMyO). */
+    Scope: {
+      /** @description The project the item has scope in. */
+      project?: {
+        /** @description The URLs of the project's avatars. */
+        avatarUrls?: {
+          /**
+           * Format: uri
+           * @description The URL of the item's 16x16 pixel avatar.
+           */
+          "16x16"?: string;
+          /**
+           * Format: uri
+           * @description The URL of the item's 24x24 pixel avatar.
+           */
+          "24x24"?: string;
+          /**
+           * Format: uri
+           * @description The URL of the item's 32x32 pixel avatar.
+           */
+          "32x32"?: string;
+          /**
+           * Format: uri
+           * @description The URL of the item's 48x48 pixel avatar.
+           */
+          "48x48"?: string;
+        };
+        /** @description The ID of the project. */
+        id?: string;
+        /** @description The key of the project. */
+        key?: string;
+        /** @description The name of the project. */
+        name?: string;
+        /** @description The category the project belongs to. */
+        projectCategory?: {
+          /** @description The name of the project category. */
+          description?: string;
+          /** @description The ID of the project category. */
+          id?: string;
+          /** @description The description of the project category. */
           name?: string;
-          /** @description This property is no longer available and will be removed from the documentation soon. See the [deprecation notice](https://developer.atlassian.com/cloud/jira/platform/deprecation-notice-user-privacy-api-migration-guide/) for details. */
-          key?: string;
-          /** @description The account ID of the user, which uniquely identifies the user across all Atlassian products. For example, *5b10ac8d82e05b22cc7d4ef5*. */
-          accountId?: string;
-          /** @description The email address of the user. Depending on the user’s privacy settings, this may be returned as null. */
-          emailAddress?: string;
-          /** @description The avatars of the user. */
+          /** @description The URL of the project category. */
+          self?: string;
+        };
+        /**
+         * @description The [project type](https://confluence.atlassian.com/x/GwiiLQ#Jiraapplicationsoverview-Productfeaturesandprojecttypes) of the project.
+         * @enum {string}
+         */
+        projectTypeKey?: "software" | "service_desk" | "business";
+        /** @description The URL of the project details. */
+        self?: string;
+        /** @description Whether or not the project is simplified. */
+        simplified?: boolean;
+      };
+      /**
+       * @description The type of scope.
+       * @enum {string}
+       */
+      type?: "PROJECT" | "TEMPLATE";
+      [key: string]: unknown;
+    };
+    /** @description The result of a JQL search. */
+    SearchResults: {
+      /** @description Expand options that include additional search result details in the response. */
+      expand?: string;
+      /** @description The list of issues found by the search. */
+      issues?: readonly components["schemas"]["IssueBean"][];
+      /**
+       * Format: int32
+       * @description The maximum number of results that could be on the page.
+       */
+      maxResults?: number;
+      /** @description The ID and name of each field in the search results. */
+      names?: {
+        [key: string]: string;
+      };
+      /** @description The schema describing the field types in the search results. */
+      schema?: {
+        [key: string]: {
+          /** @description If the field is a custom field, the configuration of the field. */
+          configuration?: {
+            [key: string]: unknown;
+          };
+          /** @description If the field is a custom field, the URI of the field. */
+          custom?: string;
+          /**
+           * Format: int64
+           * @description If the field is a custom field, the custom ID of the field.
+           */
+          customId?: number;
+          /** @description When the data type is an array, the name of the field items within the array. */
+          items?: string;
+          /** @description If the field is a system field, the name of the field. */
+          system?: string;
+          /** @description The data type of the field. */
+          type: string;
+        };
+      };
+      /**
+       * Format: int32
+       * @description The index of the first item returned on the page.
+       */
+      startAt?: number;
+      /**
+       * Format: int32
+       * @description The number of results on the page.
+       */
+      total?: number;
+      /** @description Any warnings related to the JQL query. */
+      warningMessages?: readonly string[];
+    };
+    /** @description Details about the operations available in this version. */
+    SimpleLink: {
+      href?: string;
+      iconClass?: string;
+      id?: string;
+      label?: string;
+      styleClass?: string;
+      title?: string;
+      /** Format: int32 */
+      weight?: number;
+    };
+    SprintBean: {
+      completeDate?: string;
+      createdDate?: string;
+      endDate?: string;
+      goal?: string;
+      /** Format: int64 */
+      id?: number;
+      name?: string;
+      /** Format: int64 */
+      originBoardId?: number;
+      /** Format: uri */
+      self?: string;
+      startDate?: string;
+      state?: string;
+    };
+    SprintCreateBean: {
+      endDate?: string;
+      goal?: string;
+      name?: string;
+      /** Format: int64 */
+      originBoardId?: number;
+      startDate?: string;
+    };
+    SprintSwapBean: {
+      /** Format: int64 */
+      sprintToSwapWith?: number;
+    };
+    /** @description A status category. */
+    StatusCategory: {
+      /** @description The name of the color used to represent the status category. */
+      colorName?: string;
+      /**
+       * Format: int64
+       * @description The ID of the status category.
+       */
+      id?: number;
+      /** @description The key of the status category. */
+      key?: string;
+      /** @description The name of the status category. */
+      name?: string;
+      /** @description The URL of the status category. */
+      self?: string;
+      [key: string]: unknown;
+    };
+    /** @description A status. */
+    StatusDetails: {
+      /** @description The description of the status. */
+      description?: string;
+      /** @description The URL of the icon used to represent the status. */
+      iconUrl?: string;
+      /** @description The ID of the status. */
+      id?: string;
+      /** @description The name of the status. */
+      name?: string;
+      /** @description The scope of the field. */
+      scope?: {
+        /** @description The project the item has scope in. */
+        project?: {
+          /** @description The URLs of the project's avatars. */
           avatarUrls?: {
             /**
              * Format: uri
@@ -2442,203 +3269,46 @@ export interface components {
              */
             "48x48"?: string;
           };
-          /** @description The display name of the user. Depending on the user’s privacy settings, this may return an alternative value. */
-          displayName?: string;
-          /** @description Whether the user is active. */
-          active?: boolean;
-          /** @description The time zone specified in the user's profile. Depending on the user’s privacy settings, this may be returned as null. */
-          timeZone?: string;
-          /** @description The type of account represented by this user. This will be one of 'atlassian' (normal users), 'app' (application user) or 'customer' (Jira Service Desk customer user) */
-          accountType?: string;
+          /** @description The ID of the project. */
+          id?: string;
+          /** @description The key of the project. */
+          key?: string;
+          /** @description The name of the project. */
+          name?: string;
+          /** @description The category the project belongs to. */
+          projectCategory?: {
+            /** @description The name of the project category. */
+            description?: string;
+            /** @description The ID of the project category. */
+            id?: string;
+            /** @description The description of the project category. */
+            name?: string;
+            /** @description The URL of the project category. */
+            self?: string;
+          };
+          /**
+           * @description The [project type](https://confluence.atlassian.com/x/GwiiLQ#Jiraapplicationsoverview-Productfeaturesandprojecttypes) of the project.
+           * @enum {string}
+           */
+          projectTypeKey?: "software" | "service_desk" | "business";
+          /** @description The URL of the project details. */
+          self?: string;
+          /** @description Whether or not the project is simplified. */
+          simplified?: boolean;
         };
         /**
-         * Format: date-time
-         * @description The date on which the change took place.
+         * @description The type of scope.
+         * @enum {string}
          */
-        created?: string;
-        /** @description The list of items changed. */
-        items?: readonly {
-          /** @description The name of the field changed. */
-          field?: string;
-          /** @description The type of the field changed. */
-          fieldtype?: string;
-          /** @description The ID of the field changed. */
-          fieldId?: string;
-          /** @description The details of the original value. */
-          from?: string;
-          /** @description The details of the original value as a string. */
-          fromString?: string;
-          /** @description The details of the new value. */
-          to?: string;
-          /** @description The details of the new value as a string. */
-          toString?: string;
-        }[];
-        /** @description The history metadata associated with the changed. */
-        historyMetadata?: {
-          /** @description The type of the history record. */
-          type?: string;
-          /** @description The description of the history record. */
-          description?: string;
-          /** @description The description key of the history record. */
-          descriptionKey?: string;
-          /** @description The activity described in the history record. */
-          activityDescription?: string;
-          /** @description The key of the activity described in the history record. */
-          activityDescriptionKey?: string;
-          /** @description The description of the email address associated the history record. */
-          emailDescription?: string;
-          /** @description The description key of the email address associated the history record. */
-          emailDescriptionKey?: string;
-          /** @description Details of the user whose action created the history record. */
-          actor?: {
-            /** @description The ID of the user or system associated with a history record. */
-            id?: string;
-            /** @description The display name of the user or system associated with a history record. */
-            displayName?: string;
-            /** @description The key of the display name of the user or system associated with a history record. */
-            displayNameKey?: string;
-            /** @description The type of the user or system associated with a history record. */
-            type?: string;
-            /** @description The URL to an avatar for the user or system associated with a history record. */
-            avatarUrl?: string;
-            /** @description The URL of the user or system associated with a history record. */
-            url?: string;
-            [key: string]: unknown;
-          };
-          /** @description Details of the system that generated the history record. */
-          generator?: {
-            /** @description The ID of the user or system associated with a history record. */
-            id?: string;
-            /** @description The display name of the user or system associated with a history record. */
-            displayName?: string;
-            /** @description The key of the display name of the user or system associated with a history record. */
-            displayNameKey?: string;
-            /** @description The type of the user or system associated with a history record. */
-            type?: string;
-            /** @description The URL to an avatar for the user or system associated with a history record. */
-            avatarUrl?: string;
-            /** @description The URL of the user or system associated with a history record. */
-            url?: string;
-            [key: string]: unknown;
-          };
-          /** @description Details of the cause that triggered the creation the history record. */
-          cause?: {
-            /** @description The ID of the user or system associated with a history record. */
-            id?: string;
-            /** @description The display name of the user or system associated with a history record. */
-            displayName?: string;
-            /** @description The key of the display name of the user or system associated with a history record. */
-            displayNameKey?: string;
-            /** @description The type of the user or system associated with a history record. */
-            type?: string;
-            /** @description The URL to an avatar for the user or system associated with a history record. */
-            avatarUrl?: string;
-            /** @description The URL of the user or system associated with a history record. */
-            url?: string;
-            [key: string]: unknown;
-          };
-          /** @description Additional arbitrary information about the history record. */
-          extraData?: {
-            [key: string]: string;
-          };
-          [key: string]: unknown;
-        };
-      }[];
-    };
-    /** @description The result of a JQL search. */
-    SearchResults: {
-      /** @description Expand options that include additional search result details in the response. */
-      expand?: string;
-      /**
-       * Format: int32
-       * @description The index of the first item returned on the page.
-       */
-      startAt?: number;
-      /**
-       * Format: int32
-       * @description The maximum number of results that could be on the page.
-       */
-      maxResults?: number;
-      /**
-       * Format: int32
-       * @description The number of results on the page.
-       */
-      total?: number;
-      /** @description The list of issues found by the search. */
-      issues?: readonly components["schemas"]["IssueBean"][];
-      /** @description Any warnings related to the JQL query. */
-      warningMessages?: readonly string[];
-      /** @description The ID and name of each field in the search results. */
-      names?: {
-        [key: string]: string;
+        type?: "PROJECT" | "TEMPLATE";
+        [key: string]: unknown;
       };
-      /** @description The schema describing the field types in the search results. */
-      schema?: {
-        [key: string]: {
-          /** @description The data type of the field. */
-          type: string;
-          /** @description When the data type is an array, the name of the field items within the array. */
-          items?: string;
-          /** @description If the field is a system field, the name of the field. */
-          system?: string;
-          /** @description If the field is a custom field, the URI of the field. */
-          custom?: string;
-          /**
-           * Format: int64
-           * @description If the field is a custom field, the custom ID of the field.
-           */
-          customId?: number;
-          /** @description If the field is a custom field, the configuration of the field. */
-          configuration?: {
-            [key: string]: unknown;
-          };
-        };
-      };
-    };
-    /** @description Details about the operations available in this version. */
-    SimpleLink: {
-      id?: string;
-      styleClass?: string;
-      iconClass?: string;
-      label?: string;
-      title?: string;
-      href?: string;
-      /** Format: int32 */
-      weight?: number;
-    };
-    /** @description A status category. */
-    StatusCategory: {
-      /** @description The URL of the status category. */
-      self?: string;
-      /**
-       * Format: int64
-       * @description The ID of the status category.
-       */
-      id?: number;
-      /** @description The key of the status category. */
-      key?: string;
-      /** @description The name of the color used to represent the status category. */
-      colorName?: string;
-      /** @description The name of the status category. */
-      name?: string;
-      [key: string]: unknown;
-    };
-    /** @description A status. */
-    StatusDetails: {
       /** @description The URL of the status. */
       self?: string;
-      /** @description The description of the status. */
-      description?: string;
-      /** @description The URL of the icon used to represent the status. */
-      iconUrl?: string;
-      /** @description The name of the status. */
-      name?: string;
-      /** @description The ID of the status. */
-      id?: string;
       /** @description The category assigned to the status. */
       statusCategory?: {
-        /** @description The URL of the status category. */
-        self?: string;
+        /** @description The name of the color used to represent the status category. */
+        colorName?: string;
         /**
          * Format: int64
          * @description The ID of the status category.
@@ -2646,13 +3316,96 @@ export interface components {
         id?: number;
         /** @description The key of the status category. */
         key?: string;
-        /** @description The name of the color used to represent the status category. */
-        colorName?: string;
         /** @description The name of the status category. */
         name?: string;
+        /** @description The URL of the status category. */
+        self?: string;
         [key: string]: unknown;
       };
       [key: string]: unknown;
+    };
+    StringList: Record<string, never>;
+    SubqueryBean: {
+      query?: string;
+    };
+    /** @description A project category. */
+    UpdatedProjectCategory: {
+      /** @description The name of the project category. */
+      description?: string;
+      /** @description The ID of the project category. */
+      id?: string;
+      /** @description The description of the project category. */
+      name?: string;
+      /** @description The URL of the project category. */
+      self?: string;
+    };
+    UserBean: {
+      /** @description The account ID of the user, which uniquely identifies the user across all Atlassian products. For example, *5b10ac8d82e05b22cc7d4ef5*. */
+      accountId?: string;
+      /** @description Whether the user is active. */
+      active?: boolean;
+      /** @description The avatars of the user. */
+      avatarUrls?: {
+        /**
+         * Format: uri
+         * @description The URL of the user's 16x16 pixel avatar.
+         */
+        "16x16"?: string;
+        /**
+         * Format: uri
+         * @description The URL of the user's 24x24 pixel avatar.
+         */
+        "24x24"?: string;
+        /**
+         * Format: uri
+         * @description The URL of the user's 32x32 pixel avatar.
+         */
+        "32x32"?: string;
+        /**
+         * Format: uri
+         * @description The URL of the user's 48x48 pixel avatar.
+         */
+        "48x48"?: string;
+      };
+      /** @description The display name of the user. Depending on the user’s privacy setting, this may return an alternative value. */
+      displayName?: string;
+      /**
+       * @description This property is deprecated in favor of `accountId` because of privacy changes. See the [migration guide](https://developer.atlassian.com/cloud/jira/platform/deprecation-notice-user-privacy-api-migration-guide/) for details.
+       * The key of the user.
+       */
+      key?: string;
+      /**
+       * @description This property is deprecated in favor of `accountId` because of privacy changes. See the [migration guide](https://developer.atlassian.com/cloud/jira/platform/deprecation-notice-user-privacy-api-migration-guide/) for details.
+       * The username of the user.
+       */
+      name?: string;
+      /**
+       * Format: uri
+       * @description The URL of the user.
+       */
+      self?: string;
+    };
+    UserBeanAvatarUrls: {
+      /**
+       * Format: uri
+       * @description The URL of the user's 16x16 pixel avatar.
+       */
+      "16x16"?: string;
+      /**
+       * Format: uri
+       * @description The URL of the user's 24x24 pixel avatar.
+       */
+      "24x24"?: string;
+      /**
+       * Format: uri
+       * @description The URL of the user's 32x32 pixel avatar.
+       */
+      "32x32"?: string;
+      /**
+       * Format: uri
+       * @description The URL of the user's 48x48 pixel avatar.
+       */
+      "48x48"?: string;
     };
     /**
      * @description User details permitted by the user's Atlassian Account privacy settings. However, be aware of these exceptions:
@@ -2662,16 +3415,12 @@ export interface components {
      *  *  User record unavailable: This usually occurs due to an internal service outage. In this case, all parameters have fallback values.
      */
     UserDetails: {
-      /** @description The URL of the user. */
-      self?: string;
-      /** @description This property is no longer available and will be removed from the documentation soon. See the [deprecation notice](https://developer.atlassian.com/cloud/jira/platform/deprecation-notice-user-privacy-api-migration-guide/) for details. */
-      name?: string;
-      /** @description This property is no longer available and will be removed from the documentation soon. See the [deprecation notice](https://developer.atlassian.com/cloud/jira/platform/deprecation-notice-user-privacy-api-migration-guide/) for details. */
-      key?: string;
       /** @description The account ID of the user, which uniquely identifies the user across all Atlassian products. For example, *5b10ac8d82e05b22cc7d4ef5*. */
       accountId?: string;
-      /** @description The email address of the user. Depending on the user’s privacy settings, this may be returned as null. */
-      emailAddress?: string;
+      /** @description The type of account represented by this user. This will be one of 'atlassian' (normal users), 'app' (application user) or 'customer' (Jira Service Desk customer user) */
+      accountType?: string;
+      /** @description Whether the user is active. */
+      active?: boolean;
       /** @description The avatars of the user. */
       avatarUrls?: {
         /**
@@ -2697,235 +3446,16 @@ export interface components {
       };
       /** @description The display name of the user. Depending on the user’s privacy settings, this may return an alternative value. */
       displayName?: string;
-      /** @description Whether the user is active. */
-      active?: boolean;
+      /** @description The email address of the user. Depending on the user’s privacy settings, this may be returned as null. */
+      emailAddress?: string;
+      /** @description This property is no longer available and will be removed from the documentation soon. See the [deprecation notice](https://developer.atlassian.com/cloud/jira/platform/deprecation-notice-user-privacy-api-migration-guide/) for details. */
+      key?: string;
+      /** @description This property is no longer available and will be removed from the documentation soon. See the [deprecation notice](https://developer.atlassian.com/cloud/jira/platform/deprecation-notice-user-privacy-api-migration-guide/) for details. */
+      name?: string;
+      /** @description The URL of the user. */
+      self?: string;
       /** @description The time zone specified in the user's profile. Depending on the user’s privacy settings, this may be returned as null. */
       timeZone?: string;
-      /** @description The type of account represented by this user. This will be one of 'atlassian' (normal users), 'app' (application user) or 'customer' (Jira Service Desk customer user) */
-      accountType?: string;
-    };
-    Entry: {
-      /** Format: int64 */
-      issueId?: number;
-      issueKey?: string;
-      /** Format: int32 */
-      status?: number;
-      errors?: string[];
-    };
-    PartialSuccessBean: {
-      entries?: {
-        /** Format: int64 */
-        issueId?: number;
-        issueKey?: string;
-        /** Format: int32 */
-        status?: number;
-        errors?: string[];
-      }[];
-    };
-    BoardConfigBean: {
-      /** Format: int64 */
-      id?: number;
-      name?: string;
-      type?: string;
-      /** Format: uri */
-      self?: string;
-      location?: {
-        /** @enum {string} */
-        type?: "project" | "user";
-        projectKeyOrId?: string;
-      };
-      filter?: {
-        id?: string;
-        /** Format: uri */
-        self?: string;
-      };
-      subQuery?: {
-        query?: string;
-      };
-      columnConfig?: {
-        columns?: {
-          name?: string;
-          statuses?: {
-            id?: string;
-            /** Format: uri */
-            self?: string;
-          }[];
-          /** Format: int32 */
-          min?: number;
-          /** Format: int32 */
-          max?: number;
-        }[];
-        constraintType?: string;
-      };
-      estimation?: {
-        type?: string;
-        field?: {
-          fieldId?: string;
-          displayName?: string;
-        };
-      };
-      ranking?: {
-        /** Format: int64 */
-        rankCustomFieldId?: number;
-      };
-    };
-    ColumnBean: {
-      name?: string;
-      statuses?: {
-        id?: string;
-        /** Format: uri */
-        self?: string;
-      }[];
-      /** Format: int32 */
-      min?: number;
-      /** Format: int32 */
-      max?: number;
-    };
-    ColumnConfigBean: {
-      columns?: {
-        name?: string;
-        statuses?: {
-          id?: string;
-          /** Format: uri */
-          self?: string;
-        }[];
-        /** Format: int32 */
-        min?: number;
-        /** Format: int32 */
-        max?: number;
-      }[];
-      constraintType?: string;
-    };
-    EstimationConfigBean: {
-      type?: string;
-      field?: {
-        fieldId?: string;
-        displayName?: string;
-      };
-    };
-    EstimationFieldBean: {
-      fieldId?: string;
-      displayName?: string;
-    };
-    LocationBean: {
-      /** @enum {string} */
-      type?: "project" | "user";
-      projectKeyOrId?: string;
-    };
-    RankingConfigBean: {
-      /** Format: int64 */
-      rankCustomFieldId?: number;
-    };
-    RelationBean: {
-      id?: string;
-      /** Format: uri */
-      self?: string;
-    };
-    SubqueryBean: {
-      query?: string;
-    };
-    BoardCreateBean: {
-      name?: string;
-      /** @enum {string} */
-      type?: "kanban" | "scrum" | "agility";
-      /** Format: int64 */
-      filterId?: number;
-      location?: {
-        /** @enum {string} */
-        type?: "project" | "user";
-        projectKeyOrId?: string;
-      };
-    };
-    EstimationConfigurationBean: {
-      /** @enum {string} */
-      value?: "STORY_POINTS" | "ORIGINAL_ESTIMATE";
-      localisedName?: string;
-      localisedDescription?: string;
-    };
-    FeatureBean: {
-      /** @enum {string} */
-      boardFeature?:
-        | "SIMPLE_ROADMAP"
-        | "BACKLOG"
-        | "SPRINTS"
-        | "DEVTOOLS"
-        | "REPORTS"
-        | "ESTIMATION"
-        | "PAGES"
-        | "CODE"
-        | "RELEASES"
-        | "DEPLOYMENTS"
-        | "ISSUE_NAVIGATOR"
-        | "ON_CALL_SCHEDULE"
-        | "BOARD";
-      /** Format: int64 */
-      boardId?: number;
-      /** @enum {string} */
-      state?: "ENABLED" | "DISABLED" | "COMING_SOON";
-      localisedName?: string;
-      localisedDescription?: string;
-      learnMoreLink?: string;
-      imageUri?: string;
-      /** @enum {string} */
-      featureType?: "BASIC" | "ESTIMATION";
-      localisedGroup?: string;
-      permissibleEstimationTypes?: {
-        /** @enum {string} */
-        value?: "STORY_POINTS" | "ORIGINAL_ESTIMATE";
-        localisedName?: string;
-        localisedDescription?: string;
-      }[];
-      featureId?: string;
-      learnMoreArticleId?: string;
-      toggleLocked?: boolean;
-    };
-    FeatureResponseBean: {
-      features?: {
-        /** @enum {string} */
-        boardFeature?:
-          | "SIMPLE_ROADMAP"
-          | "BACKLOG"
-          | "SPRINTS"
-          | "DEVTOOLS"
-          | "REPORTS"
-          | "ESTIMATION"
-          | "PAGES"
-          | "CODE"
-          | "RELEASES"
-          | "DEPLOYMENTS"
-          | "ISSUE_NAVIGATOR"
-          | "ON_CALL_SCHEDULE"
-          | "BOARD";
-        /** Format: int64 */
-        boardId?: number;
-        /** @enum {string} */
-        state?: "ENABLED" | "DISABLED" | "COMING_SOON";
-        localisedName?: string;
-        localisedDescription?: string;
-        learnMoreLink?: string;
-        imageUri?: string;
-        /** @enum {string} */
-        featureType?: "BASIC" | "ESTIMATION";
-        localisedGroup?: string;
-        permissibleEstimationTypes?: {
-          /** @enum {string} */
-          value?: "STORY_POINTS" | "ORIGINAL_ESTIMATE";
-          localisedName?: string;
-          localisedDescription?: string;
-        }[];
-        featureId?: string;
-        learnMoreArticleId?: string;
-        toggleLocked?: boolean;
-      }[];
-    };
-    FeatureToggleRequestBean: {
-      /** Format: int64 */
-      boardId?: number;
-      feature?: string;
-      enabling?: boolean;
-    };
-    FieldEditBean: {
-      value?: string;
     };
   };
   responses: never;
@@ -2940,6 +3470,7 @@ export type $defs = Record<string, never>;
 export type external = Record<string, never>;
 
 export interface operations {
+
   /**
    * Move issues to backlog
    * @description Move issues to the backlog.
@@ -2951,8 +3482,8 @@ export interface operations {
         /**
          * @example {
          *   "issues": [
-         *     "PR-1",moveIssuesToBacklog
          *     "10001",
+         *     "PR-1",
          *     "PR-3"
          *   ]
          * }
@@ -3000,19 +3531,19 @@ export interface operations {
       content: {
         /**
          * @example {
-         *   "rankBeforeIssue": "PR-4",
-         *   "rankCustomFieldId": 10521,
          *   "issues": [
          *     "PR-1",
          *     "10001",
          *     "PR-3"
-         *   ]
+         *   ],
+         *   "rankBeforeIssue": "PR-4",
+         *   "rankCustomFieldId": 10521
          * }
          */
         "application/json": {
           issues?: string[];
-          rankBeforeIssue?: string;
           rankAfterIssue?: string;
+          rankBeforeIssue?: string;
           /** Format: int64 */
           rankCustomFieldId?: number;
         };
@@ -3078,6 +3609,8 @@ export interface operations {
         orderBy?: "name" | "-name" | "+name";
         /** @description List of fields to expand for each board. Valid values: admins, permissions. */
         expand?: string;
+        /** @description Filters results to boards that are relevant to a project types. Support Jira Software, Jira Service Management. Valid values: software, service\_desk. By default software. */
+        projectTypeLocation?: string[];
         /** @description Filters results to boards that are relevant to a filter. Not supported for next-gen boards. */
         filterId?: number;
       };
@@ -3087,103 +3620,103 @@ export interface operations {
       200: {
         content: {
           "application/json": {
+            isLast?: boolean;
             /** Format: int32 */
             maxResults?: number;
             /** Format: int64 */
             startAt?: number;
             /** Format: int64 */
             total?: number;
-            isLast?: boolean;
             values?: {
-              /**
-               * Format: int64
-               * @description The ID of the board.
-               */
-              id?: number;
-              /**
-               * Format: uri
-               * @description The URL of the board.
-               */
-              self?: string;
-              /** @description The name of the board. */
-              name?: string;
-              /** @description The type the board. */
-              type?: string;
-              admins?: {
-                users?: {
-                  /**
-                   * @description This property is deprecated in favor of `accountId` because of privacy changes. See the [migration guide](https://developer.atlassian.com/cloud/jira/platform/deprecation-notice-user-privacy-api-migration-guide/) for details.
-                   * The key of the user.
-                   */
-                  key?: string;
-                  /**
-                   * Format: uri
-                   * @description The URL of the user.
-                   */
-                  self?: string;
-                  /**
-                   * @description This property is deprecated in favor of `accountId` because of privacy changes. See the [migration guide](https://developer.atlassian.com/cloud/jira/platform/deprecation-notice-user-privacy-api-migration-guide/) for details.
-                   * The username of the user.
-                   */
-                  name?: string;
-                  /** @description The display name of the user. Depending on the user’s privacy setting, this may return an alternative value. */
-                  displayName?: string;
-                  /** @description Whether the user is active. */
-                  active?: boolean;
-                  /** @description The account ID of the user, which uniquely identifies the user across all Atlassian products. For example, *5b10ac8d82e05b22cc7d4ef5*. */
-                  accountId?: string;
-                  /** @description The avatars of the user. */
-                  avatarUrls?: {
-                    /**
-                     * Format: uri
-                     * @description The URL of the user's 24x24 pixel avatar.
-                     */
-                    "24x24"?: string;
-                    /**
-                     * Format: uri
-                     * @description The URL of the user's 32x32 pixel avatar.
-                     */
-                    "32x32"?: string;
-                    /**
-                     * Format: uri
-                     * @description The URL of the user's 48x48 pixel avatar.
-                     */
-                    "48x48"?: string;
-                    /**
-                     * Format: uri
-                     * @description The URL of the user's 16x16 pixel avatar.
-                     */
-                    "16x16"?: string;
-                  };
-                }[];
-                groups?: {
-                  name?: string;
+                admins?: {
+                  groups?: {
+                      name?: string;
+                      /** Format: uri */
+                      self?: string;
+                    }[];
+                  users?: {
+                      /** @description The account ID of the user, which uniquely identifies the user across all Atlassian products. For example, *5b10ac8d82e05b22cc7d4ef5*. */
+                      accountId?: string;
+                      /** @description Whether the user is active. */
+                      active?: boolean;
+                      /** @description The avatars of the user. */
+                      avatarUrls?: {
+                        /**
+                         * Format: uri
+                         * @description The URL of the user's 16x16 pixel avatar.
+                         */
+                        "16x16"?: string;
+                        /**
+                         * Format: uri
+                         * @description The URL of the user's 24x24 pixel avatar.
+                         */
+                        "24x24"?: string;
+                        /**
+                         * Format: uri
+                         * @description The URL of the user's 32x32 pixel avatar.
+                         */
+                        "32x32"?: string;
+                        /**
+                         * Format: uri
+                         * @description The URL of the user's 48x48 pixel avatar.
+                         */
+                        "48x48"?: string;
+                      };
+                      /** @description The display name of the user. Depending on the user’s privacy setting, this may return an alternative value. */
+                      displayName?: string;
+                      /**
+                       * @description This property is deprecated in favor of `accountId` because of privacy changes. See the [migration guide](https://developer.atlassian.com/cloud/jira/platform/deprecation-notice-user-privacy-api-migration-guide/) for details.
+                       * The key of the user.
+                       */
+                      key?: string;
+                      /**
+                       * @description This property is deprecated in favor of `accountId` because of privacy changes. See the [migration guide](https://developer.atlassian.com/cloud/jira/platform/deprecation-notice-user-privacy-api-migration-guide/) for details.
+                       * The username of the user.
+                       */
+                      name?: string;
+                      /**
+                       * Format: uri
+                       * @description The URL of the user.
+                       */
+                      self?: string;
+                    }[];
+                };
+                /** @description Whether the board can be edited. */
+                canEdit?: boolean;
+                /** @description Whether the board is selected as a favorite. */
+                favourite?: boolean;
+                /**
+                 * Format: int64
+                 * @description The ID of the board.
+                 */
+                id?: number;
+                /** @description Whether the board is private. */
+                isPrivate?: boolean;
+                /** @description The container that the board is located in. */
+                location?: {
                   /** Format: uri */
-                  self?: string;
-                }[];
-              };
-              /** @description The container that the board is located in. */
-              location?: {
-                /** Format: int64 */
-                projectId?: number;
-                /** Format: int64 */
-                userId?: number;
-                userAccountId?: string;
-                displayName?: string;
-                projectName?: string;
-                projectKey?: string;
-                projectTypeKey?: string;
-                /** Format: uri */
-                avatarURI?: string;
+                  avatarURI?: string;
+                  displayName?: string;
+                  name?: string;
+                  /** Format: int64 */
+                  projectId?: number;
+                  projectKey?: string;
+                  projectName?: string;
+                  projectTypeKey?: string;
+                  userAccountId?: string;
+                  /** Format: int64 */
+                  userId?: number;
+                };
+                /** @description The name of the board. */
                 name?: string;
-              };
-              /** @description Whether the board can be edited. */
-              canEdit?: boolean;
-              /** @description Whether the board is private. */
-              isPrivate?: boolean;
-              /** @description Whether the board is selected as a favorite. */
-              favourite?: boolean;
-            }[];
+                /**
+                 * Format: uri
+                 * @description The URL of the board.
+                 */
+                self?: string;
+                /** @description The type the board. */
+                type?: string;
+              }[];
           };
         };
       };
@@ -3222,25 +3755,25 @@ export interface operations {
         /**
          * @example {
          *   "filterId": 10040,
-         *   "name": "scrum board",
          *   "location": {
          *     "projectKeyOrId": "10000",
          *     "type": "project"
          *   },
+         *   "name": "scrum board",
          *   "type": "scrum"
          * }
          */
         "application/json": {
-          name?: string;
-          /** @enum {string} */
-          type?: "kanban" | "scrum" | "agility";
           /** Format: int64 */
           filterId?: number;
           location?: {
+            projectKeyOrId?: string;
             /** @enum {string} */
             type?: "project" | "user";
-            projectKeyOrId?: string;
           };
+          name?: string;
+          /** @enum {string} */
+          type?: "kanban" | "scrum" | "agility";
         };
       };
     };
@@ -3249,94 +3782,94 @@ export interface operations {
       201: {
         content: {
           "application/json": {
+            admins?: {
+              groups?: {
+                  name?: string;
+                  /** Format: uri */
+                  self?: string;
+                }[];
+              users?: {
+                  /** @description The account ID of the user, which uniquely identifies the user across all Atlassian products. For example, *5b10ac8d82e05b22cc7d4ef5*. */
+                  accountId?: string;
+                  /** @description Whether the user is active. */
+                  active?: boolean;
+                  /** @description The avatars of the user. */
+                  avatarUrls?: {
+                    /**
+                     * Format: uri
+                     * @description The URL of the user's 16x16 pixel avatar.
+                     */
+                    "16x16"?: string;
+                    /**
+                     * Format: uri
+                     * @description The URL of the user's 24x24 pixel avatar.
+                     */
+                    "24x24"?: string;
+                    /**
+                     * Format: uri
+                     * @description The URL of the user's 32x32 pixel avatar.
+                     */
+                    "32x32"?: string;
+                    /**
+                     * Format: uri
+                     * @description The URL of the user's 48x48 pixel avatar.
+                     */
+                    "48x48"?: string;
+                  };
+                  /** @description The display name of the user. Depending on the user’s privacy setting, this may return an alternative value. */
+                  displayName?: string;
+                  /**
+                   * @description This property is deprecated in favor of `accountId` because of privacy changes. See the [migration guide](https://developer.atlassian.com/cloud/jira/platform/deprecation-notice-user-privacy-api-migration-guide/) for details.
+                   * The key of the user.
+                   */
+                  key?: string;
+                  /**
+                   * @description This property is deprecated in favor of `accountId` because of privacy changes. See the [migration guide](https://developer.atlassian.com/cloud/jira/platform/deprecation-notice-user-privacy-api-migration-guide/) for details.
+                   * The username of the user.
+                   */
+                  name?: string;
+                  /**
+                   * Format: uri
+                   * @description The URL of the user.
+                   */
+                  self?: string;
+                }[];
+            };
+            /** @description Whether the board can be edited. */
+            canEdit?: boolean;
+            /** @description Whether the board is selected as a favorite. */
+            favourite?: boolean;
             /**
              * Format: int64
              * @description The ID of the board.
              */
             id?: number;
+            /** @description Whether the board is private. */
+            isPrivate?: boolean;
+            /** @description The container that the board is located in. */
+            location?: {
+              /** Format: uri */
+              avatarURI?: string;
+              displayName?: string;
+              name?: string;
+              /** Format: int64 */
+              projectId?: number;
+              projectKey?: string;
+              projectName?: string;
+              projectTypeKey?: string;
+              userAccountId?: string;
+              /** Format: int64 */
+              userId?: number;
+            };
+            /** @description The name of the board. */
+            name?: string;
             /**
              * Format: uri
              * @description The URL of the board.
              */
             self?: string;
-            /** @description The name of the board. */
-            name?: string;
             /** @description The type the board. */
             type?: string;
-            admins?: {
-              users?: {
-                /**
-                 * @description This property is deprecated in favor of `accountId` because of privacy changes. See the [migration guide](https://developer.atlassian.com/cloud/jira/platform/deprecation-notice-user-privacy-api-migration-guide/) for details.
-                 * The key of the user.
-                 */
-                key?: string;
-                /**
-                 * Format: uri
-                 * @description The URL of the user.
-                 */
-                self?: string;
-                /**
-                 * @description This property is deprecated in favor of `accountId` because of privacy changes. See the [migration guide](https://developer.atlassian.com/cloud/jira/platform/deprecation-notice-user-privacy-api-migration-guide/) for details.
-                 * The username of the user.
-                 */
-                name?: string;
-                /** @description The display name of the user. Depending on the user’s privacy setting, this may return an alternative value. */
-                displayName?: string;
-                /** @description Whether the user is active. */
-                active?: boolean;
-                /** @description The account ID of the user, which uniquely identifies the user across all Atlassian products. For example, *5b10ac8d82e05b22cc7d4ef5*. */
-                accountId?: string;
-                /** @description The avatars of the user. */
-                avatarUrls?: {
-                  /**
-                   * Format: uri
-                   * @description The URL of the user's 24x24 pixel avatar.
-                   */
-                  "24x24"?: string;
-                  /**
-                   * Format: uri
-                   * @description The URL of the user's 32x32 pixel avatar.
-                   */
-                  "32x32"?: string;
-                  /**
-                   * Format: uri
-                   * @description The URL of the user's 48x48 pixel avatar.
-                   */
-                  "48x48"?: string;
-                  /**
-                   * Format: uri
-                   * @description The URL of the user's 16x16 pixel avatar.
-                   */
-                  "16x16"?: string;
-                };
-              }[];
-              groups?: {
-                name?: string;
-                /** Format: uri */
-                self?: string;
-              }[];
-            };
-            /** @description The container that the board is located in. */
-            location?: {
-              /** Format: int64 */
-              projectId?: number;
-              /** Format: int64 */
-              userId?: number;
-              userAccountId?: string;
-              displayName?: string;
-              projectName?: string;
-              projectKey?: string;
-              projectTypeKey?: string;
-              /** Format: uri */
-              avatarURI?: string;
-              name?: string;
-            };
-            /** @description Whether the board can be edited. */
-            canEdit?: boolean;
-            /** @description Whether the board is private. */
-            isPrivate?: boolean;
-            /** @description Whether the board is selected as a favorite. */
-            favourite?: boolean;
           };
         };
       };
@@ -3376,20 +3909,20 @@ export interface operations {
       200: {
         content: {
           "application/json": {
+            isLast?: boolean;
             /** Format: int32 */
             maxResults?: number;
             /** Format: int64 */
             startAt?: number;
             /** Format: int64 */
             total?: number;
-            isLast?: boolean;
             values?: {
-              /** Format: int64 */
-              id?: number;
-              /** Format: uri */
-              self?: string;
-              name?: string;
-            }[];
+                /** Format: int64 */
+                id?: number;
+                name?: string;
+                /** Format: uri */
+                self?: string;
+              }[];
           };
         };
       };
@@ -3419,94 +3952,94 @@ export interface operations {
       200: {
         content: {
           "application/json": {
+            admins?: {
+              groups?: {
+                  name?: string;
+                  /** Format: uri */
+                  self?: string;
+                }[];
+              users?: {
+                  /** @description The account ID of the user, which uniquely identifies the user across all Atlassian products. For example, *5b10ac8d82e05b22cc7d4ef5*. */
+                  accountId?: string;
+                  /** @description Whether the user is active. */
+                  active?: boolean;
+                  /** @description The avatars of the user. */
+                  avatarUrls?: {
+                    /**
+                     * Format: uri
+                     * @description The URL of the user's 16x16 pixel avatar.
+                     */
+                    "16x16"?: string;
+                    /**
+                     * Format: uri
+                     * @description The URL of the user's 24x24 pixel avatar.
+                     */
+                    "24x24"?: string;
+                    /**
+                     * Format: uri
+                     * @description The URL of the user's 32x32 pixel avatar.
+                     */
+                    "32x32"?: string;
+                    /**
+                     * Format: uri
+                     * @description The URL of the user's 48x48 pixel avatar.
+                     */
+                    "48x48"?: string;
+                  };
+                  /** @description The display name of the user. Depending on the user’s privacy setting, this may return an alternative value. */
+                  displayName?: string;
+                  /**
+                   * @description This property is deprecated in favor of `accountId` because of privacy changes. See the [migration guide](https://developer.atlassian.com/cloud/jira/platform/deprecation-notice-user-privacy-api-migration-guide/) for details.
+                   * The key of the user.
+                   */
+                  key?: string;
+                  /**
+                   * @description This property is deprecated in favor of `accountId` because of privacy changes. See the [migration guide](https://developer.atlassian.com/cloud/jira/platform/deprecation-notice-user-privacy-api-migration-guide/) for details.
+                   * The username of the user.
+                   */
+                  name?: string;
+                  /**
+                   * Format: uri
+                   * @description The URL of the user.
+                   */
+                  self?: string;
+                }[];
+            };
+            /** @description Whether the board can be edited. */
+            canEdit?: boolean;
+            /** @description Whether the board is selected as a favorite. */
+            favourite?: boolean;
             /**
              * Format: int64
              * @description The ID of the board.
              */
             id?: number;
+            /** @description Whether the board is private. */
+            isPrivate?: boolean;
+            /** @description The container that the board is located in. */
+            location?: {
+              /** Format: uri */
+              avatarURI?: string;
+              displayName?: string;
+              name?: string;
+              /** Format: int64 */
+              projectId?: number;
+              projectKey?: string;
+              projectName?: string;
+              projectTypeKey?: string;
+              userAccountId?: string;
+              /** Format: int64 */
+              userId?: number;
+            };
+            /** @description The name of the board. */
+            name?: string;
             /**
              * Format: uri
              * @description The URL of the board.
              */
             self?: string;
-            /** @description The name of the board. */
-            name?: string;
             /** @description The type the board. */
             type?: string;
-            admins?: {
-              users?: {
-                /**
-                 * @description This property is deprecated in favor of `accountId` because of privacy changes. See the [migration guide](https://developer.atlassian.com/cloud/jira/platform/deprecation-notice-user-privacy-api-migration-guide/) for details.
-                 * The key of the user.
-                 */
-                key?: string;
-                /**
-                 * Format: uri
-                 * @description The URL of the user.
-                 */
-                self?: string;
-                /**
-                 * @description This property is deprecated in favor of `accountId` because of privacy changes. See the [migration guide](https://developer.atlassian.com/cloud/jira/platform/deprecation-notice-user-privacy-api-migration-guide/) for details.
-                 * The username of the user.
-                 */
-                name?: string;
-                /** @description The display name of the user. Depending on the user’s privacy setting, this may return an alternative value. */
-                displayName?: string;
-                /** @description Whether the user is active. */
-                active?: boolean;
-                /** @description The account ID of the user, which uniquely identifies the user across all Atlassian products. For example, *5b10ac8d82e05b22cc7d4ef5*. */
-                accountId?: string;
-                /** @description The avatars of the user. */
-                avatarUrls?: {
-                  /**
-                   * Format: uri
-                   * @description The URL of the user's 24x24 pixel avatar.
-                   */
-                  "24x24"?: string;
-                  /**
-                   * Format: uri
-                   * @description The URL of the user's 32x32 pixel avatar.
-                   */
-                  "32x32"?: string;
-                  /**
-                   * Format: uri
-                   * @description The URL of the user's 48x48 pixel avatar.
-                   */
-                  "48x48"?: string;
-                  /**
-                   * Format: uri
-                   * @description The URL of the user's 16x16 pixel avatar.
-                   */
-                  "16x16"?: string;
-                };
-              }[];
-              groups?: {
-                name?: string;
-                /** Format: uri */
-                self?: string;
-              }[];
-            };
-            /** @description The container that the board is located in. */
-            location?: {
-              /** Format: int64 */
-              projectId?: number;
-              /** Format: int64 */
-              userId?: number;
-              userAccountId?: string;
-              displayName?: string;
-              projectName?: string;
-              projectKey?: string;
-              projectTypeKey?: string;
-              /** Format: uri */
-              avatarURI?: string;
-              name?: string;
-            };
-            /** @description Whether the board can be edited. */
-            canEdit?: boolean;
-            /** @description Whether the board is private. */
-            isPrivate?: boolean;
-            /** @description Whether the board is selected as a favorite. */
-            favourite?: boolean;
           };
         };
       };
@@ -3632,51 +4165,51 @@ export interface operations {
       200: {
         content: {
           "application/json": {
-            /** Format: int64 */
-            id?: number;
-            name?: string;
-            type?: string;
-            /** Format: uri */
-            self?: string;
-            location?: {
-              /** @enum {string} */
-              type?: "project" | "user";
-              projectKeyOrId?: string;
+            columnConfig?: {
+              columns?: {
+                  /** Format: int32 */
+                  max?: number;
+                  /** Format: int32 */
+                  min?: number;
+                  name?: string;
+                  statuses?: {
+                      id?: string;
+                      /** Format: uri */
+                      self?: string;
+                    }[];
+                }[];
+              constraintType?: string;
+            };
+            estimation?: {
+              field?: {
+                displayName?: string;
+                fieldId?: string;
+              };
+              type?: string;
             };
             filter?: {
               id?: string;
               /** Format: uri */
               self?: string;
             };
-            subQuery?: {
-              query?: string;
+            /** Format: int64 */
+            id?: number;
+            location?: {
+              projectKeyOrId?: string;
+              /** @enum {string} */
+              type?: "project" | "user";
             };
-            columnConfig?: {
-              columns?: {
-                name?: string;
-                statuses?: {
-                  id?: string;
-                  /** Format: uri */
-                  self?: string;
-                }[];
-                /** Format: int32 */
-                min?: number;
-                /** Format: int32 */
-                max?: number;
-              }[];
-              constraintType?: string;
-            };
-            estimation?: {
-              type?: string;
-              field?: {
-                fieldId?: string;
-                displayName?: string;
-              };
-            };
+            name?: string;
             ranking?: {
               /** Format: int64 */
               rankCustomFieldId?: number;
             };
+            /** Format: uri */
+            self?: string;
+            subQuery?: {
+              query?: string;
+            };
+            type?: string;
           };
         };
       };
@@ -3855,43 +4388,30 @@ export interface operations {
       200: {
         content: {
           "application/json": {
-            features?: {
-              /** @enum {string} */
-              boardFeature?:
-                | "SIMPLE_ROADMAP"
-                | "BACKLOG"
-                | "SPRINTS"
-                | "DEVTOOLS"
-                | "REPORTS"
-                | "ESTIMATION"
-                | "PAGES"
-                | "CODE"
-                | "RELEASES"
-                | "DEPLOYMENTS"
-                | "ISSUE_NAVIGATOR"
-                | "ON_CALL_SCHEDULE"
-                | "BOARD";
-              /** Format: int64 */
-              boardId?: number;
-              /** @enum {string} */
-              state?: "ENABLED" | "DISABLED" | "COMING_SOON";
-              localisedName?: string;
-              localisedDescription?: string;
-              learnMoreLink?: string;
-              imageUri?: string;
-              /** @enum {string} */
-              featureType?: "BASIC" | "ESTIMATION";
-              localisedGroup?: string;
-              permissibleEstimationTypes?: {
+            features?: ({
                 /** @enum {string} */
-                value?: "STORY_POINTS" | "ORIGINAL_ESTIMATE";
-                localisedName?: string;
+                boardFeature?: "SIMPLE_ROADMAP" | "BACKLOG" | "SPRINTS" | "CALENDAR" | "DEVTOOLS" | "REPORTS" | "ESTIMATION" | "PAGES" | "CODE" | "SECURITY" | "REQUESTS" | "INCIDENTS" | "RELEASES" | "DEPLOYMENTS" | "ISSUE_NAVIGATOR" | "ON_CALL_SCHEDULE" | "BOARD" | "GOALS" | "LIST_VIEW";
+                /** Format: int64 */
+                boardId?: number;
+                featureId?: string;
+                /** @enum {string} */
+                featureType?: "BASIC" | "ESTIMATION";
+                imageUri?: string;
+                learnMoreArticleId?: string;
+                learnMoreLink?: string;
                 localisedDescription?: string;
-              }[];
-              featureId?: string;
-              learnMoreArticleId?: string;
-              toggleLocked?: boolean;
-            }[];
+                localisedGroup?: string;
+                localisedName?: string;
+                permissibleEstimationTypes?: ({
+                    localisedDescription?: string;
+                    localisedName?: string;
+                    /** @enum {string} */
+                    value?: "STORY_POINTS" | "ORIGINAL_ESTIMATE";
+                  })[];
+                /** @enum {string} */
+                state?: "ENABLED" | "DISABLED" | "COMING_SOON";
+                toggleLocked?: boolean;
+              })[];
           };
         };
       };
@@ -3909,8 +4429,8 @@ export interface operations {
         "application/json": {
           /** Format: int64 */
           boardId?: number;
-          feature?: string;
           enabling?: boolean;
+          feature?: string;
         };
       };
     };
@@ -3919,43 +4439,30 @@ export interface operations {
       200: {
         content: {
           "application/json": {
-            features?: {
-              /** @enum {string} */
-              boardFeature?:
-                | "SIMPLE_ROADMAP"
-                | "BACKLOG"
-                | "SPRINTS"
-                | "DEVTOOLS"
-                | "REPORTS"
-                | "ESTIMATION"
-                | "PAGES"
-                | "CODE"
-                | "RELEASES"
-                | "DEPLOYMENTS"
-                | "ISSUE_NAVIGATOR"
-                | "ON_CALL_SCHEDULE"
-                | "BOARD";
-              /** Format: int64 */
-              boardId?: number;
-              /** @enum {string} */
-              state?: "ENABLED" | "DISABLED" | "COMING_SOON";
-              localisedName?: string;
-              localisedDescription?: string;
-              learnMoreLink?: string;
-              imageUri?: string;
-              /** @enum {string} */
-              featureType?: "BASIC" | "ESTIMATION";
-              localisedGroup?: string;
-              permissibleEstimationTypes?: {
+            features?: ({
                 /** @enum {string} */
-                value?: "STORY_POINTS" | "ORIGINAL_ESTIMATE";
-                localisedName?: string;
+                boardFeature?: "SIMPLE_ROADMAP" | "BACKLOG" | "SPRINTS" | "CALENDAR" | "DEVTOOLS" | "REPORTS" | "ESTIMATION" | "PAGES" | "CODE" | "SECURITY" | "REQUESTS" | "INCIDENTS" | "RELEASES" | "DEPLOYMENTS" | "ISSUE_NAVIGATOR" | "ON_CALL_SCHEDULE" | "BOARD" | "GOALS" | "LIST_VIEW";
+                /** Format: int64 */
+                boardId?: number;
+                featureId?: string;
+                /** @enum {string} */
+                featureType?: "BASIC" | "ESTIMATION";
+                imageUri?: string;
+                learnMoreArticleId?: string;
+                learnMoreLink?: string;
                 localisedDescription?: string;
-              }[];
-              featureId?: string;
-              learnMoreArticleId?: string;
-              toggleLocked?: boolean;
-            }[];
+                localisedGroup?: string;
+                localisedName?: string;
+                permissibleEstimationTypes?: ({
+                    localisedDescription?: string;
+                    localisedName?: string;
+                    /** @enum {string} */
+                    value?: "STORY_POINTS" | "ORIGINAL_ESTIMATE";
+                  })[];
+                /** @enum {string} */
+                state?: "ENABLED" | "DISABLED" | "COMING_SOON";
+                toggleLocked?: boolean;
+              })[];
           };
         };
       };
@@ -4029,19 +4536,19 @@ export interface operations {
       content: {
         /**
          * @example {
-         *   "rankBeforeIssue": "PR-4",
-         *   "rankCustomFieldId": 10521,
          *   "issues": [
          *     "PR-1",
          *     "10001",
          *     "PR-3"
-         *   ]
+         *   ],
+         *   "rankBeforeIssue": "PR-4",
+         *   "rankCustomFieldId": 10521
          * }
          */
         "application/json": {
           issues?: string[];
-          rankBeforeIssue?: string;
           rankAfterIssue?: string;
+          rankBeforeIssue?: string;
           /** Format: int64 */
           rankCustomFieldId?: number;
         };
@@ -4057,13 +4564,13 @@ export interface operations {
         content: {
           "application/json": {
             entries?: {
-              /** Format: int64 */
-              issueId?: number;
-              issueKey?: string;
-              /** Format: int32 */
-              status?: number;
-              errors?: string[];
-            }[];
+                errors?: string[];
+                /** Format: int64 */
+                issueId?: number;
+                issueKey?: string;
+                /** Format: int32 */
+                status?: number;
+              }[];
           };
         };
       };
@@ -4248,14 +4755,24 @@ export interface operations {
         propertyKey: string;
       };
     };
+    /** @description The value of the property. The value has to be a valid, non-empty [JSON](https://tools.ietf.org/html/rfc4627) value. The maximum length of the property value is 32768 bytes. */
+    requestBody: {
+      content: {
+        "application/json": unknown;
+      };
+    };
     responses: {
       /** @description Returned if the board property is successfully updated. */
       200: {
-        content: never;
+        content: {
+          "application/json": unknown;
+        };
       };
       /** @description Returned if the board property is successfully created. */
       201: {
-        content: never;
+        content: {
+          "application/json": unknown;
+        };
       };
       /** @description Returned if the boardId is invalid (negative or not a number). */
       400: {
@@ -4325,24 +4842,24 @@ export interface operations {
       200: {
         content: {
           "application/json": {
+            isLast?: boolean;
             /** Format: int32 */
             maxResults?: number;
             /** Format: int64 */
             startAt?: number;
             /** Format: int64 */
             total?: number;
-            isLast?: boolean;
             values?: {
-              /** Format: int64 */
-              id?: number;
-              /** Format: int64 */
-              boardId?: number;
-              name?: string;
-              jql?: string;
-              description?: string;
-              /** Format: int32 */
-              position?: number;
-            }[];
+                /** Format: int64 */
+                boardId?: number;
+                description?: string;
+                /** Format: int64 */
+                id?: number;
+                jql?: string;
+                name?: string;
+                /** Format: int32 */
+                position?: number;
+              }[];
           };
         };
       };
@@ -4382,12 +4899,12 @@ export interface operations {
         content: {
           "application/json": {
             /** Format: int64 */
-            id?: number;
-            /** Format: int64 */
             boardId?: number;
-            name?: string;
-            jql?: string;
             description?: string;
+            /** Format: int64 */
+            id?: number;
+            jql?: string;
+            name?: string;
             /** Format: int32 */
             position?: number;
           };
@@ -4620,8 +5137,8 @@ export interface operations {
         /**
          * @example {
          *   "issues": [
-         *     "PR-1",
          *     "10001",
+         *     "PR-1",
          *     "PR-3"
          *   ]
          * }
@@ -4701,36 +5218,22 @@ export interface operations {
       content: {
         /**
          * @example {
-         *   "summary": "epic 2 summary",
          *   "color": {
          *     "key": "color_6"
          *   },
+         *   "done": true,
          *   "name": "epic 2",
-         *   "done": true
+         *   "summary": "epic 2 summary"
          * }
          */
         "application/json": {
-          name?: string;
-          summary?: string;
           color?: {
             /** @enum {string} */
-            key?:
-              | "color_1"
-              | "color_2"
-              | "color_3"
-              | "color_4"
-              | "color_5"
-              | "color_6"
-              | "color_7"
-              | "color_8"
-              | "color_9"
-              | "color_10"
-              | "color_11"
-              | "color_12"
-              | "color_13"
-              | "color_14";
+            key?: "color_1" | "color_2" | "color_3" | "color_4" | "color_5" | "color_6" | "color_7" | "color_8" | "color_9" | "color_10" | "color_11" | "color_12" | "color_13" | "color_14";
           };
           done?: boolean;
+          name?: string;
+          summary?: string;
         };
       };
     };
@@ -4828,8 +5331,8 @@ export interface operations {
         /**
          * @example {
          *   "issues": [
-         *     "PR-1",
          *     "10001",
+         *     "PR-1",
          *     "PR-3"
          *   ]
          * }
@@ -4887,8 +5390,8 @@ export interface operations {
          * }
          */
         "application/json": {
-          rankBeforeEpic?: string;
           rankAfterEpic?: string;
+          rankBeforeEpic?: string;
           /** Format: int64 */
           rankCustomFieldId?: number;
         };
@@ -4931,19 +5434,19 @@ export interface operations {
       content: {
         /**
          * @example {
-         *   "rankBeforeIssue": "PR-4",
-         *   "rankCustomFieldId": 10521,
          *   "issues": [
          *     "PR-1",
          *     "10001",
          *     "PR-3"
-         *   ]
+         *   ],
+         *   "rankBeforeIssue": "PR-4",
+         *   "rankCustomFieldId": 10521
          * }
          */
         "application/json": {
           issues?: string[];
-          rankBeforeIssue?: string;
           rankAfterIssue?: string;
+          rankBeforeIssue?: string;
           /** Format: int64 */
           rankCustomFieldId?: number;
         };
@@ -5153,20 +5656,20 @@ export interface operations {
       content: {
         /**
          * @example {
-         *   "originBoardId": 5,
-         *   "goal": "sprint 1 goal",
          *   "endDate": "2015-04-20T01:22:00.000+10:00",
+         *   "goal": "sprint 1 goal",
          *   "name": "sprint 1",
+         *   "originBoardId": 5,
          *   "startDate": "2015-04-11T15:22:00.000+10:00"
          * }
          */
         "application/json": {
-          name?: string;
-          startDate?: string;
           endDate?: string;
+          goal?: string;
+          name?: string;
           /** Format: int64 */
           originBoardId?: number;
-          goal?: string;
+          startDate?: string;
         };
       };
     };
@@ -5233,7 +5736,7 @@ export interface operations {
    *
    * Notes:
    *
-   *  *  Sprints that are in a closed state cannot be updated.
+   *  *  For closed sprints, only the name and goal can be updated; changes to other fields will be ignored.
    *  *  A sprint can be started by updating the state to 'active'. This requires the sprint to be in the 'future' state and have a startDate and endDate set.
    *  *  A sprint can be completed by updating the state to 'closed'. This action requires the sprint to be in the 'active' state. This sets the completeDate to the time of the request.
    *  *  Other changes to state are not allowed.
@@ -5250,28 +5753,28 @@ export interface operations {
       content: {
         /**
          * @example {
-         *   "goal": "sprint 1 goal",
+         *   "completeDate": "2015-04-20T11:11:28.008+10:00",
          *   "endDate": "2015-04-16T14:01:00.000+10:00",
+         *   "goal": "sprint 1 goal",
          *   "name": "sprint 1",
-         *   "state": "closed",
          *   "startDate": "2015-04-11T15:36:00.000+10:00",
-         *   "completeDate": "2015-04-20T11:11:28.008+10:00"
+         *   "state": "closed"
          * }
          */
         "application/json": {
-          /** Format: int64 */
-          id?: number;
-          /** Format: uri */
-          self?: string;
-          state?: string;
-          name?: string;
-          startDate?: string;
-          endDate?: string;
           completeDate?: string;
           createdDate?: string;
+          endDate?: string;
+          goal?: string;
+          /** Format: int64 */
+          id?: number;
+          name?: string;
           /** Format: int64 */
           originBoardId?: number;
-          goal?: string;
+          /** Format: uri */
+          self?: string;
+          startDate?: string;
+          state?: string;
         };
       };
     };
@@ -5306,7 +5809,7 @@ export interface operations {
    *
    * Notes:
    *
-   *  *  Sprints that are in a closed state cannot be updated.
+   *  *  For closed sprints, only the name and goal can be updated; changes to other fields will be ignored.
    *  *  A sprint can be started by updating the state to 'active'. This requires the sprint to be in the 'future' state and have a startDate and endDate set.
    *  *  A sprint can be completed by updating the state to 'closed'. This action requires the sprint to be in the 'active' state. This sets the completeDate to the time of the request.
    *  *  Other changes to state are not allowed.
@@ -5327,19 +5830,19 @@ export interface operations {
          * }
          */
         "application/json": {
-          /** Format: int64 */
-          id?: number;
-          /** Format: uri */
-          self?: string;
-          state?: string;
-          name?: string;
-          startDate?: string;
-          endDate?: string;
           completeDate?: string;
           createdDate?: string;
+          endDate?: string;
+          goal?: string;
+          /** Format: int64 */
+          id?: number;
+          name?: string;
           /** Format: int64 */
           originBoardId?: number;
-          goal?: string;
+          /** Format: uri */
+          self?: string;
+          startDate?: string;
+          state?: string;
         };
       };
     };
@@ -5462,19 +5965,19 @@ export interface operations {
       content: {
         /**
          * @example {
-         *   "rankBeforeIssue": "PR-4",
-         *   "rankCustomFieldId": 10521,
          *   "issues": [
          *     "PR-1",
          *     "10001",
          *     "PR-3"
-         *   ]
+         *   ],
+         *   "rankBeforeIssue": "PR-4",
+         *   "rankCustomFieldId": 10521
          * }
          */
         "application/json": {
           issues?: string[];
-          rankBeforeIssue?: string;
           rankAfterIssue?: string;
+          rankBeforeIssue?: string;
           /** Format: int64 */
           rankCustomFieldId?: number;
         };
@@ -5592,14 +6095,24 @@ export interface operations {
         propertyKey: string;
       };
     };
+    /** @description The value of the property. The value has to be a valid, non-empty [JSON](https://tools.ietf.org/html/rfc4627) value. The maximum length of the property value is 32768 bytes. */
+    requestBody: {
+      content: {
+        "application/json": unknown;
+      };
+    };
     responses: {
       /** @description Returned if the sprint property is successfully updated. */
       200: {
-        content: never;
+        content: {
+          "application/json": unknown;
+        };
       };
       /** @description Returned if the sprint property is successfully created. */
       201: {
-        content: never;
+        content: {
+          "application/json": unknown;
+        };
       };
       /** @description Returned if the sprintId is invalid (negative or not a number). */
       400: {
@@ -5714,467 +6227,461 @@ export interface operations {
       content: {
         "application/json": {
           /** @description List of repositories containing development information. Must not contain duplicates. Maximum number of entities across all repositories is 1000. */
-          repositories: {
-            /**
-             * @description The name of this repository. Max length is 255 characters.
-             * @example atlassian-connect-jira-example
-             */
-            name: string;
-            /**
-             * @description Description of this repository. Max length is 1024 characters.
-             * @example The repository which stores code of the Atlassian Connect Add-on Devinfo application.
-             */
-            description?: string;
-            /**
-             * @description The ID of the repository this repository was forked from, if it's a fork. Max length is 1024 characters.
-             * @example 56c7c750-cee2-48e2-b920-d7706dfd11f7
-             */
-            forkOf?: string;
-            /**
-             * Format: url
-             * @description The URL of this repository. Max length is 2000 characters.
-             * @example https://bitbucket.org/atlassianlabs/atlassian-connect-jira-example
-             */
-            url: string;
-            /** @description List of commits to update in this repository. Must not contain duplicate entity IDs. Maximum number of commits is 400 */
-            commits?: {
+          repositories: ({
               /**
-               * @description The identifier or hash of the commit. Will be used for cross entity linking. Must be unique for all commits within a repository, i.e., only one commit can have ID 'X' in repository 'Y'. But adding, e.g., a branch with ID 'X' to repository 'Y' is acceptable. Only alphanumeric characters, and '~.-_', are allowed. Max length is 1024 characters
-               * @example a7727ee6350c33cdf90826dc21abaa26a5704370
+               * @description The name of this repository. Max length is 255 characters.
+               * @example atlassian-connect-jira-example
                */
-              id: string;
+              name: string;
               /**
-               * @description List of issues keys that this entity is associated with. They must be valid Jira issue keys.
-               * @example ["ISSUE-1","TEST-2"]
+               * @description Description of this repository. Max length is 1024 characters.
+               * @example The repository which stores code of the Atlassian Connect Add-on Devinfo application.
                */
-              issueKeys: string[];
+              description?: string;
               /**
-               * Format: int64
-               * @description An ID used to apply an ordering to updates for this entity in the case of out-of-order receipt of update requests. This can be any monotonically increasing number. A suggested implementation is to use epoch millis from the provider system, but other alternatives are valid (e.g. a provider could store a counter against each entity and increment that on each update to Jira). Updates for an entity that are received with an updateSqeuenceId lower than what is currently stored will be ignored.
-               * @example 1523494301248
+               * @description The ID of the repository this repository was forked from, if it's a fork. Max length is 1024 characters.
+               * @example 56c7c750-cee2-48e2-b920-d7706dfd11f7
                */
-              updateSequenceId: number;
-              /** @description Deprecated. Use the id field instead. */
-              hash?: string;
-              /**
-               * @description The set of flags for this commit
-               * @example [MERGE_COMMIT]
-               */
-              flags?: "MERGE_COMMIT"[];
-              /**
-               * @description The commit message. Max length is 1024 characters. If anything longer is supplied, it will be truncated down to 1024 characters.
-               * @example README.md edited online with Bitbucket
-               */
-              message: string;
-              /**
-               * Author
-               * @description Describes the author of a particular entity
-               */
-              author: {
-                /**
-                 * @description Deprecated. The name of this user in a format suitable for display. Max length is 255 characters.
-                 * @example Jane Doe
-                 */
-                name?: string;
-                /**
-                 * @description The email address of the user. Used to associate the user with a Jira user. Max length is 255 characters.
-                 * @example jane_doe@atlassian.com
-                 */
-                email?: string;
-                /**
-                 * @description Deprecated. The username of the user. Used to associate the user with a Jira user if there are multiple users for a given email. Max length is 255 characters.
-                 * @example jdoe
-                 */
-                username?: string;
-                /**
-                 * @description Deprecated. The URL of the profile for this user. Max length is 2000 characters.
-                 * @example https://atlassian.com/account/jane_doe
-                 */
-                url?: string;
-                /**
-                 * @description Deprecated. The URL of the avatar for this user. Max length is 2000 characters.
-                 * @example https://atlassian.com/account/jane_doe/avatar/32
-                 */
-                avatar?: string;
-              };
-              /**
-               * Format: int32
-               * @description The total number of files added, removed, or modified by this commit
-               * @example 1
-               */
-              fileCount: number;
+              forkOf?: string;
               /**
                * Format: url
-               * @description The URL of this commit. Max length is 2000 characters.
-               * @example https://bitbucket.org/atlassianlabs/atlassian-connect-jira-example/commits/a7727ee6350c33cdf90826dc21abaa26a5704370
+               * @description The URL of this repository. Max length is 2000 characters.
+               * @example https://bitbucket.org/atlassianlabs/atlassian-connect-jira-example
                */
               url: string;
-              /** @description List of file changes. Max number of files is 10. Currently, only the first 5 files are shown (sorted by path) in the UI. This UI behavior may change without notice. */
-              files?: {
-                /**
-                 * @description The path of the file. Max length is 1024 characters.
-                 * @example /home/user/src/atlassian-connect-jira-example/README.md
-                 */
-                path: string;
-                /**
-                 * Format: url
-                 * @description The URL of this file. Max length is 2000 characters.
-                 * @example https://bitbucket.org/atlassianlabs/atlassian-connect-jira-example/src/a7727ee6350c33cdf90826dc21abaa26a5704370/README.md
-                 */
-                url: string;
-                /**
-                 * @description The operation performed on this file
-                 * @example MODIFIED
-                 * @enum {string}
-                 */
-                changeType: "ADDED" | "COPIED" | "DELETED" | "MODIFIED" | "MOVED" | "UNKNOWN";
-                /**
-                 * Format: int32
-                 * @description Number of lines added to the file
-                 * @example 0
-                 */
-                linesAdded: number;
-                /**
-                 * Format: int32
-                 * @description Number of lines removed from the file
-                 * @example 1
-                 */
-                linesRemoved: number;
-              }[];
+              /** @description List of commits to update in this repository. Must not contain duplicate entity IDs. Maximum number of commits is 400 */
+              commits?: ({
+                  /**
+                   * @description The identifier or hash of the commit. Will be used for cross entity linking. Must be unique for all commits within a repository, i.e., only one commit can have ID 'X' in repository 'Y'. But adding, e.g., a branch with ID 'X' to repository 'Y' is acceptable. Only alphanumeric characters, and '~.-_', are allowed. Max length is 1024 characters
+                   * @example a7727ee6350c33cdf90826dc21abaa26a5704370
+                   */
+                  id: string;
+                  /**
+                   * @description List of issues keys that this entity is associated with. They must be valid Jira issue keys.
+                   * @example ["ISSUE-1","TEST-2"]
+                   */
+                  issueKeys: string[];
+                  /**
+                   * Format: int64
+                   * @description An ID used to apply an ordering to updates for this entity in the case of out-of-order receipt of update requests. This can be any monotonically increasing number. A suggested implementation is to use epoch millis from the provider system, but other alternatives are valid (e.g. a provider could store a counter against each entity and increment that on each update to Jira). Updates for an entity that are received with an updateSqeuenceId lower than what is currently stored will be ignored.
+                   * @example 1523494301248
+                   */
+                  updateSequenceId: number;
+                  /** @description Deprecated. Use the id field instead. */
+                  hash?: string;
+                  /**
+                   * @description The set of flags for this commit
+                   * @example [MERGE_COMMIT]
+                   */
+                  flags?: "MERGE_COMMIT"[];
+                  /**
+                   * @description The commit message. Max length is 1024 characters. If anything longer is supplied, it will be truncated down to 1024 characters.
+                   * @example README.md edited online with Bitbucket
+                   */
+                  message: string;
+                  /**
+                   * Author
+                   * @description Describes the author of a particular entity
+                   */
+                  author: {
+                    /**
+                     * @description Deprecated. The name of this user in a format suitable for display. Max length is 255 characters.
+                     * @example Jane Doe
+                     */
+                    name?: string;
+                    /**
+                     * @description The email address of the user. Used to associate the user with a Jira user. Max length is 255 characters.
+                     * @example jane_doe@atlassian.com
+                     */
+                    email?: string;
+                    /**
+                     * @description Deprecated. The username of the user. Used to associate the user with a Jira user if there are multiple users for a given email. Max length is 255 characters.
+                     * @example jdoe
+                     */
+                    username?: string;
+                    /**
+                     * @description Deprecated. The URL of the profile for this user. Max length is 2000 characters.
+                     * @example https://atlassian.com/account/jane_doe
+                     */
+                    url?: string;
+                    /**
+                     * @description Deprecated. The URL of the avatar for this user. Max length is 2000 characters.
+                     * @example https://atlassian.com/account/jane_doe/avatar/32
+                     */
+                    avatar?: string;
+                  };
+                  /**
+                   * Format: int32
+                   * @description The total number of files added, removed, or modified by this commit
+                   * @example 1
+                   */
+                  fileCount: number;
+                  /**
+                   * Format: url
+                   * @description The URL of this commit. Max length is 2000 characters.
+                   * @example https://bitbucket.org/atlassianlabs/atlassian-connect-jira-example/commits/a7727ee6350c33cdf90826dc21abaa26a5704370
+                   */
+                  url: string;
+                  /** @description List of file changes. Max number of files is 10. Currently, only the first 5 files are shown (sorted by path) in the UI. This UI behavior may change without notice. */
+                  files?: ({
+                      /**
+                       * @description The path of the file. Max length is 1024 characters.
+                       * @example /home/user/src/atlassian-connect-jira-example/README.md
+                       */
+                      path: string;
+                      /**
+                       * Format: url
+                       * @description The URL of this file. Max length is 2000 characters.
+                       * @example https://bitbucket.org/atlassianlabs/atlassian-connect-jira-example/src/a7727ee6350c33cdf90826dc21abaa26a5704370/README.md
+                       */
+                      url: string;
+                      /**
+                       * @description The operation performed on this file
+                       * @example MODIFIED
+                       * @enum {string}
+                       */
+                      changeType: "ADDED" | "COPIED" | "DELETED" | "MODIFIED" | "MOVED" | "UNKNOWN";
+                      /**
+                       * Format: int32
+                       * @description Number of lines added to the file
+                       * @example 0
+                       */
+                      linesAdded: number;
+                      /**
+                       * Format: int32
+                       * @description Number of lines removed from the file
+                       * @example 1
+                       */
+                      linesRemoved: number;
+                    })[];
+                  /**
+                   * @description The author timestamp of this commit. Formatted as a UTC ISO 8601 date time format.
+                   * @example 2016-10-31T23:27:25+00:00
+                   */
+                  authorTimestamp: string;
+                  /**
+                   * @description Shortened identifier for this commit, used for display. Max length is 255 characters.
+                   * @example a7727ee
+                   */
+                  displayId: string;
+                })[];
+              /** @description List of branches to update in this repository. Must not contain duplicate entity IDs. Maximum number of branches is 400. */
+              branches?: ({
+                  /**
+                   * @description The ID of this entity. Will be used for cross entity linking. Must be unique by entity type within a repository, i.e., only one commit can have ID 'X' in repository 'Y'. But adding, e.g., a branch with ID 'X' to repository 'Y' is acceptable. Only alphanumeric characters, and '~.-_', are allowed. Max length is 1024 characters.
+                   * @example c6c7c750-cee2-48e2-b920-d7706dfd11f9
+                   */
+                  id: string;
+                  /**
+                   * @description List of issues keys that this entity is associated with. They must be valid Jira issue keys.
+                   * @example ["ISSUE-1","TEST-2"]
+                   */
+                  issueKeys: string[];
+                  /**
+                   * Format: int64
+                   * @description An ID used to apply an ordering to updates for this entity in the case of out-of-order receipt of update requests. This can be any monotonically increasing number. A suggested implementation is to use epoch millis from the provider system, but other alternatives are valid (e.g. a provider could store a counter against each entity and increment that on each update to Jira). Updates for an entity that are received with an updateSqeuenceId lower than what is currently stored will be ignored.
+                   * @example 1523494301248
+                   */
+                  updateSequenceId: number;
+                  /**
+                   * @description The name of the branch. Max length is 512 characters.
+                   * @example master
+                   */
+                  name: string;
+                  /**
+                   * Commit
+                   * @description Represents a commit in the version control system.
+                   */
+                  lastCommit: {
+                    /**
+                     * @description The identifier or hash of the commit. Will be used for cross entity linking. Must be unique for all commits within a repository, i.e., only one commit can have ID 'X' in repository 'Y'. But adding, e.g., a branch with ID 'X' to repository 'Y' is acceptable. Only alphanumeric characters, and '~.-_', are allowed. Max length is 1024 characters
+                     * @example a7727ee6350c33cdf90826dc21abaa26a5704370
+                     */
+                    id: string;
+                    /**
+                     * @description List of issues keys that this entity is associated with. They must be valid Jira issue keys.
+                     * @example ["ISSUE-1","TEST-2"]
+                     */
+                    issueKeys: string[];
+                    /**
+                     * Format: int64
+                     * @description An ID used to apply an ordering to updates for this entity in the case of out-of-order receipt of update requests. This can be any monotonically increasing number. A suggested implementation is to use epoch millis from the provider system, but other alternatives are valid (e.g. a provider could store a counter against each entity and increment that on each update to Jira). Updates for an entity that are received with an updateSqeuenceId lower than what is currently stored will be ignored.
+                     * @example 1523494301248
+                     */
+                    updateSequenceId: number;
+                    /** @description Deprecated. Use the id field instead. */
+                    hash?: string;
+                    /**
+                     * @description The set of flags for this commit
+                     * @example [MERGE_COMMIT]
+                     */
+                    flags?: "MERGE_COMMIT"[];
+                    /**
+                     * @description The commit message. Max length is 1024 characters. If anything longer is supplied, it will be truncated down to 1024 characters.
+                     * @example README.md edited online with Bitbucket
+                     */
+                    message: string;
+                    /**
+                     * Author
+                     * @description Describes the author of a particular entity
+                     */
+                    author: {
+                      /**
+                       * @description Deprecated. The name of this user in a format suitable for display. Max length is 255 characters.
+                       * @example Jane Doe
+                       */
+                      name?: string;
+                      /**
+                       * @description The email address of the user. Used to associate the user with a Jira user. Max length is 255 characters.
+                       * @example jane_doe@atlassian.com
+                       */
+                      email?: string;
+                      /**
+                       * @description Deprecated. The username of the user. Used to associate the user with a Jira user if there are multiple users for a given email. Max length is 255 characters.
+                       * @example jdoe
+                       */
+                      username?: string;
+                      /**
+                       * @description Deprecated. The URL of the profile for this user. Max length is 2000 characters.
+                       * @example https://atlassian.com/account/jane_doe
+                       */
+                      url?: string;
+                      /**
+                       * @description Deprecated. The URL of the avatar for this user. Max length is 2000 characters.
+                       * @example https://atlassian.com/account/jane_doe/avatar/32
+                       */
+                      avatar?: string;
+                    };
+                    /**
+                     * Format: int32
+                     * @description The total number of files added, removed, or modified by this commit
+                     * @example 1
+                     */
+                    fileCount: number;
+                    /**
+                     * Format: url
+                     * @description The URL of this commit. Max length is 2000 characters.
+                     * @example https://bitbucket.org/atlassianlabs/atlassian-connect-jira-example/commits/a7727ee6350c33cdf90826dc21abaa26a5704370
+                     */
+                    url: string;
+                    /** @description List of file changes. Max number of files is 10. Currently, only the first 5 files are shown (sorted by path) in the UI. This UI behavior may change without notice. */
+                    files?: ({
+                        /**
+                         * @description The path of the file. Max length is 1024 characters.
+                         * @example /home/user/src/atlassian-connect-jira-example/README.md
+                         */
+                        path: string;
+                        /**
+                         * Format: url
+                         * @description The URL of this file. Max length is 2000 characters.
+                         * @example https://bitbucket.org/atlassianlabs/atlassian-connect-jira-example/src/a7727ee6350c33cdf90826dc21abaa26a5704370/README.md
+                         */
+                        url: string;
+                        /**
+                         * @description The operation performed on this file
+                         * @example MODIFIED
+                         * @enum {string}
+                         */
+                        changeType: "ADDED" | "COPIED" | "DELETED" | "MODIFIED" | "MOVED" | "UNKNOWN";
+                        /**
+                         * Format: int32
+                         * @description Number of lines added to the file
+                         * @example 0
+                         */
+                        linesAdded: number;
+                        /**
+                         * Format: int32
+                         * @description Number of lines removed from the file
+                         * @example 1
+                         */
+                        linesRemoved: number;
+                      })[];
+                    /**
+                     * @description The author timestamp of this commit. Formatted as a UTC ISO 8601 date time format.
+                     * @example 2016-10-31T23:27:25+00:00
+                     */
+                    authorTimestamp: string;
+                    /**
+                     * @description Shortened identifier for this commit, used for display. Max length is 255 characters.
+                     * @example a7727ee
+                     */
+                    displayId: string;
+                  };
+                  /**
+                   * @description The URL of the page for creating a pull request from this branch. Max length is 2000 characters.
+                   * @example https://bitbucket.org/atlassianlabs/atlassian-connect-jira-example/pull-requests/new
+                   */
+                  createPullRequestUrl?: string;
+                  /**
+                   * @description The URL of the branch. Max length is 2000 characters.
+                   * @example https://bitbucket.org/atlassianlabs/atlassian-connect-jira-example/branch/master
+                   */
+                  url: string;
+                })[];
+              /** @description List of pull requests to update in this repository. Must not contain duplicate entity IDs. Maximum number of pull requests is 400 */
+              pullRequests?: ({
+                  /**
+                   * @description The ID of this entity. Will be used for cross entity linking. Must be unique by entity type within a repository, i.e., only one commit can have ID 'X' in repository 'Y'. But adding, e.g., a branch with ID 'X' to repository 'Y' is acceptable. Only alphanumeric characters, and '~.-_', are allowed. Max length is 1024 characters
+                   * @example c6c7c750-cee2-48e2-b920-d7706dfd11f9
+                   */
+                  id: string;
+                  /**
+                   * @description List of issues keys that this entity is associated with. They must be valid Jira issue keys.
+                   * @example ["ISSUE-1","TEST-2"]
+                   */
+                  issueKeys: string[];
+                  /**
+                   * Format: int64
+                   * @description An ID used to apply an ordering to updates for this entity in the case of out-of-order receipt of update requests. This can be any monotonically increasing number. A suggested implementation is to use epoch millis from the provider system, but other alternatives are valid (e.g. a provider could store a counter against each entity and increment that on each update to Jira). Updates for an entity that are received with an updateSqeuenceId lower than what is currently stored will be ignored.
+                   * @example 1523494301248
+                   */
+                  updateSequenceId: number;
+                  /**
+                   * @description The status of the pull request. In the case of concurrent updates, priority is given in the order OPEN, MERGED, DECLINED, UNKNOWN
+                   * @example OPEN
+                   * @enum {string}
+                   */
+                  status: "OPEN" | "MERGED" | "DECLINED" | "UNKNOWN";
+                  /**
+                   * @description Title of the pull request. Max length is 1024 characters.
+                   * @example Pull request 2, fixing all the issues caused by pull request #1
+                   */
+                  title: string;
+                  /**
+                   * Author
+                   * @description Describes the author of a particular entity
+                   */
+                  author: {
+                    /**
+                     * @description Deprecated. The name of this user in a format suitable for display. Max length is 255 characters.
+                     * @example Jane Doe
+                     */
+                    name?: string;
+                    /**
+                     * @description The email address of the user. Used to associate the user with a Jira user. Max length is 255 characters.
+                     * @example jane_doe@atlassian.com
+                     */
+                    email?: string;
+                    /**
+                     * @description Deprecated. The username of the user. Used to associate the user with a Jira user if there are multiple users for a given email. Max length is 255 characters.
+                     * @example jdoe
+                     */
+                    username?: string;
+                    /**
+                     * @description Deprecated. The URL of the profile for this user. Max length is 2000 characters.
+                     * @example https://atlassian.com/account/jane_doe
+                     */
+                    url?: string;
+                    /**
+                     * @description Deprecated. The URL of the avatar for this user. Max length is 2000 characters.
+                     * @example https://atlassian.com/account/jane_doe/avatar/32
+                     */
+                    avatar?: string;
+                  };
+                  /**
+                   * Format: int32
+                   * @description The number of comments on the pull request
+                   * @example 42
+                   */
+                  commentCount: number;
+                  /**
+                   * @description The name of the source branch of this PR. Max length is 255 characters.
+                   * @example ISSUE-1-feature-branch
+                   */
+                  sourceBranch: string;
+                  /**
+                   * Format: url
+                   * @description The url of the source branch of this PR. This is used to match this PR against the branch. Max length is 2000 characters.
+                   * @example https://bitbucket.org/atlassianlabs/atlassian-connect-jira-example/branch/ISSUE-1-feature-branch
+                   */
+                  sourceBranchUrl?: string;
+                  /**
+                   * @description The most recent update to this PR. Formatted as a UTC ISO 8601 date time format.
+                   * @example 2016-10-31T23:27:25+00:00
+                   */
+                  lastUpdate: string;
+                  /**
+                   * @description The name of destination branch of this PR. Max length is 255 characters.
+                   * @example master
+                   */
+                  destinationBranch?: string;
+                  /**
+                   * Format: url
+                   * @description The url of the destination branch of this PR. Max length is 2000 characters.
+                   * @example https://bitbucket.org/atlassianlabs/atlassian-connect-jira-example/src/master
+                   */
+                  destinationBranchUrl?: string;
+                  /** @description The list of reviewers of this pull request */
+                  reviewers?: ({
+                      /**
+                       * @description Deprecated. The name of this reviewer. Max length is 255 characters.
+                       * @example Jane Doe
+                       */
+                      name?: string;
+                      /**
+                       * @description The approval status of this reviewer, default is UNAPPROVED.
+                       * @example APPROVED
+                       * @enum {string}
+                       */
+                      approvalStatus?: "APPROVED" | "UNAPPROVED";
+                      /**
+                       * Format: url
+                       * @description Deprecated. The URL of the profile for this reviewer. Max length is 2000 characters.
+                       * @example https://atlassian.com/account/jane_doe
+                       */
+                      url?: string;
+                      /**
+                       * Format: url
+                       * @description Deprecated. The URL of the avatar for this reviewer. Max length is 2000 characters.
+                       * @example https://atlassian.com/account/jane_doe/avatar/32
+                       */
+                      avatar?: string;
+                      /**
+                       * @description The email address of this reviewer. Max length is 254 characters.
+                       * @example jane_doe@example.com
+                       */
+                      email?: string;
+                      /**
+                       * @description The Atlassian Account ID (AAID) of this reviewer. Max length is 128 characters.
+                       * @example 655363:e4ca5e2d-a901-40e3-877e-bf5d22c0f130
+                       */
+                      accountId?: string;
+                    })[];
+                  /**
+                   * Format: url
+                   * @description The URL of this pull request. Max length is 2000 characters.
+                   * @example https://bitbucket.org/atlassianlabs/atlassian-connect-jira-example/pull-requests/2
+                   */
+                  url: string;
+                  /**
+                   * @description Shortened identifier for this pull request, used for display. Max length is 255 characters.
+                   * @example Pull request 2
+                   */
+                  displayId: string;
+                })[];
               /**
-               * @description The author timestamp of this commit. Formatted as a UTC ISO 8601 date time format.
-               * @example 2016-10-31T23:27:25+00:00
+               * Format: url
+               * @description The URL of the avatar for this repository. Max length is 2000 characters.
+               * @example http://bitbucket.org/atlassianlabs/atlassian-connect-jira-example/avatar/32
                */
-              authorTimestamp: string;
+              avatar?: string;
               /**
-               * @description Shortened identifier for this commit, used for display. Max length is 255 characters.
-               * @example a7727ee
+               * @description Description of the avatar for this repository. Max length is 1024 characters.
+               * @example Avatar description
                */
-              displayId: string;
-            }[];
-            /** @description List of branches to update in this repository. Must not contain duplicate entity IDs. Maximum number of branches is 400. */
-            branches?: {
+              avatarDescription?: string;
               /**
                * @description The ID of this entity. Will be used for cross entity linking. Must be unique by entity type within a repository, i.e., only one commit can have ID 'X' in repository 'Y'. But adding, e.g., a branch with ID 'X' to repository 'Y' is acceptable. Only alphanumeric characters, and '~.-_', are allowed. Max length is 1024 characters.
                * @example c6c7c750-cee2-48e2-b920-d7706dfd11f9
                */
               id: string;
               /**
-               * @description List of issues keys that this entity is associated with. They must be valid Jira issue keys.
-               * @example ["ISSUE-1","TEST-2"]
-               */
-              issueKeys: string[];
-              /**
                * Format: int64
-               * @description An ID used to apply an ordering to updates for this entity in the case of out-of-order receipt of update requests. This can be any monotonically increasing number. A suggested implementation is to use epoch millis from the provider system, but other alternatives are valid (e.g. a provider could store a counter against each entity and increment that on each update to Jira). Updates for an entity that are received with an updateSqeuenceId lower than what is currently stored will be ignored.
+               * @description  An ID used to apply an ordering to updates for this entity in the case of out-of-order receipt of update requests. This can be any monotonically increasing number. A suggested implementation is to use epoch millis from the provider system, but other alternatives are valid (e.g. a provider could store a counter against each entity and increment that on each update to Jira). Updates for an entity that are received with an updateSqeuenceId lower than what is currently stored will be ignored.
                * @example 1523494301248
                */
               updateSequenceId: number;
-              /**
-               * @description The name of the branch. Max length is 512 characters.
-               * @example master
-               */
-              name: string;
-              /**
-               * Commit
-               * @description Represents a commit in the version control system.
-               */
-              lastCommit: {
-                /**
-                 * @description The identifier or hash of the commit. Will be used for cross entity linking. Must be unique for all commits within a repository, i.e., only one commit can have ID 'X' in repository 'Y'. But adding, e.g., a branch with ID 'X' to repository 'Y' is acceptable. Only alphanumeric characters, and '~.-_', are allowed. Max length is 1024 characters
-                 * @example a7727ee6350c33cdf90826dc21abaa26a5704370
-                 */
-                id: string;
-                /**
-                 * @description List of issues keys that this entity is associated with. They must be valid Jira issue keys.
-                 * @example ["ISSUE-1","TEST-2"]
-                 */
-                issueKeys: string[];
-                /**
-                 * Format: int64
-                 * @description An ID used to apply an ordering to updates for this entity in the case of out-of-order receipt of update requests. This can be any monotonically increasing number. A suggested implementation is to use epoch millis from the provider system, but other alternatives are valid (e.g. a provider could store a counter against each entity and increment that on each update to Jira). Updates for an entity that are received with an updateSqeuenceId lower than what is currently stored will be ignored.
-                 * @example 1523494301248
-                 */
-                updateSequenceId: number;
-                /** @description Deprecated. Use the id field instead. */
-                hash?: string;
-                /**
-                 * @description The set of flags for this commit
-                 * @example [MERGE_COMMIT]
-                 */
-                flags?: "MERGE_COMMIT"[];
-                /**
-                 * @description The commit message. Max length is 1024 characters. If anything longer is supplied, it will be truncated down to 1024 characters.
-                 * @example README.md edited online with Bitbucket
-                 */
-                message: string;
-                /**
-                 * Author
-                 * @description Describes the author of a particular entity
-                 */
-                author: {
-                  /**
-                   * @description Deprecated. The name of this user in a format suitable for display. Max length is 255 characters.
-                   * @example Jane Doe
-                   */
-                  name?: string;
-                  /**
-                   * @description The email address of the user. Used to associate the user with a Jira user. Max length is 255 characters.
-                   * @example jane_doe@atlassian.com
-                   */
-                  email?: string;
-                  /**
-                   * @description Deprecated. The username of the user. Used to associate the user with a Jira user if there are multiple users for a given email. Max length is 255 characters.
-                   * @example jdoe
-                   */
-                  username?: string;
-                  /**
-                   * @description Deprecated. The URL of the profile for this user. Max length is 2000 characters.
-                   * @example https://atlassian.com/account/jane_doe
-                   */
-                  url?: string;
-                  /**
-                   * @description Deprecated. The URL of the avatar for this user. Max length is 2000 characters.
-                   * @example https://atlassian.com/account/jane_doe/avatar/32
-                   */
-                  avatar?: string;
-                };
-                /**
-                 * Format: int32
-                 * @description The total number of files added, removed, or modified by this commit
-                 * @example 1
-                 */
-                fileCount: number;
-                /**
-                 * Format: url
-                 * @description The URL of this commit. Max length is 2000 characters.
-                 * @example https://bitbucket.org/atlassianlabs/atlassian-connect-jira-example/commits/a7727ee6350c33cdf90826dc21abaa26a5704370
-                 */
-                url: string;
-                /** @description List of file changes. Max number of files is 10. Currently, only the first 5 files are shown (sorted by path) in the UI. This UI behavior may change without notice. */
-                files?: {
-                  /**
-                   * @description The path of the file. Max length is 1024 characters.
-                   * @example /home/user/src/atlassian-connect-jira-example/README.md
-                   */
-                  path: string;
-                  /**
-                   * Format: url
-                   * @description The URL of this file. Max length is 2000 characters.
-                   * @example https://bitbucket.org/atlassianlabs/atlassian-connect-jira-example/src/a7727ee6350c33cdf90826dc21abaa26a5704370/README.md
-                   */
-                  url: string;
-                  /**
-                   * @description The operation performed on this file
-                   * @example MODIFIED
-                   * @enum {string}
-                   */
-                  changeType: "ADDED" | "COPIED" | "DELETED" | "MODIFIED" | "MOVED" | "UNKNOWN";
-                  /**
-                   * Format: int32
-                   * @description Number of lines added to the file
-                   * @example 0
-                   */
-                  linesAdded: number;
-                  /**
-                   * Format: int32
-                   * @description Number of lines removed from the file
-                   * @example 1
-                   */
-                  linesRemoved: number;
-                }[];
-                /**
-                 * @description The author timestamp of this commit. Formatted as a UTC ISO 8601 date time format.
-                 * @example 2016-10-31T23:27:25+00:00
-                 */
-                authorTimestamp: string;
-                /**
-                 * @description Shortened identifier for this commit, used for display. Max length is 255 characters.
-                 * @example a7727ee
-                 */
-                displayId: string;
-              };
-              /**
-               * @description The URL of the page for creating a pull request from this branch. Max length is 2000 characters.
-               * @example https://bitbucket.org/atlassianlabs/atlassian-connect-jira-example/pull-requests/new
-               */
-              createPullRequestUrl?: string;
-              /**
-               * @description The URL of the branch. Max length is 2000 characters.
-               * @example https://bitbucket.org/atlassianlabs/atlassian-connect-jira-example/branch/master
-               */
-              url: string;
-            }[];
-            /** @description List of pull requests to update in this repository. Must not contain duplicate entity IDs. Maximum number of pull requests is 400 */
-            pullRequests?: {
-              /**
-               * @description The ID of this entity. Will be used for cross entity linking. Must be unique by entity type within a repository, i.e., only one commit can have ID 'X' in repository 'Y'. But adding, e.g., a branch with ID 'X' to repository 'Y' is acceptable. Only alphanumeric characters, and '~.-_', are allowed. Max length is 1024 characters
-               * @example c6c7c750-cee2-48e2-b920-d7706dfd11f9
-               */
-              id: string;
-              /**
-               * @description List of issues keys that this entity is associated with. They must be valid Jira issue keys.
-               * @example ["ISSUE-1","TEST-2"]
-               */
-              issueKeys: string[];
-              /**
-               * Format: int64
-               * @description An ID used to apply an ordering to updates for this entity in the case of out-of-order receipt of update requests. This can be any monotonically increasing number. A suggested implementation is to use epoch millis from the provider system, but other alternatives are valid (e.g. a provider could store a counter against each entity and increment that on each update to Jira). Updates for an entity that are received with an updateSqeuenceId lower than what is currently stored will be ignored.
-               * @example 1523494301248
-               */
-              updateSequenceId: number;
-              /**
-               * @description The status of the pull request. In the case of concurrent updates, priority is given in the order OPEN, MERGED, DECLINED, DRAFT, UNKNOWN
-               * @example OPEN
-               * @enum {string}
-               */
-              status: "OPEN" | "MERGED" | "DECLINED" | "DRAFT" | "UNKNOWN";
-              /**
-               * @description Title of the pull request. Max length is 1024 characters.
-               * @example Pull request 2, fixing all the issues caused by pull request #1
-               */
-              title: string;
-              /**
-               * Author
-               * @description Describes the author of a particular entity
-               */
-              author: {
-                /**
-                 * @description Deprecated. The name of this user in a format suitable for display. Max length is 255 characters.
-                 * @example Jane Doe
-                 */
-                name?: string;
-                /**
-                 * @description The email address of the user. Used to associate the user with a Jira user. Max length is 255 characters.
-                 * @example jane_doe@atlassian.com
-                 */
-                email?: string;
-                /**
-                 * @description Deprecated. The username of the user. Used to associate the user with a Jira user if there are multiple users for a given email. Max length is 255 characters.
-                 * @example jdoe
-                 */
-                username?: string;
-                /**
-                 * @description Deprecated. The URL of the profile for this user. Max length is 2000 characters.
-                 * @example https://atlassian.com/account/jane_doe
-                 */
-                url?: string;
-                /**
-                 * @description Deprecated. The URL of the avatar for this user. Max length is 2000 characters.
-                 * @example https://atlassian.com/account/jane_doe/avatar/32
-                 */
-                avatar?: string;
-              };
-              /**
-               * Format: int32
-               * @description The number of comments on the pull request
-               * @example 42
-               */
-              commentCount: number;
-              /**
-               * @description The name of the source branch of this PR. Max length is 255 characters.
-               * @example ISSUE-1-feature-branch
-               */
-              sourceBranch: string;
-              /**
-               * Format: url
-               * @description The url of the source branch of this PR. This is used to match this PR against the branch. Max length is 2000 characters.
-               * @example https://bitbucket.org/atlassianlabs/atlassian-connect-jira-example/branch/ISSUE-1-feature-branch
-               */
-              sourceBranchUrl?: string;
-              /**
-               * @description The most recent update to this PR. Formatted as a UTC ISO 8601 date time format.
-               * @example 2016-10-31T23:27:25+00:00
-               */
-              lastUpdate: string;
-              /**
-               * @description The name of destination branch of this PR. Max length is 255 characters.
-               * @example master
-               */
-              destinationBranch?: string;
-              /**
-               * Format: url
-               * @description The url of the destination branch of this PR. Max length is 2000 characters.
-               * @example https://bitbucket.org/atlassianlabs/atlassian-connect-jira-example/src/master
-               */
-              destinationBranchUrl?: string;
-              /** @description The list of reviewers of this pull request */
-              reviewers?: {
-                /**
-                 * @description Deprecated. The name of this reviewer. Max length is 255 characters.
-                 * @example Jane Doe
-                 */
-                name?: string;
-                /**
-                 * @description The approval status of this reviewer, default is UNAPPROVED.
-                 * @example APPROVED
-                 * @enum {string}
-                 */
-                approvalStatus?: "APPROVED" | "NEEDSWORK" | "UNAPPROVED";
-                /**
-                 * Format: url
-                 * @description Deprecated. The URL of the profile for this reviewer. Max length is 2000 characters.
-                 * @example https://atlassian.com/account/jane_doe
-                 */
-                url?: string;
-                /**
-                 * Format: url
-                 * @description Deprecated. The URL of the avatar for this reviewer. Max length is 2000 characters.
-                 * @example https://atlassian.com/account/jane_doe/avatar/32
-                 */
-                avatar?: string;
-                /**
-                 * @description The email address of this reviewer. Max length is 254 characters.
-                 * @example jane_doe@example.com
-                 */
-                email?: string;
-                /**
-                 * @description The Atlassian Account ID (AAID) of this reviewer. Max length is 128 characters.
-                 * @example 655363:e4ca5e2d-a901-40e3-877e-bf5d22c0f130
-                 */
-                accountId?: string;
-              }[];
-              /**
-               * Format: url
-               * @description The URL of this pull request. Max length is 2000 characters.
-               * @example https://bitbucket.org/atlassianlabs/atlassian-connect-jira-example/pull-requests/2
-               */
-              url: string;
-              /**
-               * @description Shortened identifier for this pull request, used for display. Max length is 255 characters.
-               * @example Pull request 2
-               */
-              displayId: string;
-              /**
-               * Format: int32
-               * @description The number of tasks on the pull request
-               * @example 42
-               */
-              taskCount?: number;
-            }[];
-            /**
-             * Format: url
-             * @description The URL of the avatar for this repository. Max length is 2000 characters.
-             * @example http://bitbucket.org/atlassianlabs/atlassian-connect-jira-example/avatar/32
-             */
-            avatar?: string;
-            /**
-             * @description Description of the avatar for this repository. Max length is 1024 characters.
-             * @example Avatar description
-             */
-            avatarDescription?: string;
-            /**
-             * @description The ID of this entity. Will be used for cross entity linking. Must be unique by entity type within a repository, i.e., only one commit can have ID 'X' in repository 'Y'. But adding, e.g., a branch with ID 'X' to repository 'Y' is acceptable. Only alphanumeric characters, and '~.-_', are allowed. Max length is 1024 characters.
-             * @example c6c7c750-cee2-48e2-b920-d7706dfd11f9
-             */
-            id: string;
-            /**
-             * Format: int64
-             * @description  An ID used to apply an ordering to updates for this entity in the case of out-of-order receipt of update requests. This can be any monotonically increasing number. A suggested implementation is to use epoch millis from the provider system, but other alternatives are valid (e.g. a provider could store a counter against each entity and increment that on each update to Jira). Updates for an entity that are received with an updateSqeuenceId lower than what is currently stored will be ignored.
-             * @example 1523494301248
-             */
-            updateSequenceId: number;
-          }[];
+            })[];
           /** @description Flag to prevent automatic issue transitions and smart commits being fired, default is false. */
           preventTransitions?: boolean;
           /**
@@ -6222,47 +6729,47 @@ export interface operations {
               [key: string]: {
                 /** @description Repository errors */
                 errorMessages?: {
-                  /** @description A human-readable message describing the error. */
-                  message: string;
-                  /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-                  errorTraceId?: string;
-                }[];
+                    /** @description A human-readable message describing the error. */
+                    message: string;
+                    /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+                    errorTraceId?: string;
+                  }[];
                 /** @description Commits errors */
                 commits?: {
-                  /** @description Entity id */
-                  id: string;
-                  /** @description Error message */
-                  errorMessages?: {
-                    /** @description A human-readable message describing the error. */
-                    message: string;
-                    /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-                    errorTraceId?: string;
+                    /** @description Entity id */
+                    id: string;
+                    /** @description Error message */
+                    errorMessages?: {
+                        /** @description A human-readable message describing the error. */
+                        message: string;
+                        /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+                        errorTraceId?: string;
+                      }[];
                   }[];
-                }[];
                 /** @description Branches errors */
                 branches?: {
-                  /** @description Entity id */
-                  id: string;
-                  /** @description Error message */
-                  errorMessages?: {
-                    /** @description A human-readable message describing the error. */
-                    message: string;
-                    /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-                    errorTraceId?: string;
+                    /** @description Entity id */
+                    id: string;
+                    /** @description Error message */
+                    errorMessages?: {
+                        /** @description A human-readable message describing the error. */
+                        message: string;
+                        /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+                        errorTraceId?: string;
+                      }[];
                   }[];
-                }[];
                 /** @description Pull requests errors */
                 pullRequests?: {
-                  /** @description Entity id */
-                  id: string;
-                  /** @description Error message */
-                  errorMessages?: {
-                    /** @description A human-readable message describing the error. */
-                    message: string;
-                    /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-                    errorTraceId?: string;
+                    /** @description Entity id */
+                    id: string;
+                    /** @description Error message */
+                    errorMessages?: {
+                        /** @description A human-readable message describing the error. */
+                        message: string;
+                        /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+                        errorTraceId?: string;
+                      }[];
                   }[];
-                }[];
               };
             };
             /** @description Issue keys that are not known on this Jira instance (if any). These may be invalid keys (e.g. `UTF-8` is sometimes incorrectly identified as a Jira issue key), or they may be for projects that no longer exist. If a devinfo entity has been associated with issue keys other than those in this array it will still be stored against those valid keys. */
@@ -6276,11 +6783,11 @@ export interface operations {
           "application/json": {
             /** @description List of errors occurred. */
             errorMessages: {
-              /** @description A human-readable message describing the error. */
-              message: string;
-              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-              errorTraceId?: string;
-            }[];
+                /** @description A human-readable message describing the error. */
+                message: string;
+                /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+                errorTraceId?: string;
+              }[];
           };
         };
       };
@@ -6298,11 +6805,11 @@ export interface operations {
           "application/json": {
             /** @description List of errors occurred. */
             errorMessages: {
-              /** @description A human-readable message describing the error. */
-              message: string;
-              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-              errorTraceId?: string;
-            }[];
+                /** @description A human-readable message describing the error. */
+                message: string;
+                /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+                errorTraceId?: string;
+              }[];
           };
         };
       };
@@ -6326,11 +6833,11 @@ export interface operations {
           "application/json": {
             /** @description List of errors occurred. */
             errorMessages: {
-              /** @description A human-readable message describing the error. */
-              message: string;
-              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-              errorTraceId?: string;
-            }[];
+                /** @description A human-readable message describing the error. */
+                message: string;
+                /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+                errorTraceId?: string;
+              }[];
           };
         };
       };
@@ -6382,149 +6889,7 @@ export interface operations {
              */
             url: string;
             /** @description List of commits to update in this repository. Must not contain duplicate entity IDs. Maximum number of commits is 400 */
-            commits?: {
-              /**
-               * @description The identifier or hash of the commit. Will be used for cross entity linking. Must be unique for all commits within a repository, i.e., only one commit can have ID 'X' in repository 'Y'. But adding, e.g., a branch with ID 'X' to repository 'Y' is acceptable. Only alphanumeric characters, and '~.-_', are allowed. Max length is 1024 characters
-               * @example a7727ee6350c33cdf90826dc21abaa26a5704370
-               */
-              id: string;
-              /**
-               * @description List of issues keys that this entity is associated with. They must be valid Jira issue keys.
-               * @example ["ISSUE-1","TEST-2"]
-               */
-              issueKeys: string[];
-              /**
-               * Format: int64
-               * @description An ID used to apply an ordering to updates for this entity in the case of out-of-order receipt of update requests. This can be any monotonically increasing number. A suggested implementation is to use epoch millis from the provider system, but other alternatives are valid (e.g. a provider could store a counter against each entity and increment that on each update to Jira). Updates for an entity that are received with an updateSqeuenceId lower than what is currently stored will be ignored.
-               * @example 1523494301248
-               */
-              updateSequenceId: number;
-              /** @description Deprecated. Use the id field instead. */
-              hash?: string;
-              /**
-               * @description The set of flags for this commit
-               * @example [MERGE_COMMIT]
-               */
-              flags?: "MERGE_COMMIT"[];
-              /**
-               * @description The commit message. Max length is 1024 characters. If anything longer is supplied, it will be truncated down to 1024 characters.
-               * @example README.md edited online with Bitbucket
-               */
-              message: string;
-              /**
-               * Author
-               * @description Describes the author of a particular entity
-               */
-              author: {
-                /**
-                 * @description Deprecated. The name of this user in a format suitable for display. Max length is 255 characters.
-                 * @example Jane Doe
-                 */
-                name?: string;
-                /**
-                 * @description The email address of the user. Used to associate the user with a Jira user. Max length is 255 characters.
-                 * @example jane_doe@atlassian.com
-                 */
-                email?: string;
-                /**
-                 * @description Deprecated. The username of the user. Used to associate the user with a Jira user if there are multiple users for a given email. Max length is 255 characters.
-                 * @example jdoe
-                 */
-                username?: string;
-                /**
-                 * @description Deprecated. The URL of the profile for this user. Max length is 2000 characters.
-                 * @example https://atlassian.com/account/jane_doe
-                 */
-                url?: string;
-                /**
-                 * @description Deprecated. The URL of the avatar for this user. Max length is 2000 characters.
-                 * @example https://atlassian.com/account/jane_doe/avatar/32
-                 */
-                avatar?: string;
-              };
-              /**
-               * Format: int32
-               * @description The total number of files added, removed, or modified by this commit
-               * @example 1
-               */
-              fileCount: number;
-              /**
-               * Format: url
-               * @description The URL of this commit. Max length is 2000 characters.
-               * @example https://bitbucket.org/atlassianlabs/atlassian-connect-jira-example/commits/a7727ee6350c33cdf90826dc21abaa26a5704370
-               */
-              url: string;
-              /** @description List of file changes. Max number of files is 10. Currently, only the first 5 files are shown (sorted by path) in the UI. This UI behavior may change without notice. */
-              files?: {
-                /**
-                 * @description The path of the file. Max length is 1024 characters.
-                 * @example /home/user/src/atlassian-connect-jira-example/README.md
-                 */
-                path: string;
-                /**
-                 * Format: url
-                 * @description The URL of this file. Max length is 2000 characters.
-                 * @example https://bitbucket.org/atlassianlabs/atlassian-connect-jira-example/src/a7727ee6350c33cdf90826dc21abaa26a5704370/README.md
-                 */
-                url: string;
-                /**
-                 * @description The operation performed on this file
-                 * @example MODIFIED
-                 * @enum {string}
-                 */
-                changeType: "ADDED" | "COPIED" | "DELETED" | "MODIFIED" | "MOVED" | "UNKNOWN";
-                /**
-                 * Format: int32
-                 * @description Number of lines added to the file
-                 * @example 0
-                 */
-                linesAdded: number;
-                /**
-                 * Format: int32
-                 * @description Number of lines removed from the file
-                 * @example 1
-                 */
-                linesRemoved: number;
-              }[];
-              /**
-               * @description The author timestamp of this commit. Formatted as a UTC ISO 8601 date time format.
-               * @example 2016-10-31T23:27:25+00:00
-               */
-              authorTimestamp: string;
-              /**
-               * @description Shortened identifier for this commit, used for display. Max length is 255 characters.
-               * @example a7727ee
-               */
-              displayId: string;
-            }[];
-            /** @description List of branches to update in this repository. Must not contain duplicate entity IDs. Maximum number of branches is 400. */
-            branches?: {
-              /**
-               * @description The ID of this entity. Will be used for cross entity linking. Must be unique by entity type within a repository, i.e., only one commit can have ID 'X' in repository 'Y'. But adding, e.g., a branch with ID 'X' to repository 'Y' is acceptable. Only alphanumeric characters, and '~.-_', are allowed. Max length is 1024 characters.
-               * @example c6c7c750-cee2-48e2-b920-d7706dfd11f9
-               */
-              id: string;
-              /**
-               * @description List of issues keys that this entity is associated with. They must be valid Jira issue keys.
-               * @example ["ISSUE-1","TEST-2"]
-               */
-              issueKeys: string[];
-              /**
-               * Format: int64
-               * @description An ID used to apply an ordering to updates for this entity in the case of out-of-order receipt of update requests. This can be any monotonically increasing number. A suggested implementation is to use epoch millis from the provider system, but other alternatives are valid (e.g. a provider could store a counter against each entity and increment that on each update to Jira). Updates for an entity that are received with an updateSqeuenceId lower than what is currently stored will be ignored.
-               * @example 1523494301248
-               */
-              updateSequenceId: number;
-              /**
-               * @description The name of the branch. Max length is 512 characters.
-               * @example master
-               */
-              name: string;
-              /**
-               * Commit
-               * @description Represents a commit in the version control system.
-               */
-              lastCommit: {
+            commits?: ({
                 /**
                  * @description The identifier or hash of the commit. Will be used for cross entity linking. Must be unique for all commits within a repository, i.e., only one commit can have ID 'X' in repository 'Y'. But adding, e.g., a branch with ID 'X' to repository 'Y' is acceptable. Only alphanumeric characters, and '~.-_', are allowed. Max length is 1024 characters
                  * @example a7727ee6350c33cdf90826dc21abaa26a5704370
@@ -6597,37 +6962,37 @@ export interface operations {
                  */
                 url: string;
                 /** @description List of file changes. Max number of files is 10. Currently, only the first 5 files are shown (sorted by path) in the UI. This UI behavior may change without notice. */
-                files?: {
-                  /**
-                   * @description The path of the file. Max length is 1024 characters.
-                   * @example /home/user/src/atlassian-connect-jira-example/README.md
-                   */
-                  path: string;
-                  /**
-                   * Format: url
-                   * @description The URL of this file. Max length is 2000 characters.
-                   * @example https://bitbucket.org/atlassianlabs/atlassian-connect-jira-example/src/a7727ee6350c33cdf90826dc21abaa26a5704370/README.md
-                   */
-                  url: string;
-                  /**
-                   * @description The operation performed on this file
-                   * @example MODIFIED
-                   * @enum {string}
-                   */
-                  changeType: "ADDED" | "COPIED" | "DELETED" | "MODIFIED" | "MOVED" | "UNKNOWN";
-                  /**
-                   * Format: int32
-                   * @description Number of lines added to the file
-                   * @example 0
-                   */
-                  linesAdded: number;
-                  /**
-                   * Format: int32
-                   * @description Number of lines removed from the file
-                   * @example 1
-                   */
-                  linesRemoved: number;
-                }[];
+                files?: ({
+                    /**
+                     * @description The path of the file. Max length is 1024 characters.
+                     * @example /home/user/src/atlassian-connect-jira-example/README.md
+                     */
+                    path: string;
+                    /**
+                     * Format: url
+                     * @description The URL of this file. Max length is 2000 characters.
+                     * @example https://bitbucket.org/atlassianlabs/atlassian-connect-jira-example/src/a7727ee6350c33cdf90826dc21abaa26a5704370/README.md
+                     */
+                    url: string;
+                    /**
+                     * @description The operation performed on this file
+                     * @example MODIFIED
+                     * @enum {string}
+                     */
+                    changeType: "ADDED" | "COPIED" | "DELETED" | "MODIFIED" | "MOVED" | "UNKNOWN";
+                    /**
+                     * Format: int32
+                     * @description Number of lines added to the file
+                     * @example 0
+                     */
+                    linesAdded: number;
+                    /**
+                     * Format: int32
+                     * @description Number of lines removed from the file
+                     * @example 1
+                     */
+                    linesRemoved: number;
+                  })[];
                 /**
                  * @description The author timestamp of this commit. Formatted as a UTC ISO 8601 date time format.
                  * @example 2016-10-31T23:27:25+00:00
@@ -6638,165 +7003,301 @@ export interface operations {
                  * @example a7727ee
                  */
                 displayId: string;
-              };
-              /**
-               * @description The URL of the page for creating a pull request from this branch. Max length is 2000 characters.
-               * @example https://bitbucket.org/atlassianlabs/atlassian-connect-jira-example/pull-requests/new
-               */
-              createPullRequestUrl?: string;
-              /**
-               * @description The URL of the branch. Max length is 2000 characters.
-               * @example https://bitbucket.org/atlassianlabs/atlassian-connect-jira-example/branch/master
-               */
-              url: string;
-            }[];
+              })[];
+            /** @description List of branches to update in this repository. Must not contain duplicate entity IDs. Maximum number of branches is 400. */
+            branches?: ({
+                /**
+                 * @description The ID of this entity. Will be used for cross entity linking. Must be unique by entity type within a repository, i.e., only one commit can have ID 'X' in repository 'Y'. But adding, e.g., a branch with ID 'X' to repository 'Y' is acceptable. Only alphanumeric characters, and '~.-_', are allowed. Max length is 1024 characters.
+                 * @example c6c7c750-cee2-48e2-b920-d7706dfd11f9
+                 */
+                id: string;
+                /**
+                 * @description List of issues keys that this entity is associated with. They must be valid Jira issue keys.
+                 * @example ["ISSUE-1","TEST-2"]
+                 */
+                issueKeys: string[];
+                /**
+                 * Format: int64
+                 * @description An ID used to apply an ordering to updates for this entity in the case of out-of-order receipt of update requests. This can be any monotonically increasing number. A suggested implementation is to use epoch millis from the provider system, but other alternatives are valid (e.g. a provider could store a counter against each entity and increment that on each update to Jira). Updates for an entity that are received with an updateSqeuenceId lower than what is currently stored will be ignored.
+                 * @example 1523494301248
+                 */
+                updateSequenceId: number;
+                /**
+                 * @description The name of the branch. Max length is 512 characters.
+                 * @example master
+                 */
+                name: string;
+                /**
+                 * Commit
+                 * @description Represents a commit in the version control system.
+                 */
+                lastCommit: {
+                  /**
+                   * @description The identifier or hash of the commit. Will be used for cross entity linking. Must be unique for all commits within a repository, i.e., only one commit can have ID 'X' in repository 'Y'. But adding, e.g., a branch with ID 'X' to repository 'Y' is acceptable. Only alphanumeric characters, and '~.-_', are allowed. Max length is 1024 characters
+                   * @example a7727ee6350c33cdf90826dc21abaa26a5704370
+                   */
+                  id: string;
+                  /**
+                   * @description List of issues keys that this entity is associated with. They must be valid Jira issue keys.
+                   * @example ["ISSUE-1","TEST-2"]
+                   */
+                  issueKeys: string[];
+                  /**
+                   * Format: int64
+                   * @description An ID used to apply an ordering to updates for this entity in the case of out-of-order receipt of update requests. This can be any monotonically increasing number. A suggested implementation is to use epoch millis from the provider system, but other alternatives are valid (e.g. a provider could store a counter against each entity and increment that on each update to Jira). Updates for an entity that are received with an updateSqeuenceId lower than what is currently stored will be ignored.
+                   * @example 1523494301248
+                   */
+                  updateSequenceId: number;
+                  /** @description Deprecated. Use the id field instead. */
+                  hash?: string;
+                  /**
+                   * @description The set of flags for this commit
+                   * @example [MERGE_COMMIT]
+                   */
+                  flags?: "MERGE_COMMIT"[];
+                  /**
+                   * @description The commit message. Max length is 1024 characters. If anything longer is supplied, it will be truncated down to 1024 characters.
+                   * @example README.md edited online with Bitbucket
+                   */
+                  message: string;
+                  /**
+                   * Author
+                   * @description Describes the author of a particular entity
+                   */
+                  author: {
+                    /**
+                     * @description Deprecated. The name of this user in a format suitable for display. Max length is 255 characters.
+                     * @example Jane Doe
+                     */
+                    name?: string;
+                    /**
+                     * @description The email address of the user. Used to associate the user with a Jira user. Max length is 255 characters.
+                     * @example jane_doe@atlassian.com
+                     */
+                    email?: string;
+                    /**
+                     * @description Deprecated. The username of the user. Used to associate the user with a Jira user if there are multiple users for a given email. Max length is 255 characters.
+                     * @example jdoe
+                     */
+                    username?: string;
+                    /**
+                     * @description Deprecated. The URL of the profile for this user. Max length is 2000 characters.
+                     * @example https://atlassian.com/account/jane_doe
+                     */
+                    url?: string;
+                    /**
+                     * @description Deprecated. The URL of the avatar for this user. Max length is 2000 characters.
+                     * @example https://atlassian.com/account/jane_doe/avatar/32
+                     */
+                    avatar?: string;
+                  };
+                  /**
+                   * Format: int32
+                   * @description The total number of files added, removed, or modified by this commit
+                   * @example 1
+                   */
+                  fileCount: number;
+                  /**
+                   * Format: url
+                   * @description The URL of this commit. Max length is 2000 characters.
+                   * @example https://bitbucket.org/atlassianlabs/atlassian-connect-jira-example/commits/a7727ee6350c33cdf90826dc21abaa26a5704370
+                   */
+                  url: string;
+                  /** @description List of file changes. Max number of files is 10. Currently, only the first 5 files are shown (sorted by path) in the UI. This UI behavior may change without notice. */
+                  files?: ({
+                      /**
+                       * @description The path of the file. Max length is 1024 characters.
+                       * @example /home/user/src/atlassian-connect-jira-example/README.md
+                       */
+                      path: string;
+                      /**
+                       * Format: url
+                       * @description The URL of this file. Max length is 2000 characters.
+                       * @example https://bitbucket.org/atlassianlabs/atlassian-connect-jira-example/src/a7727ee6350c33cdf90826dc21abaa26a5704370/README.md
+                       */
+                      url: string;
+                      /**
+                       * @description The operation performed on this file
+                       * @example MODIFIED
+                       * @enum {string}
+                       */
+                      changeType: "ADDED" | "COPIED" | "DELETED" | "MODIFIED" | "MOVED" | "UNKNOWN";
+                      /**
+                       * Format: int32
+                       * @description Number of lines added to the file
+                       * @example 0
+                       */
+                      linesAdded: number;
+                      /**
+                       * Format: int32
+                       * @description Number of lines removed from the file
+                       * @example 1
+                       */
+                      linesRemoved: number;
+                    })[];
+                  /**
+                   * @description The author timestamp of this commit. Formatted as a UTC ISO 8601 date time format.
+                   * @example 2016-10-31T23:27:25+00:00
+                   */
+                  authorTimestamp: string;
+                  /**
+                   * @description Shortened identifier for this commit, used for display. Max length is 255 characters.
+                   * @example a7727ee
+                   */
+                  displayId: string;
+                };
+                /**
+                 * @description The URL of the page for creating a pull request from this branch. Max length is 2000 characters.
+                 * @example https://bitbucket.org/atlassianlabs/atlassian-connect-jira-example/pull-requests/new
+                 */
+                createPullRequestUrl?: string;
+                /**
+                 * @description The URL of the branch. Max length is 2000 characters.
+                 * @example https://bitbucket.org/atlassianlabs/atlassian-connect-jira-example/branch/master
+                 */
+                url: string;
+              })[];
             /** @description List of pull requests to update in this repository. Must not contain duplicate entity IDs. Maximum number of pull requests is 400 */
-            pullRequests?: {
-              /**
-               * @description The ID of this entity. Will be used for cross entity linking. Must be unique by entity type within a repository, i.e., only one commit can have ID 'X' in repository 'Y'. But adding, e.g., a branch with ID 'X' to repository 'Y' is acceptable. Only alphanumeric characters, and '~.-_', are allowed. Max length is 1024 characters
-               * @example c6c7c750-cee2-48e2-b920-d7706dfd11f9
-               */
-              id: string;
-              /**
-               * @description List of issues keys that this entity is associated with. They must be valid Jira issue keys.
-               * @example ["ISSUE-1","TEST-2"]
-               */
-              issueKeys: string[];
-              /**
-               * Format: int64
-               * @description An ID used to apply an ordering to updates for this entity in the case of out-of-order receipt of update requests. This can be any monotonically increasing number. A suggested implementation is to use epoch millis from the provider system, but other alternatives are valid (e.g. a provider could store a counter against each entity and increment that on each update to Jira). Updates for an entity that are received with an updateSqeuenceId lower than what is currently stored will be ignored.
-               * @example 1523494301248
-               */
-              updateSequenceId: number;
-              /**
-               * @description The status of the pull request. In the case of concurrent updates, priority is given in the order OPEN, MERGED, DECLINED, DRAFT, UNKNOWN
-               * @example OPEN
-               * @enum {string}
-               */
-              status: "OPEN" | "MERGED" | "DECLINED" | "DRAFT" | "UNKNOWN";
-              /**
-               * @description Title of the pull request. Max length is 1024 characters.
-               * @example Pull request 2, fixing all the issues caused by pull request #1
-               */
-              title: string;
-              /**
-               * Author
-               * @description Describes the author of a particular entity
-               */
-              author: {
+            pullRequests?: ({
                 /**
-                 * @description Deprecated. The name of this user in a format suitable for display. Max length is 255 characters.
-                 * @example Jane Doe
+                 * @description The ID of this entity. Will be used for cross entity linking. Must be unique by entity type within a repository, i.e., only one commit can have ID 'X' in repository 'Y'. But adding, e.g., a branch with ID 'X' to repository 'Y' is acceptable. Only alphanumeric characters, and '~.-_', are allowed. Max length is 1024 characters
+                 * @example c6c7c750-cee2-48e2-b920-d7706dfd11f9
                  */
-                name?: string;
+                id: string;
                 /**
-                 * @description The email address of the user. Used to associate the user with a Jira user. Max length is 255 characters.
-                 * @example jane_doe@atlassian.com
+                 * @description List of issues keys that this entity is associated with. They must be valid Jira issue keys.
+                 * @example ["ISSUE-1","TEST-2"]
                  */
-                email?: string;
+                issueKeys: string[];
                 /**
-                 * @description Deprecated. The username of the user. Used to associate the user with a Jira user if there are multiple users for a given email. Max length is 255 characters.
-                 * @example jdoe
+                 * Format: int64
+                 * @description An ID used to apply an ordering to updates for this entity in the case of out-of-order receipt of update requests. This can be any monotonically increasing number. A suggested implementation is to use epoch millis from the provider system, but other alternatives are valid (e.g. a provider could store a counter against each entity and increment that on each update to Jira). Updates for an entity that are received with an updateSqeuenceId lower than what is currently stored will be ignored.
+                 * @example 1523494301248
                  */
-                username?: string;
+                updateSequenceId: number;
                 /**
-                 * @description Deprecated. The URL of the profile for this user. Max length is 2000 characters.
-                 * @example https://atlassian.com/account/jane_doe
-                 */
-                url?: string;
-                /**
-                 * @description Deprecated. The URL of the avatar for this user. Max length is 2000 characters.
-                 * @example https://atlassian.com/account/jane_doe/avatar/32
-                 */
-                avatar?: string;
-              };
-              /**
-               * Format: int32
-               * @description The number of comments on the pull request
-               * @example 42
-               */
-              commentCount: number;
-              /**
-               * @description The name of the source branch of this PR. Max length is 255 characters.
-               * @example ISSUE-1-feature-branch
-               */
-              sourceBranch: string;
-              /**
-               * Format: url
-               * @description The url of the source branch of this PR. This is used to match this PR against the branch. Max length is 2000 characters.
-               * @example https://bitbucket.org/atlassianlabs/atlassian-connect-jira-example/branch/ISSUE-1-feature-branch
-               */
-              sourceBranchUrl?: string;
-              /**
-               * @description The most recent update to this PR. Formatted as a UTC ISO 8601 date time format.
-               * @example 2016-10-31T23:27:25+00:00
-               */
-              lastUpdate: string;
-              /**
-               * @description The name of destination branch of this PR. Max length is 255 characters.
-               * @example master
-               */
-              destinationBranch?: string;
-              /**
-               * Format: url
-               * @description The url of the destination branch of this PR. Max length is 2000 characters.
-               * @example https://bitbucket.org/atlassianlabs/atlassian-connect-jira-example/src/master
-               */
-              destinationBranchUrl?: string;
-              /** @description The list of reviewers of this pull request */
-              reviewers?: {
-                /**
-                 * @description Deprecated. The name of this reviewer. Max length is 255 characters.
-                 * @example Jane Doe
-                 */
-                name?: string;
-                /**
-                 * @description The approval status of this reviewer, default is UNAPPROVED.
-                 * @example APPROVED
+                 * @description The status of the pull request. In the case of concurrent updates, priority is given in the order OPEN, MERGED, DECLINED, UNKNOWN
+                 * @example OPEN
                  * @enum {string}
                  */
-                approvalStatus?: "APPROVED" | "NEEDSWORK" | "UNAPPROVED";
+                status: "OPEN" | "MERGED" | "DECLINED" | "UNKNOWN";
+                /**
+                 * @description Title of the pull request. Max length is 1024 characters.
+                 * @example Pull request 2, fixing all the issues caused by pull request #1
+                 */
+                title: string;
+                /**
+                 * Author
+                 * @description Describes the author of a particular entity
+                 */
+                author: {
+                  /**
+                   * @description Deprecated. The name of this user in a format suitable for display. Max length is 255 characters.
+                   * @example Jane Doe
+                   */
+                  name?: string;
+                  /**
+                   * @description The email address of the user. Used to associate the user with a Jira user. Max length is 255 characters.
+                   * @example jane_doe@atlassian.com
+                   */
+                  email?: string;
+                  /**
+                   * @description Deprecated. The username of the user. Used to associate the user with a Jira user if there are multiple users for a given email. Max length is 255 characters.
+                   * @example jdoe
+                   */
+                  username?: string;
+                  /**
+                   * @description Deprecated. The URL of the profile for this user. Max length is 2000 characters.
+                   * @example https://atlassian.com/account/jane_doe
+                   */
+                  url?: string;
+                  /**
+                   * @description Deprecated. The URL of the avatar for this user. Max length is 2000 characters.
+                   * @example https://atlassian.com/account/jane_doe/avatar/32
+                   */
+                  avatar?: string;
+                };
+                /**
+                 * Format: int32
+                 * @description The number of comments on the pull request
+                 * @example 42
+                 */
+                commentCount: number;
+                /**
+                 * @description The name of the source branch of this PR. Max length is 255 characters.
+                 * @example ISSUE-1-feature-branch
+                 */
+                sourceBranch: string;
                 /**
                  * Format: url
-                 * @description Deprecated. The URL of the profile for this reviewer. Max length is 2000 characters.
-                 * @example https://atlassian.com/account/jane_doe
+                 * @description The url of the source branch of this PR. This is used to match this PR against the branch. Max length is 2000 characters.
+                 * @example https://bitbucket.org/atlassianlabs/atlassian-connect-jira-example/branch/ISSUE-1-feature-branch
                  */
-                url?: string;
+                sourceBranchUrl?: string;
+                /**
+                 * @description The most recent update to this PR. Formatted as a UTC ISO 8601 date time format.
+                 * @example 2016-10-31T23:27:25+00:00
+                 */
+                lastUpdate: string;
+                /**
+                 * @description The name of destination branch of this PR. Max length is 255 characters.
+                 * @example master
+                 */
+                destinationBranch?: string;
                 /**
                  * Format: url
-                 * @description Deprecated. The URL of the avatar for this reviewer. Max length is 2000 characters.
-                 * @example https://atlassian.com/account/jane_doe/avatar/32
+                 * @description The url of the destination branch of this PR. Max length is 2000 characters.
+                 * @example https://bitbucket.org/atlassianlabs/atlassian-connect-jira-example/src/master
                  */
-                avatar?: string;
+                destinationBranchUrl?: string;
+                /** @description The list of reviewers of this pull request */
+                reviewers?: ({
+                    /**
+                     * @description Deprecated. The name of this reviewer. Max length is 255 characters.
+                     * @example Jane Doe
+                     */
+                    name?: string;
+                    /**
+                     * @description The approval status of this reviewer, default is UNAPPROVED.
+                     * @example APPROVED
+                     * @enum {string}
+                     */
+                    approvalStatus?: "APPROVED" | "UNAPPROVED";
+                    /**
+                     * Format: url
+                     * @description Deprecated. The URL of the profile for this reviewer. Max length is 2000 characters.
+                     * @example https://atlassian.com/account/jane_doe
+                     */
+                    url?: string;
+                    /**
+                     * Format: url
+                     * @description Deprecated. The URL of the avatar for this reviewer. Max length is 2000 characters.
+                     * @example https://atlassian.com/account/jane_doe/avatar/32
+                     */
+                    avatar?: string;
+                    /**
+                     * @description The email address of this reviewer. Max length is 254 characters.
+                     * @example jane_doe@example.com
+                     */
+                    email?: string;
+                    /**
+                     * @description The Atlassian Account ID (AAID) of this reviewer. Max length is 128 characters.
+                     * @example 655363:e4ca5e2d-a901-40e3-877e-bf5d22c0f130
+                     */
+                    accountId?: string;
+                  })[];
                 /**
-                 * @description The email address of this reviewer. Max length is 254 characters.
-                 * @example jane_doe@example.com
+                 * Format: url
+                 * @description The URL of this pull request. Max length is 2000 characters.
+                 * @example https://bitbucket.org/atlassianlabs/atlassian-connect-jira-example/pull-requests/2
                  */
-                email?: string;
+                url: string;
                 /**
-                 * @description The Atlassian Account ID (AAID) of this reviewer. Max length is 128 characters.
-                 * @example 655363:e4ca5e2d-a901-40e3-877e-bf5d22c0f130
+                 * @description Shortened identifier for this pull request, used for display. Max length is 255 characters.
+                 * @example Pull request 2
                  */
-                accountId?: string;
-              }[];
-              /**
-               * Format: url
-               * @description The URL of this pull request. Max length is 2000 characters.
-               * @example https://bitbucket.org/atlassianlabs/atlassian-connect-jira-example/pull-requests/2
-               */
-              url: string;
-              /**
-               * @description Shortened identifier for this pull request, used for display. Max length is 255 characters.
-               * @example Pull request 2
-               */
-              displayId: string;
-              /**
-               * Format: int32
-               * @description The number of tasks on the pull request
-               * @example 42
-               */
-              taskCount?: number;
-            }[];
+                displayId: string;
+              })[];
             /**
              * Format: url
              * @description The URL of the avatar for this repository. Max length is 2000 characters.
@@ -6844,11 +7345,11 @@ export interface operations {
           "application/json": {
             /** @description List of errors occurred. */
             errorMessages: {
-              /** @description A human-readable message describing the error. */
-              message: string;
-              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-              errorTraceId?: string;
-            }[];
+                /** @description A human-readable message describing the error. */
+                message: string;
+                /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+                errorTraceId?: string;
+              }[];
           };
         };
       };
@@ -6900,11 +7401,11 @@ export interface operations {
           "application/json": {
             /** @description List of errors occurred. */
             errorMessages: {
-              /** @description A human-readable message describing the error. */
-              message: string;
-              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-              errorTraceId?: string;
-            }[];
+                /** @description A human-readable message describing the error. */
+                message: string;
+                /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+                errorTraceId?: string;
+              }[];
           };
         };
       };
@@ -6916,7 +7417,7 @@ export interface operations {
   };
   /**
    * Delete development information by properties
-   * @description Deletes development information entities which have all the provided properties. Entities will be deleted that match ALL of the properties (i.e. treated as an AND). For example if request is `DELETE bulk?accountId=123&projectId=ABC` entities which have properties `accountId=123` and `projectId=ABC` will be deleted. Special property `_updateSequenceId` can be used to delete all entities with updateSequenceId less or equal than the value specified. In addition to the optional `_updateSequenceId`, one or more query params must be supplied to specify properties to delete by. Deletion is performed asynchronously: specified entities will eventually be removed from Jira.
+   * @description Deletes development information entities which have all the provided properties. Repositories which have properties that match ALL of the properties (i.e. treated as an AND), and all their related development information (such as commits, branches and pull requests), will be deleted. For example if request is `DELETE bulk?accountId=123&projectId=ABC` entities which have properties `accountId=123` and `projectId=ABC` will be deleted. Optional param `_updateSequenceId` is no longer supported. Deletion is performed asynchronously: specified entities will eventually be removed from Jira.
    */
   deleteByProperties: {
     parameters: {
@@ -6940,11 +7441,11 @@ export interface operations {
           "application/json": {
             /** @description List of errors occurred. */
             errorMessages: {
-              /** @description A human-readable message describing the error. */
-              message: string;
-              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-              errorTraceId?: string;
-            }[];
+                /** @description A human-readable message describing the error. */
+                message: string;
+                /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+                errorTraceId?: string;
+              }[];
           };
         };
       };
@@ -6966,11 +7467,11 @@ export interface operations {
           "application/json": {
             /** @description List of errors occurred. */
             errorMessages: {
-              /** @description A human-readable message describing the error. */
-              message: string;
-              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-              errorTraceId?: string;
-            }[];
+                /** @description A human-readable message describing the error. */
+                message: string;
+                /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+                errorTraceId?: string;
+              }[];
           };
         };
       };
@@ -6982,7 +7483,7 @@ export interface operations {
   };
   /**
    * Check if data exists for the supplied properties
-   * @description Checks if development information which have all the provided properties exists. For example, if request is `GET existsByProperties?accountId=123&projectId=ABC` then result will be positive only if there is at least one entity or repository with both properties `accountId=123` and `projectId=ABC`. Special property `_updateSequenceId` can be used to filter all entities with updateSequenceId less or equal than the value specified. In addition to the optional `_updateSequenceId`, one or more query params must be supplied to specify properties to search by.
+   * @description Checks if repositories which have all the provided properties exists. For example, if request is `GET existsByProperties?accountId=123&projectId=ABC` then result will be positive only if there is at least one repository with both properties `accountId=123` and `projectId=ABC`. Special property `_updateSequenceId` can be used to filter all entities with updateSequenceId less or equal than the value specified. In addition to the optional `_updateSequenceId`, one or more query params must be supplied to specify properties to search by.
    */
   existsByProperties: {
     parameters: {
@@ -7011,11 +7512,11 @@ export interface operations {
           "application/json": {
             /** @description List of errors occurred. */
             errorMessages: {
-              /** @description A human-readable message describing the error. */
-              message: string;
-              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-              errorTraceId?: string;
-            }[];
+                /** @description A human-readable message describing the error. */
+                message: string;
+                /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+                errorTraceId?: string;
+              }[];
           };
         };
       };
@@ -7037,11 +7538,11 @@ export interface operations {
           "application/json": {
             /** @description List of errors occurred. */
             errorMessages: {
-              /** @description A human-readable message describing the error. */
-              message: string;
-              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-              errorTraceId?: string;
-            }[];
+                /** @description A human-readable message describing the error. */
+                message: string;
+                /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+                errorTraceId?: string;
+              }[];
           };
         };
       };
@@ -7082,11 +7583,11 @@ export interface operations {
           "application/json": {
             /** @description List of errors occurred. */
             errorMessages: {
-              /** @description A human-readable message describing the error. */
-              message: string;
-              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-              errorTraceId?: string;
-            }[];
+                /** @description A human-readable message describing the error. */
+                message: string;
+                /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+                errorTraceId?: string;
+              }[];
           };
         };
       };
@@ -7108,11 +7609,11 @@ export interface operations {
           "application/json": {
             /** @description List of errors occurred. */
             errorMessages: {
-              /** @description A human-readable message describing the error. */
-              message: string;
-              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-              errorTraceId?: string;
-            }[];
+                /** @description A human-readable message describing the error. */
+                message: string;
+                /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+                errorTraceId?: string;
+              }[];
           };
         };
       };
@@ -7175,208 +7676,208 @@ export interface operations {
            *
            * Each Feature Flag may be associated with 1 or more Jira issue keys, and will be associated with any properties included in this request.
            */
-          flags: {
-            /**
-             * @description The FeatureFlagData schema version used for this flag data.
-             *
-             * Placeholder to support potential schema changes in the future.
-             *
-             * @default 1.0
-             * @example 1.0
-             * @enum {string}
-             */
-            schemaVersion?: "1.0";
-            /**
-             * @description The identifier for the Feature Flag. Must be unique for a given Provider.
-             *
-             * @example 111-222-333
-             */
-            id: string;
-            /**
-             * @description The identifier that users would use to reference the Feature Flag in their source code etc.
-             *
-             * Will be made available via the UI for users to copy into their source code etc.
-             *
-             * @example my-awesome-feature
-             */
-            key: string;
-            /**
-             * Format: int64
-             * @description An ID used to apply an ordering to updates for this Feature Flag in the case of out-of-order receipt of update requests.
-             *
-             * This can be any monotonically increasing number. A suggested implementation is to use epoch millis from the Provider system, but other alternatives are valid (e.g. a Provider could store a counter against each Feature Flag and increment that on each update to Jira).
-             *
-             * Updates for a Feature Flag that are received with an updateSqeuenceId lower than what is currently stored will be ignored.
-             *
-             * @example 1523494301448
-             */
-            updateSequenceId: number;
-            /**
-             * @description The human-readable name for the Feature Flag. Will be shown in the UI.
-             *
-             * If not provided, will use the ID for display.
-             *
-             * @example Enable awesome feature
-             */
-            displayName?: string;
-            /** @description The Jira issue keys to associate the Feature Flag information with. */
-            issueKeys: string[];
-            /**
-             * FeatureFlagSummary
-             * @description Summary information for a single Feature Flag.
-             *
-             * Providers may elect to provide information from a specific environment, or they may choose to 'roll up' information from across multiple environments - whatever makes most sense in the Provider system.
-             *
-             * This is the summary information that will be presented to the user on e.g. the Jira issue screen.
-             */
-            summary: {
+          flags: ({
               /**
-               * Format: uri
-               * @description A URL users can use to link to a summary view of this flag, if appropriate.
+               * @description The FeatureFlagData schema version used for this flag data.
                *
-               * This could be any location that makes sense in the Provider system (e.g. if the summary information comes from a specific environment, it might make sense to link the user to the flag in that environment).
+               * Placeholder to support potential schema changes in the future.
                *
-               * @example https://example.com/project/feature-123/summary
+               * @default 1.0
+               * @example 1.0
+               * @enum {string}
                */
-              url?: string;
+              schemaVersion?: "1.0";
               /**
-               * FeatureFlagStatus
-               * @description Status information about a single Feature Flag.
+               * @description The identifier for the Feature Flag. Must be unique for a given Provider.
+               *
+               * @example 111-222-333
                */
-              status: {
+              id: string;
+              /**
+               * @description The identifier that users would use to reference the Feature Flag in their source code etc.
+               *
+               * Will be made available via the UI for users to copy into their source code etc.
+               *
+               * @example my-awesome-feature
+               */
+              key: string;
+              /**
+               * Format: int64
+               * @description An ID used to apply an ordering to updates for this Feature Flag in the case of out-of-order receipt of update requests.
+               *
+               * This can be any monotonically increasing number. A suggested implementation is to use epoch millis from the Provider system, but other alternatives are valid (e.g. a Provider could store a counter against each Feature Flag and increment that on each update to Jira).
+               *
+               * Updates for a Feature Flag that are received with an updateSqeuenceId lower than what is currently stored will be ignored.
+               *
+               * @example 1523494301448
+               */
+              updateSequenceId: number;
+              /**
+               * @description The human-readable name for the Feature Flag. Will be shown in the UI.
+               *
+               * If not provided, will use the ID for display.
+               *
+               * @example Enable awesome feature
+               */
+              displayName?: string;
+              /** @description The Jira issue keys to associate the Feature Flag information with. */
+              issueKeys: string[];
+              /**
+               * FeatureFlagSummary
+               * @description Summary information for a single Feature Flag.
+               *
+               * Providers may elect to provide information from a specific environment, or they may choose to 'roll up' information from across multiple environments - whatever makes most sense in the Provider system.
+               *
+               * This is the summary information that will be presented to the user on e.g. the Jira issue screen.
+               */
+              summary: {
                 /**
-                 * @description Whether the Feature Flag is enabled in the given environment (or in summary).
+                 * Format: uri
+                 * @description A URL users can use to link to a summary view of this flag, if appropriate.
                  *
-                 * Enabled may imply a partial rollout, which can be described using the 'rollout' field.
+                 * This could be any location that makes sense in the Provider system (e.g. if the summary information comes from a specific environment, it might make sense to link the user to the flag in that environment).
+                 *
+                 * @example https://example.com/project/feature-123/summary
                  */
-                enabled: boolean;
+                url?: string;
                 /**
-                 * @description The value served by this Feature Flag when it is disabled. This could be the actual value or an alias, as appropriate.
-                 *
-                 * This value may be presented to the user in the UI.
-                 *
-                 * @example Disabled
+                 * FeatureFlagStatus
+                 * @description Status information about a single Feature Flag.
                  */
-                defaultValue?: string;
-                /**
-                 * FeatureFlagRollout
-                 * @description Information about the rollout of a Feature Flag in an environment (or in summary).
-                 *
-                 * Only one of 'percentage', 'text', or 'rules' should be provided. They will be used in that order if multiple are present.
-                 *
-                 * This information may be presented to the user in the UI.
-                 *
-                 * @example {
-                 *   "percentage": 80
-                 * }
-                 */
-                rollout?: {
-                  /** @description If the Feature Flag rollout is a simple percentage rollout */
-                  percentage?: number;
-                  /** @description A text status to display that represents the rollout. This could be e.g. a named cohort. */
-                  text?: string;
-                  /** @description A count of the number of rules active for this Feature Flag in an environment. */
-                  rules?: number;
+                status: {
+                  /**
+                   * @description Whether the Feature Flag is enabled in the given environment (or in summary).
+                   *
+                   * Enabled may imply a partial rollout, which can be described using the 'rollout' field.
+                   */
+                  enabled: boolean;
+                  /**
+                   * @description The value served by this Feature Flag when it is disabled. This could be the actual value or an alias, as appropriate.
+                   *
+                   * This value may be presented to the user in the UI.
+                   *
+                   * @example Disabled
+                   */
+                  defaultValue?: string;
+                  /**
+                   * FeatureFlagRollout
+                   * @description Information about the rollout of a Feature Flag in an environment (or in summary).
+                   *
+                   * Only one of 'percentage', 'text', or 'rules' should be provided. They will be used in that order if multiple are present.
+                   *
+                   * This information may be presented to the user in the UI.
+                   *
+                   * @example {
+                   *   "percentage": 80
+                   * }
+                   */
+                  rollout?: {
+                    /** @description If the Feature Flag rollout is a simple percentage rollout */
+                    percentage?: number;
+                    /** @description A text status to display that represents the rollout. This could be e.g. a named cohort. */
+                    text?: string;
+                    /** @description A count of the number of rules active for this Feature Flag in an environment. */
+                    rules?: number;
+                  };
                 };
+                /**
+                 * Format: date-time
+                 * @description The last-updated timestamp to present to the user as a summary of the state of the Feature Flag.
+                 *
+                 * Providers may choose to supply the last-updated timestamp from a specific environment, or the 'most recent' last-updated timestamp across all environments - whatever makes sense in the Provider system.
+                 *
+                 * Expected format is an RFC3339 formatted string.
+                 *
+                 * @example 2018-01-20T23:27:25.000Z
+                 */
+                lastUpdated: string;
               };
               /**
-               * Format: date-time
-               * @description The last-updated timestamp to present to the user as a summary of the state of the Feature Flag.
+               * @description Detail information for this Feature Flag.
                *
-               * Providers may choose to supply the last-updated timestamp from a specific environment, or the 'most recent' last-updated timestamp across all environments - whatever makes sense in the Provider system.
-               *
-               * Expected format is an RFC3339 formatted string.
-               *
-               * @example 2018-01-20T23:27:25.000Z
+               * This may be information for each environment the Feature Flag is defined in or a selection of environments made by the user, as appropriate.
                */
-              lastUpdated: string;
-            };
-            /**
-             * @description Detail information for this Feature Flag.
-             *
-             * This may be information for each environment the Feature Flag is defined in or a selection of environments made by the user, as appropriate.
-             */
-            details: {
-              /**
-               * Format: uri
-               * @description A URL users can use to link to this Feature Flag, in this environment.
-               *
-               * @example https://example.com/project/feature-123/production
-               */
-              url: string;
-              /**
-               * Format: date-time
-               * @description The last-updated timestamp for this Feature Flag, in this environment.
-               *
-               * Expected format is an RFC3339 formatted string.
-               *
-               * @example 2018-01-20T23:27:25.000Z
-               */
-              lastUpdated: string;
-              /**
-               * EnvironmentDetails
-               * @description Details of a single environment.
-               *
-               * At the simplest this must be the name of the environment.
-               *
-               * Ideally there is also type information which may be used to group data from multiple Feature Flags and other entities for visualisation in the UI.
-               *
-               * @example {
-               *   "name": "prod-us-west",
-               *   "type": "production"
-               * }
-               */
-              environment: {
-                /** @description The name of the environment. */
-                name: string;
-                /**
-                 * @description The 'type' or 'category' of environment this environment belongs to.
-                 * @enum {string}
-                 */
-                type?: "development" | "testing" | "staging" | "production";
-              };
-              /**
-               * FeatureFlagStatus
-               * @description Status information about a single Feature Flag.
-               */
-              status: {
-                /**
-                 * @description Whether the Feature Flag is enabled in the given environment (or in summary).
-                 *
-                 * Enabled may imply a partial rollout, which can be described using the 'rollout' field.
-                 */
-                enabled: boolean;
-                /**
-                 * @description The value served by this Feature Flag when it is disabled. This could be the actual value or an alias, as appropriate.
-                 *
-                 * This value may be presented to the user in the UI.
-                 *
-                 * @example Disabled
-                 */
-                defaultValue?: string;
-                /**
-                 * FeatureFlagRollout
-                 * @description Information about the rollout of a Feature Flag in an environment (or in summary).
-                 *
-                 * Only one of 'percentage', 'text', or 'rules' should be provided. They will be used in that order if multiple are present.
-                 *
-                 * This information may be presented to the user in the UI.
-                 *
-                 * @example {
-                 *   "percentage": 80
-                 * }
-                 */
-                rollout?: {
-                  /** @description If the Feature Flag rollout is a simple percentage rollout */
-                  percentage?: number;
-                  /** @description A text status to display that represents the rollout. This could be e.g. a named cohort. */
-                  text?: string;
-                  /** @description A count of the number of rules active for this Feature Flag in an environment. */
-                  rules?: number;
-                };
-              };
-            }[];
-          }[];
+              details: ({
+                  /**
+                   * Format: uri
+                   * @description A URL users can use to link to this Feature Flag, in this environment.
+                   *
+                   * @example https://example.com/project/feature-123/production
+                   */
+                  url: string;
+                  /**
+                   * Format: date-time
+                   * @description The last-updated timestamp for this Feature Flag, in this environment.
+                   *
+                   * Expected format is an RFC3339 formatted string.
+                   *
+                   * @example 2018-01-20T23:27:25.000Z
+                   */
+                  lastUpdated: string;
+                  /**
+                   * EnvironmentDetails
+                   * @description Details of a single environment.
+                   *
+                   * At the simplest this must be the name of the environment.
+                   *
+                   * Ideally there is also type information which may be used to group data from multiple Feature Flags and other entities for visualisation in the UI.
+                   *
+                   * @example {
+                   *   "name": "prod-us-west",
+                   *   "type": "production"
+                   * }
+                   */
+                  environment: {
+                    /** @description The name of the environment. */
+                    name: string;
+                    /**
+                     * @description The 'type' or 'category' of environment this environment belongs to.
+                     * @enum {string}
+                     */
+                    type?: "development" | "testing" | "staging" | "production";
+                  };
+                  /**
+                   * FeatureFlagStatus
+                   * @description Status information about a single Feature Flag.
+                   */
+                  status: {
+                    /**
+                     * @description Whether the Feature Flag is enabled in the given environment (or in summary).
+                     *
+                     * Enabled may imply a partial rollout, which can be described using the 'rollout' field.
+                     */
+                    enabled: boolean;
+                    /**
+                     * @description The value served by this Feature Flag when it is disabled. This could be the actual value or an alias, as appropriate.
+                     *
+                     * This value may be presented to the user in the UI.
+                     *
+                     * @example Disabled
+                     */
+                    defaultValue?: string;
+                    /**
+                     * FeatureFlagRollout
+                     * @description Information about the rollout of a Feature Flag in an environment (or in summary).
+                     *
+                     * Only one of 'percentage', 'text', or 'rules' should be provided. They will be used in that order if multiple are present.
+                     *
+                     * This information may be presented to the user in the UI.
+                     *
+                     * @example {
+                     *   "percentage": 80
+                     * }
+                     */
+                    rollout?: {
+                      /** @description If the Feature Flag rollout is a simple percentage rollout */
+                      percentage?: number;
+                      /** @description A text status to display that represents the rollout. This could be e.g. a named cohort. */
+                      text?: string;
+                      /** @description A count of the number of rules active for this Feature Flag in an environment. */
+                      rules?: number;
+                    };
+                  };
+                })[];
+            })[];
           /**
            * ProviderMetadata
            * @description Information about the provider. This is useful for auditing, logging, debugging,
@@ -7422,11 +7923,11 @@ export interface operations {
              */
             failedFeatureFlags?: {
               [key: string]: {
-                /** @description A human-readable message describing the error. */
-                message: string;
-                /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-                errorTraceId?: string;
-              }[];
+                  /** @description A human-readable message describing the error. */
+                  message: string;
+                  /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+                  errorTraceId?: string;
+                }[];
             };
             /**
              * @description Issue keys that are not known on this Jira instance (if any).
@@ -7448,11 +7949,11 @@ export interface operations {
       400: {
         content: {
           "application/json": {
-            /** @description A human-readable message describing the error. */
-            message: string;
-            /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-            errorTraceId?: string;
-          }[];
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
         };
       };
       /** @description Missing a JWT token, or token is invalid. */
@@ -7470,11 +7971,11 @@ export interface operations {
       413: {
         content: {
           "application/json": {
-            /** @description A human-readable message describing the error. */
-            message: string;
-            /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-            errorTraceId?: string;
-          }[];
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
         };
       };
       /** @description API rate limit has been exceeded. */
@@ -7489,11 +7990,11 @@ export interface operations {
       default: {
         content: {
           "application/json": {
-            /** @description A human-readable message describing the error. */
-            message: string;
-            /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-            errorTraceId?: string;
-          }[];
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
         };
       };
     };
@@ -7549,11 +8050,11 @@ export interface operations {
       400: {
         content: {
           "application/json": {
-            /** @description A human-readable message describing the error. */
-            message: string;
-            /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-            errorTraceId?: string;
-          }[];
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
         };
       };
       /** @description Missing a JWT token, or token is invalid. */
@@ -7579,11 +8080,11 @@ export interface operations {
       default: {
         content: {
           "application/json": {
-            /** @description A human-readable message describing the error. */
-            message: string;
-            /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-            errorTraceId?: string;
-          }[];
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
         };
       };
     };
@@ -7739,86 +8240,86 @@ export interface operations {
              *
              * This may be information for each environment the Feature Flag is defined in or a selection of environments made by the user, as appropriate.
              */
-            details: {
-              /**
-               * Format: uri
-               * @description A URL users can use to link to this Feature Flag, in this environment.
-               *
-               * @example https://example.com/project/feature-123/production
-               */
-              url: string;
-              /**
-               * Format: date-time
-               * @description The last-updated timestamp for this Feature Flag, in this environment.
-               *
-               * Expected format is an RFC3339 formatted string.
-               *
-               * @example 2018-01-20T23:27:25.000Z
-               */
-              lastUpdated: string;
-              /**
-               * EnvironmentDetails
-               * @description Details of a single environment.
-               *
-               * At the simplest this must be the name of the environment.
-               *
-               * Ideally there is also type information which may be used to group data from multiple Feature Flags and other entities for visualisation in the UI.
-               *
-               * @example {
-               *   "name": "prod-us-west",
-               *   "type": "production"
-               * }
-               */
-              environment: {
-                /** @description The name of the environment. */
-                name: string;
+            details: ({
                 /**
-                 * @description The 'type' or 'category' of environment this environment belongs to.
-                 * @enum {string}
+                 * Format: uri
+                 * @description A URL users can use to link to this Feature Flag, in this environment.
+                 *
+                 * @example https://example.com/project/feature-123/production
                  */
-                type?: "development" | "testing" | "staging" | "production";
-              };
-              /**
-               * FeatureFlagStatus
-               * @description Status information about a single Feature Flag.
-               */
-              status: {
+                url: string;
                 /**
-                 * @description Whether the Feature Flag is enabled in the given environment (or in summary).
+                 * Format: date-time
+                 * @description The last-updated timestamp for this Feature Flag, in this environment.
                  *
-                 * Enabled may imply a partial rollout, which can be described using the 'rollout' field.
+                 * Expected format is an RFC3339 formatted string.
+                 *
+                 * @example 2018-01-20T23:27:25.000Z
                  */
-                enabled: boolean;
+                lastUpdated: string;
                 /**
-                 * @description The value served by this Feature Flag when it is disabled. This could be the actual value or an alias, as appropriate.
+                 * EnvironmentDetails
+                 * @description Details of a single environment.
                  *
-                 * This value may be presented to the user in the UI.
+                 * At the simplest this must be the name of the environment.
                  *
-                 * @example Disabled
-                 */
-                defaultValue?: string;
-                /**
-                 * FeatureFlagRollout
-                 * @description Information about the rollout of a Feature Flag in an environment (or in summary).
-                 *
-                 * Only one of 'percentage', 'text', or 'rules' should be provided. They will be used in that order if multiple are present.
-                 *
-                 * This information may be presented to the user in the UI.
+                 * Ideally there is also type information which may be used to group data from multiple Feature Flags and other entities for visualisation in the UI.
                  *
                  * @example {
-                 *   "percentage": 80
+                 *   "name": "prod-us-west",
+                 *   "type": "production"
                  * }
                  */
-                rollout?: {
-                  /** @description If the Feature Flag rollout is a simple percentage rollout */
-                  percentage?: number;
-                  /** @description A text status to display that represents the rollout. This could be e.g. a named cohort. */
-                  text?: string;
-                  /** @description A count of the number of rules active for this Feature Flag in an environment. */
-                  rules?: number;
+                environment: {
+                  /** @description The name of the environment. */
+                  name: string;
+                  /**
+                   * @description The 'type' or 'category' of environment this environment belongs to.
+                   * @enum {string}
+                   */
+                  type?: "development" | "testing" | "staging" | "production";
                 };
-              };
-            }[];
+                /**
+                 * FeatureFlagStatus
+                 * @description Status information about a single Feature Flag.
+                 */
+                status: {
+                  /**
+                   * @description Whether the Feature Flag is enabled in the given environment (or in summary).
+                   *
+                   * Enabled may imply a partial rollout, which can be described using the 'rollout' field.
+                   */
+                  enabled: boolean;
+                  /**
+                   * @description The value served by this Feature Flag when it is disabled. This could be the actual value or an alias, as appropriate.
+                   *
+                   * This value may be presented to the user in the UI.
+                   *
+                   * @example Disabled
+                   */
+                  defaultValue?: string;
+                  /**
+                   * FeatureFlagRollout
+                   * @description Information about the rollout of a Feature Flag in an environment (or in summary).
+                   *
+                   * Only one of 'percentage', 'text', or 'rules' should be provided. They will be used in that order if multiple are present.
+                   *
+                   * This information may be presented to the user in the UI.
+                   *
+                   * @example {
+                   *   "percentage": 80
+                   * }
+                   */
+                  rollout?: {
+                    /** @description If the Feature Flag rollout is a simple percentage rollout */
+                    percentage?: number;
+                    /** @description A text status to display that represents the rollout. This could be e.g. a named cohort. */
+                    text?: string;
+                    /** @description A count of the number of rules active for this Feature Flag in an environment. */
+                    rules?: number;
+                  };
+                };
+              })[];
           };
         };
       };
@@ -7849,11 +8350,11 @@ export interface operations {
       default: {
         content: {
           "application/json": {
-            /** @description A human-readable message describing the error. */
-            message: string;
-            /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-            errorTraceId?: string;
-          }[];
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
         };
       };
     };
@@ -7924,11 +8425,11 @@ export interface operations {
       default: {
         content: {
           "application/json": {
-            /** @description A human-readable message describing the error. */
-            message: string;
-            /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-            errorTraceId?: string;
-          }[];
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
         };
       };
     };
@@ -7985,34 +8486,32 @@ export interface operations {
            *
            * Each deployment may be associated with one or more Jira issue keys, and will be associated with any properties included in this request.
            */
-          deployments: {
-            /**
-             * Format: int64
-             * @description This is the identifier for the deployment. It must be unique for the specified pipeline and environment. It must be a monotonically increasing number, as this is used to sequence the deployments.
-             *
-             * @example 100
-             */
-            deploymentSequenceNumber: number;
-            /**
-             * Format: int64
-             * @description A number used to apply an order to the updates to the deployment, as identified by the deploymentSequenceNumber, in the case of out-of-order receipt of update requests. It must be a monotonically increasing number. For example, epoch time could be one way to generate the updateSequenceNumber.
-             *
-             * @example 1
-             */
-            updateSequenceNumber: number;
-            /**
-             * @deprecated
-             * @description Deprecated. The Jira issue keys to associate the Deployment information with.
-             * Should replace this field with the "associations" field to associate Deployment information with issueKeys or other types of associations.
-             */
-            issueKeys?: string[];
-            /**
-             * @description The entities to associate the Deployment information with.
-             * It must contain at least one of IssueIdOrKeysAssociation or ServiceIdOrKeysAssociation.
-             */
-            associations?: OneOf<
-              [
-                {
+          deployments: ({
+              /**
+               * Format: int64
+               * @description This is the identifier for the deployment. It must be unique for the specified pipeline and environment. It must be a monotonically increasing number, as this is used to sequence the deployments.
+               *
+               * @example 100
+               */
+              deploymentSequenceNumber: number;
+              /**
+               * Format: int64
+               * @description A number used to apply an order to the updates to the deployment, as identified by the deploymentSequenceNumber, in the case of out-of-order receipt of update requests. It must be a monotonically increasing number. For example, epoch time could be one way to generate the updateSequenceNumber.
+               *
+               * @example 1
+               */
+              updateSequenceNumber: number;
+              /**
+               * @deprecated
+               * @description Deprecated. The Jira issue keys to associate the Deployment information with.
+               * Should replace this field with the "associations" field to associate Deployment information with issueKeys or other types of associations.
+               */
+              issueKeys?: string[];
+              /**
+               * @description The entities to associate the Deployment information with.
+               * It must contain at least one of IssueIdOrKeysAssociation or ServiceIdOrKeysAssociation.
+               */
+              associations?: (OneOf<[{
                   /**
                    * @description Defines the asssociation type.
                    *
@@ -8027,8 +8526,7 @@ export interface operations {
                    * issueIdOrKeys and serviceIdOrKeys) must not exceed a limit of 500.
                    */
                   values: string[];
-                },
-                {
+                }, {
                   /**
                    * @description Defines the asssociation type.
                    *
@@ -8043,134 +8541,128 @@ export interface operations {
                    * issueIdOrKeys and serviceIdOrKeys) must not exceed a limit of 500.
                    */
                   values: string[];
-                },
-              ]
-            >[];
-            /**
-             * @description The human-readable name for the deployment. Will be shown in the UI.
-             *
-             * @example Deployment number 16 of Data Depot
-             */
-            displayName: string;
-            /**
-             * Format: uri
-             * @description A URL users can use to link to this deployment, in this environment.
-             *
-             * @example http://mydeployer.com/project1/1111-222-333/prod-east
-             */
-            url: string;
-            /**
-             * @description A short description of the deployment
-             *
-             * @example The bits are being transferred
-             */
-            description: string;
-            /**
-             * Format: date-time
-             * @description The last-updated timestamp to present to the user as a summary of the state of the deployment.
-             *
-             * @example 2018-01-20T23:27:25.000Z
-             */
-            lastUpdated: string;
-            /**
-             * @description An (optional) additional label that may be displayed with deployment information. Can be used to display version information etc. for the deployment.
-             *
-             * @example Release 2018-01-20_08-47-bc2421a
-             */
-            label?: string;
-            /**
-             * @description The state of the deployment
-             *
-             * @example in_progress
-             * @enum {string}
-             */
-            state: "unknown" | "pending" | "in_progress" | "cancelled" | "failed" | "rolled_back" | "successful";
-            /**
-             * Pipeline
-             * @description This object models the Continuous Delivery (CD) Pipeline concept, an automated process (usually comprised of multiple stages)
-             *
-             * for getting software from version control right through to the production environment.
-             */
-            pipeline: {
+                }]>)[];
               /**
-               * @description The identifier of this pipeline, must be unique for the provider.
+               * @description The human-readable name for the deployment. Will be shown in the UI.
                *
-               * @example e9c906a7-451f-4fa6-ae1a-c389e2e2d87c
-               */
-              id: string;
-              /**
-               * @description The name of the pipeline to present to the user.
-               *
-               * @example Data Depot Deployment
+               * @example Deployment number 16 of Data Depot
                */
               displayName: string;
               /**
                * Format: uri
-               * @description A URL users can use to link to this deployment pipeline.
+               * @description A URL users can use to link to this deployment, in this environment.
                *
-               * @example http://mydeployer.com/project1
+               * @example http://mydeployer.com/project1/1111-222-333/prod-east
                */
               url: string;
-            };
-            /**
-             * Environment
-             * @description The environment that the deployment is present in.
-             */
-            environment: {
               /**
-               * @description The identifier of this environment, must be unique for the provider so that it can be shared across pipelines.
+               * @description A short description of the deployment
                *
-               * @example 8ec94d72-a4fc-4ac0-b31d-c5a595f373ba
+               * @example The bits are being transferred
                */
-              id: string;
+              description: string;
               /**
-               * @description The name of the environment to present to the user.
+               * Format: date-time
+               * @description The last-updated timestamp to present to the user as a summary of the state of the deployment.
                *
-               * @example US East
+               * @example 2018-01-20T23:27:25.000Z
                */
-              displayName: string;
+              lastUpdated: string;
               /**
-               * @description The type of the environment.
+               * @description An (optional) additional label that may be displayed with deployment information. Can be used to display version information etc. for the deployment.
                *
-               * @example production
+               * @example Release 2018-01-20_08-47-bc2421a
+               */
+              label?: string;
+              /**
+               * Format: int64
+               * @description The duration of the deployment (in seconds).
+               *
+               * @example 47
+               */
+              duration?: number;
+              /**
+               * @description The state of the deployment
+               *
+               * @example in_progress
                * @enum {string}
                */
-              type: "unmapped" | "development" | "testing" | "staging" | "production";
-            };
-            /**
-             * Commands
-             * @description A list of commands to be actioned for this Deployment
-             */
-            commands?: {
+              state: "unknown" | "pending" | "in_progress" | "cancelled" | "failed" | "rolled_back" | "successful";
               /**
-               * @description The command name.
+               * Pipeline
+               * @description This object models the Continuous Delivery (CD) Pipeline concept, an automated process (usually comprised of multiple stages)
                *
-               * @example initiate_deployment_gating
+               * for getting software from version control right through to the production environment.
                */
-              command?: string;
-            }[];
-            /**
-             * @description The DeploymentData schema version used for this deployment data.
-             *
-             * Placeholder to support potential schema changes in the future.
-             *
-             * @default 1.0
-             * @example 1.0
-             * @enum {string}
-             */
-            schemaVersion?: "1.0";
-            /**
-             * triggeredBy
-             * @description Describes the user who triggered the deployment
-             */
-            triggeredBy?: {
+              pipeline: {
+                /**
+                 * @description The identifier of this pipeline, must be unique for the provider.
+                 *
+                 * @example e9c906a7-451f-4fa6-ae1a-c389e2e2d87c
+                 */
+                id: string;
+                /**
+                 * @description The name of the pipeline to present to the user.
+                 *
+                 * @example Data Depot Deployment
+                 */
+                displayName: string;
+                /**
+                 * Format: uri
+                 * @description A URL users can use to link to this deployment pipeline.
+                 *
+                 * @example http://mydeployer.com/project1
+                 */
+                url: string;
+              };
               /**
-               * @description The email address of the user. Used to associate the user with a Jira user. Max length is 255 characters.
-               * @example jane_doe@atlassian.com
+               * Environment
+               * @description The environment that the deployment is present in.
                */
-              email?: string;
-            };
-          }[];
+              environment: {
+                /**
+                 * @description The identifier of this environment, must be unique for the provider so that it can be shared across pipelines.
+                 *
+                 * @example 8ec94d72-a4fc-4ac0-b31d-c5a595f373ba
+                 */
+                id: string;
+                /**
+                 * @description The name of the environment to present to the user.
+                 *
+                 * @example US East
+                 */
+                displayName: string;
+                /**
+                 * @description The type of the environment.
+                 *
+                 * @example production
+                 * @enum {string}
+                 */
+                type: "unmapped" | "development" | "testing" | "staging" | "production";
+              };
+              /**
+               * Commands
+               * @description A list of commands to be actioned for this Deployment
+               */
+              commands?: {
+                  /**
+                   * @description The command name.
+                   *
+                   * @example initiate_deployment_gating
+                   */
+                  command?: string;
+                }[];
+              /**
+               * @description The DeploymentData schema version used for this deployment data.
+               *
+               * Placeholder to support potential schema changes in the future.
+               *
+               * @default 1.0
+               * @example 1.0
+               * @enum {string}
+               */
+              schemaVersion?: "1.0";
+            })[];
           /**
            * ProviderMetadata
            * @description Information about the provider. This is useful for auditing, logging, debugging,
@@ -8204,37 +8696,6 @@ export interface operations {
              * Note that a deployment that isn't updated due to it's updateSequenceNumber being out of order is not considered a failed submission.
              */
             acceptedDeployments?: {
-              /**
-               * @description The identifier of a pipeline, must be unique for the provider.
-               *
-               * @example e9c906a7-451f-4fa6-ae1a-c389e2e2d87c
-               */
-              pipelineId: string;
-              /**
-               * @description The identifier of an environment, must be unique for the provider so that it can be shared across pipelines.
-               *
-               * @example 8ec94d72-a4fc-4ac0-b31d-c5a595f373ba
-               */
-              environmentId: string;
-              /**
-               * Format: int64
-               * @description This is the identifier for the deployment. It must be unique for the specified pipeline and environment. It must be a monotonically increasing number, as this is used to sequence the deployments.
-               *
-               * @example 100
-               */
-              deploymentSequenceNumber: number;
-            }[];
-            /**
-             * @description Details of deployments that have not been accepted for submission, usually due to a problem with the request data.
-             *
-             * The object will contain the deployment key and any errors associated with that deployment that have prevented it being submitted.
-             */
-            rejectedDeployments?: {
-              /**
-               * DeploymentKey
-               * @description Fields that uniquely reference a deployment.
-               */
-              key: {
                 /**
                  * @description The identifier of a pipeline, must be unique for the provider.
                  *
@@ -8254,15 +8715,46 @@ export interface operations {
                  * @example 100
                  */
                 deploymentSequenceNumber: number;
-              };
-              /** @description The error messages for the rejected deployment */
-              errors: {
-                /** @description A human-readable message describing the error. */
-                message: string;
-                /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-                errorTraceId?: string;
               }[];
-            }[];
+            /**
+             * @description Details of deployments that have not been accepted for submission, usually due to a problem with the request data.
+             *
+             * The object will contain the deployment key and any errors associated with that deployment that have prevented it being submitted.
+             */
+            rejectedDeployments?: {
+                /**
+                 * DeploymentKey
+                 * @description Fields that uniquely reference a deployment.
+                 */
+                key: {
+                  /**
+                   * @description The identifier of a pipeline, must be unique for the provider.
+                   *
+                   * @example e9c906a7-451f-4fa6-ae1a-c389e2e2d87c
+                   */
+                  pipelineId: string;
+                  /**
+                   * @description The identifier of an environment, must be unique for the provider so that it can be shared across pipelines.
+                   *
+                   * @example 8ec94d72-a4fc-4ac0-b31d-c5a595f373ba
+                   */
+                  environmentId: string;
+                  /**
+                   * Format: int64
+                   * @description This is the identifier for the deployment. It must be unique for the specified pipeline and environment. It must be a monotonically increasing number, as this is used to sequence the deployments.
+                   *
+                   * @example 100
+                   */
+                  deploymentSequenceNumber: number;
+                };
+                /** @description The error messages for the rejected deployment */
+                errors: {
+                    /** @description A human-readable message describing the error. */
+                    message: string;
+                    /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+                    errorTraceId?: string;
+                  }[];
+              }[];
             /**
              * @description Issue keys that are not known on this Jira instance (if any).
              *
@@ -8280,51 +8772,48 @@ export interface operations {
              * If a deployment has been associated with any other association other than those in this array it will still be stored against those valid associations.
              * If a deployment was only associated with the associations in this array, it is deemed to be invalid and it won't be persisted.
              */
-            unknownAssociations?: (
-              | {
-                  /**
-                   * @description Defines the asssociation type.
-                   *
-                   * @example issueIdOrKeys
-                   * @enum {string}
-                   */
-                  associationType: "issueKeys" | "issueIdOrKeys";
-                  /**
-                   * @description The Jira issue keys to associate the Deployment information with.
-                   *
-                   * The number of values counted across all associationTypes (issueKeys,
-                   * issueIdOrKeys and serviceIdOrKeys) must not exceed a limit of 500.
-                   */
-                  values: string[];
-                }
-              | {
-                  /**
-                   * @description Defines the asssociation type.
-                   *
-                   * @example serviceIdOrKeys
-                   * @enum {string}
-                   */
-                  associationType: "serviceIdOrKeys";
-                  /**
-                   * @description The service id or keys to associate the Deployment information with.
-                   *
-                   * The number of values counted across all associationTypes (issueKeys,
-                   * issueIdOrKeys and serviceIdOrKeys) must not exceed a limit of 500.
-                   */
-                  values: string[];
-                }
-              | {
-                  /**
-                   * @description Defines the association type. Currently supported entities can be found in this field's value enums list.
-                   *
-                   * @enum {string}
-                   */
-                  associationType: "commit";
-                  /**
-                   * @description The entity keys that represent the entities to be associated.
-                   * The number of values counted across all associationTypes (issueKeys, issueIdOrKeys, serviceIdOrKeys, supported ATIs and entity associations) must not exceed a limit of 500.
-                   */
-                  values: {
+            unknownAssociations?: (({
+                /**
+                 * @description Defines the asssociation type.
+                 *
+                 * @example issueIdOrKeys
+                 * @enum {string}
+                 */
+                associationType: "issueKeys" | "issueIdOrKeys";
+                /**
+                 * @description The Jira issue keys to associate the Deployment information with.
+                 *
+                 * The number of values counted across all associationTypes (issueKeys,
+                 * issueIdOrKeys and serviceIdOrKeys) must not exceed a limit of 500.
+                 */
+                values: string[];
+              }) | {
+                /**
+                 * @description Defines the asssociation type.
+                 *
+                 * @example serviceIdOrKeys
+                 * @enum {string}
+                 */
+                associationType: "serviceIdOrKeys";
+                /**
+                 * @description The service id or keys to associate the Deployment information with.
+                 *
+                 * The number of values counted across all associationTypes (issueKeys,
+                 * issueIdOrKeys and serviceIdOrKeys) must not exceed a limit of 500.
+                 */
+                values: string[];
+              } | ({
+                /**
+                 * @description Defines the association type. Currently supported entities can be found in this field's value enums list.
+                 *
+                 * @enum {string}
+                 */
+                associationType: "commit" | "repository";
+                /**
+                 * @description The entity keys that represent the entities to be associated.
+                 * The number of values counted across all associationTypes (issueKeys, issueIdOrKeys, serviceIdOrKeys, supported ATIs and entity associations) must not exceed a limit of 500.
+                 */
+                values: ({
                     /**
                      * @description The hash for the Commit.
                      *
@@ -8337,9 +8826,11 @@ export interface operations {
                      * @example de7fbebffabe
                      */
                     repositoryId: string;
-                  }[];
-                }
-            )[];
+                  } | {
+                    /** @example de7fbebffaba */
+                    repositoryId: string;
+                  })[];
+              }))[];
           };
         };
       };
@@ -8351,11 +8842,11 @@ export interface operations {
       400: {
         content: {
           "application/json": {
-            /** @description A human-readable message describing the error. */
-            message: string;
-            /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-            errorTraceId?: string;
-          }[];
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
         };
       };
       /** @description Missing a JWT token, or token is invalid. */
@@ -8373,11 +8864,11 @@ export interface operations {
       413: {
         content: {
           "application/json": {
-            /** @description A human-readable message describing the error. */
-            message: string;
-            /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-            errorTraceId?: string;
-          }[];
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
         };
       };
       /** @description API rate limit has been exceeded. */
@@ -8392,11 +8883,11 @@ export interface operations {
       default: {
         content: {
           "application/json": {
-            /** @description A human-readable message describing the error. */
-            message: string;
-            /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-            errorTraceId?: string;
-          }[];
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
         };
       };
     };
@@ -8453,11 +8944,11 @@ export interface operations {
       400: {
         content: {
           "application/json": {
-            /** @description A human-readable message describing the error. */
-            message: string;
-            /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-            errorTraceId?: string;
-          }[];
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
         };
       };
       /** @description Missing a JWT token, or token is invalid. */
@@ -8483,11 +8974,11 @@ export interface operations {
       default: {
         content: {
           "application/json": {
-            /** @description A human-readable message describing the error. */
-            message: string;
-            /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-            errorTraceId?: string;
-          }[];
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
         };
       };
     };
@@ -8552,42 +9043,37 @@ export interface operations {
              * @description The entities to associate the Deployment information with.
              * It must contain at least one of IssueIdOrKeysAssociation or ServiceIdOrKeysAssociation.
              */
-            associations?: OneOf<
-              [
-                {
-                  /**
-                   * @description Defines the asssociation type.
-                   *
-                   * @example issueIdOrKeys
-                   * @enum {string}
-                   */
-                  associationType: "issueKeys" | "issueIdOrKeys";
-                  /**
-                   * @description The Jira issue keys to associate the Deployment information with.
-                   *
-                   * The number of values counted across all associationTypes (issueKeys,
-                   * issueIdOrKeys and serviceIdOrKeys) must not exceed a limit of 500.
-                   */
-                  values: string[];
-                },
-                {
-                  /**
-                   * @description Defines the asssociation type.
-                   *
-                   * @example serviceIdOrKeys
-                   * @enum {string}
-                   */
-                  associationType: "serviceIdOrKeys";
-                  /**
-                   * @description The service id or keys to associate the Deployment information with.
-                   *
-                   * The number of values counted across all associationTypes (issueKeys,
-                   * issueIdOrKeys and serviceIdOrKeys) must not exceed a limit of 500.
-                   */
-                  values: string[];
-                },
-              ]
-            >[];
+            associations?: (OneOf<[{
+                /**
+                 * @description Defines the asssociation type.
+                 *
+                 * @example issueIdOrKeys
+                 * @enum {string}
+                 */
+                associationType: "issueKeys" | "issueIdOrKeys";
+                /**
+                 * @description The Jira issue keys to associate the Deployment information with.
+                 *
+                 * The number of values counted across all associationTypes (issueKeys,
+                 * issueIdOrKeys and serviceIdOrKeys) must not exceed a limit of 500.
+                 */
+                values: string[];
+              }, {
+                /**
+                 * @description Defines the asssociation type.
+                 *
+                 * @example serviceIdOrKeys
+                 * @enum {string}
+                 */
+                associationType: "serviceIdOrKeys";
+                /**
+                 * @description The service id or keys to associate the Deployment information with.
+                 *
+                 * The number of values counted across all associationTypes (issueKeys,
+                 * issueIdOrKeys and serviceIdOrKeys) must not exceed a limit of 500.
+                 */
+                values: string[];
+              }]>)[];
             /**
              * @description The human-readable name for the deployment. Will be shown in the UI.
              *
@@ -8620,6 +9106,13 @@ export interface operations {
              * @example Release 2018-01-20_08-47-bc2421a
              */
             label?: string;
+            /**
+             * Format: int64
+             * @description The duration of the deployment (in seconds).
+             *
+             * @example 47
+             */
+            duration?: number;
             /**
              * @description The state of the deployment
              *
@@ -8684,13 +9177,13 @@ export interface operations {
              * @description A list of commands to be actioned for this Deployment
              */
             commands?: {
-              /**
-               * @description The command name.
-               *
-               * @example initiate_deployment_gating
-               */
-              command?: string;
-            }[];
+                /**
+                 * @description The command name.
+                 *
+                 * @example initiate_deployment_gating
+                 */
+                command?: string;
+              }[];
             /**
              * @description The DeploymentData schema version used for this deployment data.
              *
@@ -8732,11 +9225,11 @@ export interface operations {
       default: {
         content: {
           "application/json": {
-            /** @description A human-readable message describing the error. */
-            message: string;
-            /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-            errorTraceId?: string;
-          }[];
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
         };
       };
     };
@@ -8812,11 +9305,11 @@ export interface operations {
       default: {
         content: {
           "application/json": {
-            /** @description A human-readable message describing the error. */
-            message: string;
-            /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-            errorTraceId?: string;
-          }[];
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
         };
       };
     };
@@ -8876,28 +9369,28 @@ export interface operations {
              */
             gatingStatus?: "allowed" | "prevented" | "awaiting" | "invalid";
             details?: {
-              /**
-               * @description The type of the gating status details.
-               *
-               * @example issue
-               * @enum {string}
-               */
-              type: "issue";
-              /**
-               * IssueKey
-               * @description An issue key that references an issue in Jira.
-               *
-               * @example ABC-123
-               */
-              issueKey: string;
-              /**
-               * Format: uri
-               * @description A full HTTPS link to the Jira issue for the change request gating this Deployment. This field is provided if the details type is issue.
-               *
-               * @example https://your-domain.atlassian.net/servicedesk/customer/portal/1/ZAINA-123
-               */
-              issueLink: string;
-            }[];
+                /**
+                 * @description The type of the gating status details.
+                 *
+                 * @example issue
+                 * @enum {string}
+                 */
+                type: "issue";
+                /**
+                 * IssueKey
+                 * @description An issue key that references an issue in Jira.
+                 *
+                 * @example ABC-123
+                 */
+                issueKey: string;
+                /**
+                 * Format: uri
+                 * @description A full HTTPS link to the Jira issue for the change request gating this Deployment. This field is provided if the details type is issue.
+                 *
+                 * @example https://your-domain.atlassian.net/servicedesk/customer/portal/1/ZAINA-123
+                 */
+                issueLink: string;
+              }[];
           };
         };
       };
@@ -8925,11 +9418,11 @@ export interface operations {
       default: {
         content: {
           "application/json": {
-            /** @description A human-readable message describing the error. */
-            message: string;
-            /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-            errorTraceId?: string;
-          }[];
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
         };
       };
     };
@@ -8998,189 +9491,189 @@ export interface operations {
            * Each build may be associated with one or more Jira issue keys, and will be associated with any properties
            * included in this request.
            */
-          builds: {
-            /**
-             * @description The schema version used for this data.
-             *
-             * Placeholder to support potential schema changes in the future.
-             *
-             * @default 1.0
-             * @example 1.0
-             * @enum {string}
-             */
-            schemaVersion?: "1.0";
-            /**
-             * @description An ID that relates a sequence of builds. Depending on your use case this might be a project ID, pipeline ID,
-             * plan key etc. - whatever logical unit you use to group a sequence of builds.
-             *
-             * The combination of `pipelineId` and `buildNumber` must uniquely identify a build you have provided.
-             *
-             * @example my-build-plan
-             */
-            pipelineId: string;
-            /**
-             * Format: int64
-             * @description Identifies a build within the sequence of builds identified by the build `pipelineId`.
-             *
-             * Used to identify the 'most recent' build in that sequence of builds.
-             *
-             * The combination of `pipelineId` and `buildNumber` must uniquely identify a build you have provided.
-             *
-             * @example 16
-             */
-            buildNumber: number;
-            /**
-             * Format: int64
-             * @description A number used to apply an order to the updates to the build, as identified by `pipelineId` and `buildNumber`,
-             * in the case of out-of-order receipt of update requests.
-             *
-             * It must be a monotonically increasing number. For example, epoch time could be one way to generate the
-             * `updateSequenceNumber`.
-             *
-             * Updates for a build that is received with an `updateSqeuenceNumber` less than or equal to what is currently
-             * stored will be ignored.
-             *
-             * @example 1523494301448
-             */
-            updateSequenceNumber: number;
-            /**
-             * @description The human-readable name for the build.
-             *
-             * Will be shown in the UI.
-             *
-             * @example My Project build #16
-             */
-            displayName: string;
-            /**
-             * @description An optional description to attach to this build.
-             *
-             * This may be anything that makes sense in your system.
-             *
-             * @example My Project build #16: Failed
-             */
-            description?: string;
-            /** @description A human-readable string that to provide information about the build. */
-            label?: string;
-            /**
-             * Format: URL
-             * @description The URL to this build in your system.
-             */
-            url: string;
-            /**
-             * BuildState
-             * @description The state of a build.
-             *
-             * * `pending` - The build is queued, or some manual action is required.
-             * * `in_progress` - The build is currently running.
-             * * `successful` - The build completed successfully.
-             * * `failed` - The build failed.
-             * * `cancelled` - The build has been cancelled or stopped.
-             * * `unknown` - The build is in an unknown state.
-             *
-             * @example failed
-             * @enum {string}
-             */
-            state: "pending" | "in_progress" | "successful" | "failed" | "cancelled" | "unknown";
-            /**
-             * Format: date-time
-             * @description The last-updated timestamp to present to the user as a summary of the state of the build.
-             *
-             * @example 2018-01-20T23:27:25.000Z
-             */
-            lastUpdated: string;
-            /**
-             * @description The Jira issue keys to associate the build information with.
-             *
-             * You are free to associate issue keys in any way you like. However, we recommend that you use the name
-             * of the branch the build was executed on, and extract issue keys from that name using a simple regex. This has
-             * the advantage that it provides an intuitive association of builds to issue keys.
-             */
-            issueKeys: string[];
-            /**
-             * TestInfo
-             * @description Information about tests that were executed during a build.
-             */
-            testInfo?: {
+          builds: ({
+              /**
+               * @description The schema version used for this data.
+               *
+               * Placeholder to support potential schema changes in the future.
+               *
+               * @default 1.0
+               * @example 1.0
+               * @enum {string}
+               */
+              schemaVersion?: "1.0";
+              /**
+               * @description An ID that relates a sequence of builds. Depending on your use case this might be a project ID, pipeline ID,
+               * plan key etc. - whatever logical unit you use to group a sequence of builds.
+               *
+               * The combination of `pipelineId` and `buildNumber` must uniquely identify a build you have provided.
+               *
+               * @example my-build-plan
+               */
+              pipelineId: string;
               /**
                * Format: int64
-               * @description The total number of tests considered during a build.
+               * @description Identifies a build within the sequence of builds identified by the build `pipelineId`.
                *
-               * @example 150
+               * Used to identify the 'most recent' build in that sequence of builds.
+               *
+               * The combination of `pipelineId` and `buildNumber` must uniquely identify a build you have provided.
+               *
+               * @example 16
                */
-              totalNumber: number;
+              buildNumber: number;
               /**
                * Format: int64
-               * @description The number of tests that passed during a build.
+               * @description A number used to apply an order to the updates to the build, as identified by `pipelineId` and `buildNumber`,
+               * in the case of out-of-order receipt of update requests.
                *
-               * @example 145
-               */
-              numberPassed: number;
-              /**
-               * Format: int64
-               * @description The number of tests that failed during a build.
+               * It must be a monotonically increasing number. For example, epoch time could be one way to generate the
+               * `updateSequenceNumber`.
                *
-               * @example 5
-               */
-              numberFailed: number;
-              /**
-               * Format: int64
-               * @description The number of tests that were skipped during a build.
+               * Updates for a build that is received with an `updateSqeuenceNumber` less than or equal to what is currently
+               * stored will be ignored.
                *
-               * @default 0
-               * @example 0
+               * @example 1523494301448
                */
-              numberSkipped?: number;
-            };
-            /** @description Optional information that links a build to a commit, branch etc. */
-            references?: {
+              updateSequenceNumber: number;
               /**
-               * BuildCommitReference
-               * @description Details about the commit the build was run against.
+               * @description The human-readable name for the build.
+               *
+               * Will be shown in the UI.
+               *
+               * @example My Project build #16
                */
-              commit?: {
+              displayName: string;
+              /**
+               * @description An optional description to attach to this build.
+               *
+               * This may be anything that makes sense in your system.
+               *
+               * @example My Project build #16: Failed
+               */
+              description?: string;
+              /** @description A human-readable string that to provide information about the build. */
+              label?: string;
+              /**
+               * Format: URL
+               * @description The URL to this build in your system.
+               */
+              url: string;
+              /**
+               * BuildState
+               * @description The state of a build.
+               *
+               * * `pending` - The build is queued, or some manual action is required.
+               * * `in_progress` - The build is currently running.
+               * * `successful` - The build completed successfully.
+               * * `failed` - The build failed.
+               * * `cancelled` - The build has been cancelled or stopped.
+               * * `unknown` - The build is in an unknown state.
+               *
+               * @example failed
+               * @enum {string}
+               */
+              state: "pending" | "in_progress" | "successful" | "failed" | "cancelled" | "unknown";
+              /**
+               * Format: date-time
+               * @description The last-updated timestamp to present to the user as a summary of the state of the build.
+               *
+               * @example 2018-01-20T23:27:25.000Z
+               */
+              lastUpdated: string;
+              /**
+               * @description The Jira issue keys to associate the build information with.
+               *
+               * You are free to associate issue keys in any way you like. However, we recommend that you use the name
+               * of the branch the build was executed on, and extract issue keys from that name using a simple regex. This has
+               * the advantage that it provides an intuitive association of builds to issue keys.
+               */
+              issueKeys: string[];
+              /**
+               * TestInfo
+               * @description Information about tests that were executed during a build.
+               */
+              testInfo?: {
                 /**
-                 * @description The ID of the commit. E.g. for a Git repository this would be the SHA1 hash.
+                 * Format: int64
+                 * @description The total number of tests considered during a build.
                  *
-                 * @example 08cd9c26b2b8d7cf6e6af6b49da8895d065c259f
+                 * @example 150
                  */
-                id: string;
+                totalNumber: number;
                 /**
-                 * @description An identifier for the repository containing the commit.
+                 * Format: int64
+                 * @description The number of tests that passed during a build.
                  *
-                 * In most cases this should be the URL of the repository in the SCM provider.
-                 *
-                 * For cases where the build was executed against a local repository etc. this should be some identifier that is
-                 * unique to that repository.
-                 *
-                 * @example https://bitbucket.org/atlassian/biij-vendor-api
+                 * @example 145
                  */
-                repositoryUri: string;
+                numberPassed: number;
+                /**
+                 * Format: int64
+                 * @description The number of tests that failed during a build.
+                 *
+                 * @example 5
+                 */
+                numberFailed: number;
+                /**
+                 * Format: int64
+                 * @description The number of tests that were skipped during a build.
+                 *
+                 * @default 0
+                 * @example 0
+                 */
+                numberSkipped?: number;
               };
-              /**
-               * BuildRefReference
-               * @description Details about the ref the build was run on.
-               */
-              ref?: {
-                /**
-                 * @description The name of the ref the build ran on
-                 *
-                 * @example feature/ISSUE-123-some-work
-                 */
-                name: string;
-                /**
-                 * @description An identifer for the ref.
-                 *
-                 * In most cases this should be the URL of the tag/branch etc. in the SCM provider.
-                 *
-                 * For cases where the build was executed against a local repository etc. this should be something that uniquely
-                 * identifies the ref.
-                 *
-                 * @example https://bitbucket.org/atlassian/biij-vendor-api/refs/feature/ISSUE-123-some-work
-                 */
-                uri: string;
-              };
-            }[];
-          }[];
+              /** @description Optional information that links a build to a commit, branch etc. */
+              references?: {
+                  /**
+                   * BuildCommitReference
+                   * @description Details about the commit the build was run against.
+                   */
+                  commit?: {
+                    /**
+                     * @description The ID of the commit. E.g. for a Git repository this would be the SHA1 hash.
+                     *
+                     * @example 08cd9c26b2b8d7cf6e6af6b49da8895d065c259f
+                     */
+                    id: string;
+                    /**
+                     * @description An identifier for the repository containing the commit.
+                     *
+                     * In most cases this should be the URL of the repository in the SCM provider.
+                     *
+                     * For cases where the build was executed against a local repository etc. this should be some identifier that is
+                     * unique to that repository.
+                     *
+                     * @example https://bitbucket.org/atlassian/biij-vendor-api
+                     */
+                    repositoryUri: string;
+                  };
+                  /**
+                   * BuildRefReference
+                   * @description Details about the ref the build was run on.
+                   */
+                  ref?: {
+                    /**
+                     * @description The name of the ref the build ran on
+                     *
+                     * @example feature/ISSUE-123-some-work
+                     */
+                    name: string;
+                    /**
+                     * @description An identifer for the ref.
+                     *
+                     * In most cases this should be the URL of the tag/branch etc. in the SCM provider.
+                     *
+                     * For cases where the build was executed against a local repository etc. this should be something that uniquely
+                     * identifies the ref.
+                     *
+                     * @example https://bitbucket.org/atlassian/biij-vendor-api/refs/feature/ISSUE-123-some-work
+                     */
+                    uri: string;
+                  };
+                }[];
+            })[];
           /**
            * ProviderMetadata
            * @description Information about the provider. This is useful for auditing, logging, debugging,
@@ -9218,39 +9711,6 @@ export interface operations {
              * considered a failed submission.
              */
             acceptedBuilds?: {
-              /**
-               * @description An ID that relates a sequence of builds. Depending on your system this might be a project ID, pipeline ID,
-               * plan key etc. - whatever logical unit you use to group a sequence of builds.
-               *
-               * The combination of `pipelineId` and `buildNumber` must uniquely identify the build.
-               *
-               * @example my-build-plan
-               */
-              pipelineId: string;
-              /**
-               * Format: int64
-               * @description Identifies a build within the sequence of builds identified by the build `pipelineId`.
-               *
-               * Used to identify the 'most recent' build in that sequence of builds.
-               *
-               * The combination of `pipelineId` and `buildNumber` must uniquely identify the build.
-               *
-               * @example 16
-               */
-              buildNumber: number;
-            }[];
-            /**
-             * @description Details of builds that have not been accepted for submission.
-             *
-             * A build may be rejected if it was only associated with unknown issue keys, or if the submitted data for the
-             * build does not match the required schema.
-             */
-            rejectedBuilds?: {
-              /**
-               * BuildKey
-               * @description Fields that uniquely reference a build.
-               */
-              key: {
                 /**
                  * @description An ID that relates a sequence of builds. Depending on your system this might be a project ID, pipeline ID,
                  * plan key etc. - whatever logical unit you use to group a sequence of builds.
@@ -9271,15 +9731,48 @@ export interface operations {
                  * @example 16
                  */
                 buildNumber: number;
-              };
-              /** @description The error messages for the rejected build */
-              errors: {
-                /** @description A human-readable message describing the error. */
-                message: string;
-                /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-                errorTraceId?: string;
               }[];
-            }[];
+            /**
+             * @description Details of builds that have not been accepted for submission.
+             *
+             * A build may be rejected if it was only associated with unknown issue keys, or if the submitted data for the
+             * build does not match the required schema.
+             */
+            rejectedBuilds?: {
+                /**
+                 * BuildKey
+                 * @description Fields that uniquely reference a build.
+                 */
+                key: {
+                  /**
+                   * @description An ID that relates a sequence of builds. Depending on your system this might be a project ID, pipeline ID,
+                   * plan key etc. - whatever logical unit you use to group a sequence of builds.
+                   *
+                   * The combination of `pipelineId` and `buildNumber` must uniquely identify the build.
+                   *
+                   * @example my-build-plan
+                   */
+                  pipelineId: string;
+                  /**
+                   * Format: int64
+                   * @description Identifies a build within the sequence of builds identified by the build `pipelineId`.
+                   *
+                   * Used to identify the 'most recent' build in that sequence of builds.
+                   *
+                   * The combination of `pipelineId` and `buildNumber` must uniquely identify the build.
+                   *
+                   * @example 16
+                   */
+                  buildNumber: number;
+                };
+                /** @description The error messages for the rejected build */
+                errors: {
+                    /** @description A human-readable message describing the error. */
+                    message: string;
+                    /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+                    errorTraceId?: string;
+                  }[];
+              }[];
             /**
              * @description Issue keys that are not known on this Jira instance (if any).
              *
@@ -9303,11 +9796,11 @@ export interface operations {
       400: {
         content: {
           "application/json": {
-            /** @description A human-readable message describing the error. */
-            message: string;
-            /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-            errorTraceId?: string;
-          }[];
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
         };
       };
       /** @description Missing a JWT token, or token is invalid. */
@@ -9325,11 +9818,11 @@ export interface operations {
       413: {
         content: {
           "application/json": {
-            /** @description A human-readable message describing the error. */
-            message: string;
-            /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-            errorTraceId?: string;
-          }[];
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
         };
       };
       /** @description API rate limit has been exceeded. */
@@ -9344,11 +9837,11 @@ export interface operations {
       default: {
         content: {
           "application/json": {
-            /** @description A human-readable message describing the error. */
-            message: string;
-            /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-            errorTraceId?: string;
-          }[];
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
         };
       };
     };
@@ -9409,11 +9902,11 @@ export interface operations {
       400: {
         content: {
           "application/json": {
-            /** @description A human-readable message describing the error. */
-            message: string;
-            /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-            errorTraceId?: string;
-          }[];
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
         };
       };
       /** @description Missing a JWT token, or token is invalid. */
@@ -9439,11 +9932,11 @@ export interface operations {
       default: {
         content: {
           "application/json": {
-            /** @description A human-readable message describing the error. */
-            message: string;
-            /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-            errorTraceId?: string;
-          }[];
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
         };
       };
     };
@@ -9616,53 +10109,53 @@ export interface operations {
             };
             /** @description Optional information that links a build to a commit, branch etc. */
             references?: {
-              /**
-               * BuildCommitReference
-               * @description Details about the commit the build was run against.
-               */
-              commit?: {
                 /**
-                 * @description The ID of the commit. E.g. for a Git repository this would be the SHA1 hash.
-                 *
-                 * @example 08cd9c26b2b8d7cf6e6af6b49da8895d065c259f
+                 * BuildCommitReference
+                 * @description Details about the commit the build was run against.
                  */
-                id: string;
+                commit?: {
+                  /**
+                   * @description The ID of the commit. E.g. for a Git repository this would be the SHA1 hash.
+                   *
+                   * @example 08cd9c26b2b8d7cf6e6af6b49da8895d065c259f
+                   */
+                  id: string;
+                  /**
+                   * @description An identifier for the repository containing the commit.
+                   *
+                   * In most cases this should be the URL of the repository in the SCM provider.
+                   *
+                   * For cases where the build was executed against a local repository etc. this should be some identifier that is
+                   * unique to that repository.
+                   *
+                   * @example https://bitbucket.org/atlassian/biij-vendor-api
+                   */
+                  repositoryUri: string;
+                };
                 /**
-                 * @description An identifier for the repository containing the commit.
-                 *
-                 * In most cases this should be the URL of the repository in the SCM provider.
-                 *
-                 * For cases where the build was executed against a local repository etc. this should be some identifier that is
-                 * unique to that repository.
-                 *
-                 * @example https://bitbucket.org/atlassian/biij-vendor-api
+                 * BuildRefReference
+                 * @description Details about the ref the build was run on.
                  */
-                repositoryUri: string;
-              };
-              /**
-               * BuildRefReference
-               * @description Details about the ref the build was run on.
-               */
-              ref?: {
-                /**
-                 * @description The name of the ref the build ran on
-                 *
-                 * @example feature/ISSUE-123-some-work
-                 */
-                name: string;
-                /**
-                 * @description An identifer for the ref.
-                 *
-                 * In most cases this should be the URL of the tag/branch etc. in the SCM provider.
-                 *
-                 * For cases where the build was executed against a local repository etc. this should be something that uniquely
-                 * identifies the ref.
-                 *
-                 * @example https://bitbucket.org/atlassian/biij-vendor-api/refs/feature/ISSUE-123-some-work
-                 */
-                uri: string;
-              };
-            }[];
+                ref?: {
+                  /**
+                   * @description The name of the ref the build ran on
+                   *
+                   * @example feature/ISSUE-123-some-work
+                   */
+                  name: string;
+                  /**
+                   * @description An identifer for the ref.
+                   *
+                   * In most cases this should be the URL of the tag/branch etc. in the SCM provider.
+                   *
+                   * For cases where the build was executed against a local repository etc. this should be something that uniquely
+                   * identifies the ref.
+                   *
+                   * @example https://bitbucket.org/atlassian/biij-vendor-api/refs/feature/ISSUE-123-some-work
+                   */
+                  uri: string;
+                };
+              }[];
           };
         };
       };
@@ -9693,11 +10186,11 @@ export interface operations {
       default: {
         content: {
           "application/json": {
-            /** @description A human-readable message describing the error. */
-            message: string;
-            /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-            errorTraceId?: string;
-          }[];
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
         };
       };
     };
@@ -9772,11 +10265,11 @@ export interface operations {
       default: {
         content: {
           "application/json": {
-            /** @description A human-readable message describing the error. */
-            message: string;
-            /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-            errorTraceId?: string;
-          }[];
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
         };
       };
     };
@@ -9840,85 +10333,75 @@ export interface operations {
            * Each Remote Link may be associated with one or more Jira issue keys, and will be associated with any properties
            * included in this request.
            */
-          remoteLinks: {
-            /**
-             * @description The schema version used for this data.
-             *
-             * Placeholder to support potential schema changes in the future.
-             *
-             * @default 1.0
-             * @example 1.0
-             * @enum {string}
-             */
-            schemaVersion?: "1.0";
-            /**
-             * @description The identifier for the Remote Link. Must be unique for a given Provider.
-             *
-             * @example 111-222-333
-             */
-            id: string;
-            /**
-             * Format: int64
-             * @description An ID used to apply an ordering to updates for this Remote Link in the case of out-of-order receipt of
-             * update requests.
-             *
-             * It must be a monotonically increasing number. For example, epoch time could be one way to generate the
-             * `updateSequenceNumber`.
-             *
-             * Updates for a Remote Link that is received with an `updateSqeuenceNumber` less than or equal to what is currently
-             * stored will be ignored.
-             *
-             * @example 1523494301448
-             */
-            updateSequenceNumber: number;
-            /**
-             * @description The human-readable name for the Remote Link.
-             *
-             * Will be shown in the UI.
-             *
-             * @example Remote Link #42
-             */
-            displayName: string;
-            /**
-             * Format: uri
-             * @description The URL to this Remote Link in your system.
-             */
-            url: string;
-            /**
-             * @description The type of the Remote Link. The current supported types are 'document', 'alert', 'test',
-             * 'security', 'logFile', 'prototype', 'coverage', 'bugReport' and 'other'
-             *
-             * @example security
-             * @enum {string}
-             */
-            type:
-              | "document"
-              | "alert"
-              | "test"
-              | "security"
-              | "logFile"
-              | "prototype"
-              | "coverage"
-              | "bugReport"
-              | "other";
-            /**
-             * @description An optional description to attach to this Remote Link.
-             *
-             * This may be anything that makes sense in your system.
-             *
-             * @example Remote Link #42 with more information in this description
-             */
-            description?: string;
-            /**
-             * Format: date-time
-             * @description The last-updated timestamp to present to the user as a summary of when Remote Link was last updated.
-             *
-             * @example 2018-01-20T23:27:25.000Z
-             */
-            lastUpdated: string;
-            /** @description The entities to associate the Remote Link information with. */
-            associations?: (
-              | {
+          remoteLinks: ({
+              /**
+               * @description The schema version used for this data.
+               *
+               * Placeholder to support potential schema changes in the future.
+               *
+               * @default 1.0
+               * @example 1.0
+               * @enum {string}
+               */
+              schemaVersion?: "1.0";
+              /**
+               * @description The identifier for the Remote Link. Must be unique for a given Provider.
+               *
+               * @example 111-222-333
+               */
+              id: string;
+              /**
+               * Format: int64
+               * @description An ID used to apply an ordering to updates for this Remote Link in the case of out-of-order receipt of
+               * update requests.
+               *
+               * It must be a monotonically increasing number. For example, epoch time could be one way to generate the
+               * `updateSequenceNumber`.
+               *
+               * Updates for a Remote Link that is received with an `updateSqeuenceNumber` less than or equal to what is currently
+               * stored will be ignored.
+               *
+               * @example 1523494301448
+               */
+              updateSequenceNumber: number;
+              /**
+               * @description The human-readable name for the Remote Link.
+               *
+               * Will be shown in the UI.
+               *
+               * @example Remote Link #42
+               */
+              displayName: string;
+              /**
+               * Format: uri
+               * @description The URL to this Remote Link in your system.
+               */
+              url: string;
+              /**
+               * @description The type of the Remote Link. The current supported types are 'document', 'alert', 'test',
+               * 'security', 'logFile', 'prototype', 'coverage', 'bugReport' and 'other'
+               *
+               * @example security
+               * @enum {string}
+               */
+              type: "document" | "alert" | "test" | "security" | "logFile" | "prototype" | "coverage" | "bugReport" | "other";
+              /**
+               * @description An optional description to attach to this Remote Link.
+               *
+               * This may be anything that makes sense in your system.
+               *
+               * @example Remote Link #42 with more information in this description
+               */
+              description?: string;
+              /**
+               * Format: date-time
+               * @description The last-updated timestamp to present to the user as a summary of when Remote Link was last updated.
+               *
+               * @example 2018-01-20T23:27:25.000Z
+               */
+              lastUpdated: string;
+              /** @description The entities to associate the Remote Link information with. */
+              associations?: ({
                   /**
                    * @description Defines the asssociation type.
                    *
@@ -9933,8 +10416,7 @@ export interface operations {
                    * issueIdOrKeys and serviceIdOrKeys) must not exceed a limit of 500.
                    */
                   values: string[];
-                }
-              | {
+                } | {
                   /**
                    * @description Defines the asssociation type.
                    *
@@ -9949,51 +10431,50 @@ export interface operations {
                    * issueIdOrKeys and serviceIdOrKeys) must not exceed a limit of 500.
                    */
                   values: string[];
-                }
-            )[];
-            /**
-             * RemoteLinkStatus
-             * @description The status of a Remote Link.
-             */
-            status?: {
+                })[];
               /**
-               * @description Appearance is a fixed set of appearance types affecting the colour
-               * of the status lozenge in the UI. The colours they correspond to are
-               * equivalent to atlaskit's [Lozenge](https://atlaskit.atlassian.com/packages/core/lozenge) component.
-               *
-               * @example inprogress
-               * @enum {string}
+               * RemoteLinkStatus
+               * @description The status of a Remote Link.
                */
-              appearance: "default" | "inprogress" | "moved" | "new" | "removed" | "prototype" | "success";
+              status?: {
+                /**
+                 * @description Appearance is a fixed set of appearance types affecting the colour
+                 * of the status lozenge in the UI. The colours they correspond to are
+                 * equivalent to atlaskit's [Lozenge](https://atlaskit.atlassian.com/packages/core/lozenge) component.
+                 *
+                 * @example inprogress
+                 * @enum {string}
+                 */
+                appearance: "default" | "inprogress" | "moved" | "new" | "removed" | "prototype" | "success";
+                /**
+                 * @description The human-readable description for the Remote Link status.
+                 *
+                 * Will be shown in the UI.
+                 *
+                 * @example ANOMALOUS
+                 */
+                label: string;
+              };
               /**
-               * @description The human-readable description for the Remote Link status.
+               * @description Optional list of actionIds. They are associated with the actions the provider is able to provide when they
+               * registered. Indicates which actions this Remote Link has.
                *
-               * Will be shown in the UI.
+               * If any actions have a templateUrl that requires string substitution, then `attributeMap` must be passed in.
                *
-               * @example ANOMALOUS
+               * @example [
+               *   "action-111-222-333",
+               *   "action-444-555-666"
+               * ]
                */
-              label: string;
-            };
-            /**
-             * @description Optional list of actionIds. They are associated with the actions the provider is able to provide when they
-             * registered. Indicates which actions this Remote Link has.
-             *
-             * If any actions have a templateUrl that requires string substitution, then `attributeMap` must be passed in.
-             *
-             * @example [
-             *   "action-111-222-333",
-             *   "action-444-555-666"
-             * ]
-             */
-            actionIds?: string[];
-            /**
-             * @description Map of key/values (string to string mapping). This is used to build the urls for actions from the
-             * templateUrl the provider registered their available actions with.
-             */
-            attributeMap?: {
-              [key: string]: string;
-            };
-          }[];
+              actionIds?: string[];
+              /**
+               * @description Map of key/values (string to string mapping). This is used to build the urls for actions from the
+               * templateUrl the provider registered their available actions with.
+               */
+              attributeMap?: {
+                [key: string]: string;
+              };
+            })[];
           /**
            * ProviderMetadata
            * @description Information about the provider. This is useful for auditing, logging, debugging, and other internal uses. It is
@@ -10046,47 +10527,44 @@ export interface operations {
              */
             rejectedRemoteLinks?: {
               [key: string]: {
-                /** @description A human-readable message describing the error. */
-                message: string;
-                /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-                errorTraceId?: string;
-              }[];
+                  /** @description A human-readable message describing the error. */
+                  message: string;
+                  /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+                  errorTraceId?: string;
+                }[];
             };
             /** @description Issue keys or services IDs or keys that are not known on this Jira instance (if any). */
-            unknownAssociations?: (
-              | {
-                  /**
-                   * @description Defines the asssociation type.
-                   *
-                   * @example issueKeys
-                   * @enum {string}
-                   */
-                  associationType: "issueKeys";
-                  /**
-                   * @description The Jira issue keys to associate the Remote Link information with.
-                   *
-                   * The number of values counted across all associationTypes (issueKeys,
-                   * issueIdOrKeys and serviceIdOrKeys) must not exceed a limit of 500.
-                   */
-                  values: string[];
-                }
-              | {
-                  /**
-                   * @description Defines the asssociation type.
-                   *
-                   * @example serviceIdOrKeys
-                   * @enum {string}
-                   */
-                  associationType: "serviceIdOrKeys";
-                  /**
-                   * @description The service id or keys to associate the Remote Link information with.
-                   *
-                   * The number of values counted across all associationTypes (issueKeys,
-                   * issueIdOrKeys and serviceIdOrKeys) must not exceed a limit of 500.
-                   */
-                  values: string[];
-                }
-            )[];
+            unknownAssociations?: ({
+                /**
+                 * @description Defines the asssociation type.
+                 *
+                 * @example issueKeys
+                 * @enum {string}
+                 */
+                associationType: "issueKeys";
+                /**
+                 * @description The Jira issue keys to associate the Remote Link information with.
+                 *
+                 * The number of values counted across all associationTypes (issueKeys,
+                 * issueIdOrKeys and serviceIdOrKeys) must not exceed a limit of 500.
+                 */
+                values: string[];
+              } | {
+                /**
+                 * @description Defines the asssociation type.
+                 *
+                 * @example serviceIdOrKeys
+                 * @enum {string}
+                 */
+                associationType: "serviceIdOrKeys";
+                /**
+                 * @description The service id or keys to associate the Remote Link information with.
+                 *
+                 * The number of values counted across all associationTypes (issueKeys,
+                 * issueIdOrKeys and serviceIdOrKeys) must not exceed a limit of 500.
+                 */
+                values: string[];
+              })[];
           };
         };
       };
@@ -10100,11 +10578,11 @@ export interface operations {
       400: {
         content: {
           "application/json": {
-            /** @description A human-readable message describing the error. */
-            message: string;
-            /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-            errorTraceId?: string;
-          }[];
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
         };
       };
       /** @description Missing a JWT token, or token is invalid. */
@@ -10122,11 +10600,11 @@ export interface operations {
       413: {
         content: {
           "application/json": {
-            /** @description A human-readable message describing the error. */
-            message: string;
-            /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-            errorTraceId?: string;
-          }[];
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
         };
       };
       /** @description API rate limit has been exceeded. */
@@ -10141,11 +10619,11 @@ export interface operations {
       default: {
         content: {
           "application/json": {
-            /** @description A human-readable message describing the error. */
-            message: string;
-            /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-            errorTraceId?: string;
-          }[];
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
         };
       };
     };
@@ -10219,11 +10697,11 @@ export interface operations {
       400: {
         content: {
           "application/json": {
-            /** @description A human-readable message describing the error. */
-            message: string;
-            /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-            errorTraceId?: string;
-          }[];
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
         };
       };
       /** @description Missing a JWT token, or token is invalid. */
@@ -10249,11 +10727,11 @@ export interface operations {
       default: {
         content: {
           "application/json": {
-            /** @description A human-readable message describing the error. */
-            message: string;
-            /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-            errorTraceId?: string;
-          }[];
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
         };
       };
     };
@@ -10341,16 +10819,7 @@ export interface operations {
              * @example security
              * @enum {string}
              */
-            type:
-              | "document"
-              | "alert"
-              | "test"
-              | "security"
-              | "logFile"
-              | "prototype"
-              | "coverage"
-              | "bugReport"
-              | "other";
+            type: "document" | "alert" | "test" | "security" | "logFile" | "prototype" | "coverage" | "bugReport" | "other";
             /**
              * @description An optional description to attach to this Remote Link.
              *
@@ -10367,40 +10836,37 @@ export interface operations {
              */
             lastUpdated: string;
             /** @description The entities to associate the Remote Link information with. */
-            associations?: (
-              | {
-                  /**
-                   * @description Defines the asssociation type.
-                   *
-                   * @example issueKeys
-                   * @enum {string}
-                   */
-                  associationType: "issueKeys";
-                  /**
-                   * @description The Jira issue keys to associate the Remote Link information with.
-                   *
-                   * The number of values counted across all associationTypes (issueKeys,
-                   * issueIdOrKeys and serviceIdOrKeys) must not exceed a limit of 500.
-                   */
-                  values: string[];
-                }
-              | {
-                  /**
-                   * @description Defines the asssociation type.
-                   *
-                   * @example serviceIdOrKeys
-                   * @enum {string}
-                   */
-                  associationType: "serviceIdOrKeys";
-                  /**
-                   * @description The service id or keys to associate the Remote Link information with.
-                   *
-                   * The number of values counted across all associationTypes (issueKeys,
-                   * issueIdOrKeys and serviceIdOrKeys) must not exceed a limit of 500.
-                   */
-                  values: string[];
-                }
-            )[];
+            associations?: ({
+                /**
+                 * @description Defines the asssociation type.
+                 *
+                 * @example issueKeys
+                 * @enum {string}
+                 */
+                associationType: "issueKeys";
+                /**
+                 * @description The Jira issue keys to associate the Remote Link information with.
+                 *
+                 * The number of values counted across all associationTypes (issueKeys,
+                 * issueIdOrKeys and serviceIdOrKeys) must not exceed a limit of 500.
+                 */
+                values: string[];
+              } | {
+                /**
+                 * @description Defines the asssociation type.
+                 *
+                 * @example serviceIdOrKeys
+                 * @enum {string}
+                 */
+                associationType: "serviceIdOrKeys";
+                /**
+                 * @description The service id or keys to associate the Remote Link information with.
+                 *
+                 * The number of values counted across all associationTypes (issueKeys,
+                 * issueIdOrKeys and serviceIdOrKeys) must not exceed a limit of 500.
+                 */
+                values: string[];
+              })[];
             /**
              * RemoteLinkStatus
              * @description The status of a Remote Link.
@@ -10473,11 +10939,11 @@ export interface operations {
       default: {
         content: {
           "application/json": {
-            /** @description A human-readable message describing the error. */
-            message: string;
-            /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-            errorTraceId?: string;
-          }[];
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
         };
       };
     };
@@ -10551,11 +11017,11 @@ export interface operations {
       default: {
         content: {
           "application/json": {
-            /** @description A human-readable message describing the error. */
-            message: string;
-            /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-            errorTraceId?: string;
-          }[];
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
         };
       };
     };
@@ -10606,11 +11072,11 @@ export interface operations {
       400: {
         content: {
           "application/json": {
-            /** @description A human-readable message describing the error. */
-            message: string;
-            /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-            errorTraceId?: string;
-          }[];
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
         };
       };
       /** @description Missing a JWT token, or token is invalid. */
@@ -10628,11 +11094,11 @@ export interface operations {
       413: {
         content: {
           "application/json": {
-            /** @description A human-readable message describing the error. */
-            message: string;
-            /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-            errorTraceId?: string;
-          }[];
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
         };
       };
       /** @description API rate limit has been exceeded. */
@@ -10647,11 +11113,11 @@ export interface operations {
       default: {
         content: {
           "application/json": {
-            /** @description A human-readable message describing the error. */
-            message: string;
-            /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-            errorTraceId?: string;
-          }[];
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
         };
       };
     };
@@ -10687,11 +11153,11 @@ export interface operations {
       400: {
         content: {
           "application/json": {
-            /** @description A human-readable message describing the error. */
-            message: string;
-            /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-            errorTraceId?: string;
-          }[];
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
         };
       };
       /** @description Missing a JWT token, or token is invalid. */
@@ -10717,11 +11183,11 @@ export interface operations {
       default: {
         content: {
           "application/json": {
-            /** @description A human-readable message describing the error. */
-            message: string;
-            /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-            errorTraceId?: string;
-          }[];
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
         };
       };
     };
@@ -10793,11 +11259,11 @@ export interface operations {
       default: {
         content: {
           "application/json": {
-            /** @description A human-readable message describing the error. */
-            message: string;
-            /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-            errorTraceId?: string;
-          }[];
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
         };
       };
     };
@@ -10843,7 +11309,7 @@ export interface operations {
              * Format: date-time
              * @description Latest date and time that the Security Workspace was updated in Jira.
              *
-             * @example 2020-01-17T09:30:00Z
+             * @example 2020-01-17T09:30:00.000Z
              */
             updatedAt: string;
           };
@@ -10876,11 +11342,11 @@ export interface operations {
       default: {
         content: {
           "application/json": {
-            /** @description A human-readable message describing the error. */
-            message: string;
-            /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-            errorTraceId?: string;
-          }[];
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
         };
       };
     };
@@ -10940,202 +11406,202 @@ export interface operations {
           properties?: {
             [key: string]: string;
           };
-          vulnerabilities: {
-            /**
-             * @description The VulnerabilityData schema version used for this vulnerability data.
-             *
-             * Placeholder to support potential schema changes in the future.
-             *
-             * @default 1.0
-             * @example 1.0
-             * @enum {string}
-             */
-            schemaVersion: "1.0";
-            /**
-             * @description The identifier for the Vulnerability. Must be unique for a given Provider.
-             *
-             * @example 111-222-333
-             */
-            id: string;
-            /**
-             * Format: int64
-             * @description An ID used to apply an ordering to updates for this Vulnerability in the case of out-of-order receipt of update requests.
-             *
-             * This can be any monotonically increasing number. A suggested implementation is to use epoch millis from the Provider system, but other alternatives are valid (e.g. a Provider could store a counter against each Vulnerability and increment that on each update to Jira).
-             *
-             * Updates for a Vulnerability that are received with an updateSequenceId lower than what is currently stored will be ignored.
-             *
-             * @example 1523494301448
-             */
-            updateSequenceNumber: number;
-            /**
-             * @description The identifier of the Container where this Vulnerability was found. Must be unique for a given Provider. This must follow this regex pattern: `[a-zA-Z0-9\\-_.~@:{}=]+(/[a-zA-Z0-9\\-_.~@:{}=]+)*`
-             *
-             * @example 111-222-333
-             */
-            containerId: string;
-            /**
-             * @description The human-readable name for the Vulnerability. Will be shown in the UI.
-             *
-             * If not provided, will use the ID for display.
-             *
-             * @example curl/libcurl3 - Buffer Override
-             */
-            displayName: string;
-            /**
-             * @description A description of the issue in markdown format that will be shown in the UI and used when creating Jira Issues. HTML tags are not supported in the markdown format. For creating a new line `\n` can be used. Read more about the accepted markdown transformations [here](https://atlaskit.atlassian.com/packages/editor/editor-markdown-transformer).
-             *
-             * @example ## Overview
-             *
-             *
-             * Affected versions of this package are vulnerable to MeltLeak
-             */
-            description: string;
-            /**
-             * Format: uri
-             * @description A URL users can use to link to a summary view of this vulnerability, if appropriate.
-             *
-             * This could be any location that makes sense in the Provider system (e.g. if the summary information comes from a specific project, it might make sense to link the user to the vulnerability in that project).
-             *
-             * @example https://example.com/project/CWE-123/summary
-             */
-            url: string;
-            /**
-             * @description The type of Vulnerability detected.
-             * @example sca
-             * @enum {string}
-             */
-            type: "sca" | "sast" | "dast" | "unknown";
-            /**
-             * Format: date-time
-             * @description The timestamp to present to the user that shows when the Vulnerability was introduced.
-             *
-             * Expected format is an RFC3339 formatted string.
-             *
-             * @example 2018-01-20T23:27:25.000Z
-             */
-            introducedDate: string;
-            /**
-             * Format: date-time
-             * @description The last-updated timestamp to present to the user the last time the Vulnerability was updated.
-             *
-             * Expected format is an RFC3339 formatted string.
-             *
-             * @example 2018-01-20T23:27:25.000Z
-             */
-            lastUpdated: string;
-            /**
-             * VulnerabilitySeverity
-             * @description Severity information for a single Vulnerability.
-             *
-             * This is the severity information that will be presented to the user on e.g. the Jira Security screen.
-             */
-            severity: {
+          vulnerabilities: ({
               /**
-               * @description The severity level of the Vulnerability.
-               * @example critical
+               * @description The VulnerabilityData schema version used for this vulnerability data.
+               *
+               * Placeholder to support potential schema changes in the future.
+               *
+               * @default 1.0
+               * @example 1.0
                * @enum {string}
                */
-              level: "critical" | "high" | "medium" | "low" | "unknown";
-            };
-            /** @description The identifying information for the Vulnerability. */
-            identifiers?: {
+              schemaVersion: "1.0";
               /**
-               * @description The display name of the Vulnerability identified.
+               * @description The identifier for the Vulnerability. Must be unique for a given Provider.
                *
-               * @example CWE-123
+               * @example 111-222-333
+               */
+              id: string;
+              /**
+               * Format: int64
+               * @description An ID used to apply an ordering to updates for this Vulnerability in the case of out-of-order receipt of update requests.
+               *
+               * This can be any monotonically increasing number. A suggested implementation is to use epoch millis from the Provider system, but other alternatives are valid (e.g. a Provider could store a counter against each Vulnerability and increment that on each update to Jira).
+               *
+               * Updates for a Vulnerability that are received with an updateSequenceId lower than what is currently stored will be ignored.
+               *
+               * @example 1523494301448
+               */
+              updateSequenceNumber: number;
+              /**
+               * @description The identifier of the Container where this Vulnerability was found. Must be unique for a given Provider. This must follow this regex pattern: `[a-zA-Z0-9\\-_.~@:{}=]+(/[a-zA-Z0-9\\-_.~@:{}=]+)*`
+               *
+               * @example 111-222-333
+               */
+              containerId: string;
+              /**
+               * @description The human-readable name for the Vulnerability. Will be shown in the UI.
+               *
+               * If not provided, will use the ID for display.
+               *
+               * @example curl/libcurl3 - Buffer Override
                */
               displayName: string;
               /**
-               * Format: uri
-               * @description A URL users can use to link to the definition of the Vulnerability identified.
+               * @description A description of the issue in markdown format that will be shown in the UI and used when creating Jira Issues. HTML tags are not supported in the markdown format. For creating a new line `\n` can be used. Read more about the accepted markdown transformations [here](https://atlaskit.atlassian.com/packages/editor/editor-markdown-transformer).
                *
-               * @example https://cwe.mitre.org/data/definitions/123.html
+               * @example ## Overview
+               *
+               *
+               * Affected versions of this package are vulnerable to MeltLeak
+               */
+              description: string;
+              /**
+               * Format: uri
+               * @description A URL users can use to link to a summary view of this vulnerability, if appropriate.
+               *
+               * This could be any location that makes sense in the Provider system (e.g. if the summary information comes from a specific project, it might make sense to link the user to the vulnerability in that project).
+               *
+               * @example https://example.com/project/CWE-123/summary
                */
               url: string;
-            }[];
-            /**
-             * VulnerabilityStatus
-             * @description The current status of the Vulnerability.
-             *
-             * @example open
-             * @enum {string}
-             */
-            status: "open" | "closed" | "ignored" | "unknown";
-            /**
-             * VulnerabilityAdditionalInfo
-             * @description Extra information (optional). This data will be shown in the security feature under the vulnerability displayName.
-             */
-            additionalInfo?: {
               /**
-               * @description The content of the additionalInfo.
-               *
-               * @example More information on the vulnerability, as a string
-               */
-              content: string;
-              /**
-               * Format: uri
-               * @description Optional URL linking to the information
-               *
-               * @example https://example.com/project/CWE-123/additionalInfo
-               */
-              url?: string;
-            };
-            /** @description The associations (e.g. Jira issue) to add in addition to the currently stored associations of the Security Vulnerability. */
-            addAssociations?: {
-              /**
-               * @description Defines the association type.
-               *
-               * @example issueIdOrKeys
+               * @description The type of Vulnerability detected.
+               * @example sca
                * @enum {string}
                */
-              associationType: "issueIdOrKeys";
+              type: "sca" | "sast" | "dast" | "unknown";
               /**
-               * @description The Jira issue id or keys to associate the Security information with.
+               * Format: date-time
+               * @description The timestamp to present to the user that shows when the Vulnerability was introduced.
                *
-               * The number of values counted across all associationTypes (issueIdOrKeys) must not exceed a limit of 500.
+               * Expected format is an RFC3339 formatted string.
+               *
+               * @example 2018-01-20T23:27:25.000Z
                */
-              values: string[];
-            }[];
-            /** @description The associations (e.g. Jira issue) to remove from currently stored associations of the Security Vulnerability. */
-            removeAssociations?: {
+              introducedDate: string;
               /**
-               * @description Defines the association type.
+               * Format: date-time
+               * @description The last-updated timestamp to present to the user the last time the Vulnerability was updated.
                *
-               * @example issueIdOrKeys
+               * Expected format is an RFC3339 formatted string.
+               *
+               * @example 2018-01-20T23:27:25.000Z
+               */
+              lastUpdated: string;
+              /**
+               * VulnerabilitySeverity
+               * @description Severity information for a single Vulnerability.
+               *
+               * This is the severity information that will be presented to the user on e.g. the Jira Security screen.
+               */
+              severity: {
+                /**
+                 * @description The severity level of the Vulnerability.
+                 * @example critical
+                 * @enum {string}
+                 */
+                level: "critical" | "high" | "medium" | "low" | "unknown";
+              };
+              /** @description The identifying information for the Vulnerability. */
+              identifiers?: {
+                  /**
+                   * @description The display name of the Vulnerability identified.
+                   *
+                   * @example CWE-123
+                   */
+                  displayName: string;
+                  /**
+                   * Format: uri
+                   * @description A URL users can use to link to the definition of the Vulnerability identified.
+                   *
+                   * @example https://cwe.mitre.org/data/definitions/123.html
+                   */
+                  url: string;
+                }[];
+              /**
+               * VulnerabilityStatus
+               * @description The current status of the Vulnerability.
+               *
+               * @example open
                * @enum {string}
                */
-              associationType: "issueIdOrKeys";
+              status: "open" | "closed" | "ignored" | "unknown";
               /**
-               * @description The Jira issue id or keys to associate the Security information with.
-               *
-               * The number of values counted across all associationTypes (issueIdOrKeys) must not exceed a limit of 500.
+               * VulnerabilityAdditionalInfo
+               * @description Extra information (optional). This data will be shown in the security feature under the vulnerability displayName.
                */
-              values: string[];
-            }[];
-            /**
-             * Format: date-time
-             * @description An ISO-8601 Date-time string representing the last time the provider updated associations on this entity.
-             *
-             * Expected format is an RFC3339 formatted string.
-             *
-             * @example 2023-11-02T23:27:25.000Z
-             */
-            associationsLastUpdated?: string;
-            /**
-             * Format: int64
-             * @description A sequence number to compare when writing entity associations to the database.
-             *
-             * This can be any monotonically increasing number. A highly recommended implementation is to use epoch millis.
-             *
-             * If it is not provided it will default to being equal to the corresponding entity's `updateSequenceNumber`.
-             *
-             * Associations are written following a LastWriteWins strategy, association that are received with an associationsUpdateSequenceNumber lower than what is currently stored will be ignored.
-             *
-             * @example 1523494301448
-             */
-            associationsUpdateSequenceNumber?: number;
-          }[];
+              additionalInfo?: {
+                /**
+                 * @description The content of the additionalInfo.
+                 *
+                 * @example More information on the vulnerability, as a string
+                 */
+                content: string;
+                /**
+                 * Format: uri
+                 * @description Optional URL linking to the information
+                 *
+                 * @example https://example.com/project/CWE-123/additionalInfo
+                 */
+                url?: string;
+              };
+              /** @description The associations (e.g. Jira issue) to add in addition to the currently stored associations of the Security Vulnerability. */
+              addAssociations?: {
+                  /**
+                   * @description Defines the association type.
+                   *
+                   * @example issueIdOrKeys
+                   * @enum {string}
+                   */
+                  associationType: "issueIdOrKeys";
+                  /**
+                   * @description The Jira issue id or keys to associate the Security information with.
+                   *
+                   * The number of values counted across all associationTypes (issueIdOrKeys) must not exceed a limit of 500.
+                   */
+                  values: string[];
+                }[];
+              /** @description The associations (e.g. Jira issue) to remove from currently stored associations of the Security Vulnerability. */
+              removeAssociations?: {
+                  /**
+                   * @description Defines the association type.
+                   *
+                   * @example issueIdOrKeys
+                   * @enum {string}
+                   */
+                  associationType: "issueIdOrKeys";
+                  /**
+                   * @description The Jira issue id or keys to associate the Security information with.
+                   *
+                   * The number of values counted across all associationTypes (issueIdOrKeys) must not exceed a limit of 500.
+                   */
+                  values: string[];
+                }[];
+              /**
+               * Format: date-time
+               * @description An ISO-8601 Date-time string representing the last time the provider updated associations on this entity.
+               *
+               * Expected format is an RFC3339 formatted string.
+               *
+               * @example 2018-01-20T23:27:25.000Z
+               */
+              associationsLastUpdated?: string;
+              /**
+               * Format: int64
+               * @description A sequence number to compare when writing entity associations to the database.
+               *
+               * This can be any monotonically increasing number. A highly recommended implementation is to use epoch millis.
+               *
+               * This is an optional field. If it is not provided it will default to being equal to the corresponding entity's `updateSequenceNumber`.
+               *
+               * Associations are written following a LastWriteWins strategy, association that are received with an associationsUpdateSequenceNumber lower than what is currently stored will be ignored.
+               *
+               * @example 1523494301448
+               */
+              associationsUpdateSequenceNumber?: number;
+            })[];
           /**
            * ProviderMetadata
            * @description Information about the provider. This is useful for auditing, logging, debugging,
@@ -11180,11 +11646,11 @@ export interface operations {
              */
             failedVulnerabilities?: {
               [key: string]: {
-                /** @description A human-readable message describing the error. */
-                message: string;
-                /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-                errorTraceId?: string;
-              }[];
+                  /** @description A human-readable message describing the error. */
+                  message: string;
+                  /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+                  errorTraceId?: string;
+                }[];
             };
             /**
              * @description Associations (e.g. Service IDs) that are not known on this Jira instance (if any).
@@ -11193,20 +11659,20 @@ export interface operations {
              * If a Vulnerability was only associated with the associations in this array, it is deemed to be invalid and it won't be persisted.
              */
             unknownAssociations?: {
-              /**
-               * @description Defines the association type.
-               *
-               * @example serviceIdOrKeys
-               * @enum {string}
-               */
-              associationType: "serviceIdOrKeys";
-              /**
-               * @description The service id or keys to associate the Security information with.
-               *
-               * The number of values counted across all associationTypes (serviceIdOrKeys) must not exceed a limit of 500.
-               */
-              values: string[];
-            }[];
+                /**
+                 * @description Defines the association type.
+                 *
+                 * @example issueIdOrKeys
+                 * @enum {string}
+                 */
+                associationType: "issueIdOrKeys";
+                /**
+                 * @description The Jira issue id or keys to associate the Security information with.
+                 *
+                 * The number of values counted across all associationTypes (issueIdOrKeys) must not exceed a limit of 500.
+                 */
+                values: string[];
+              }[];
           };
         };
       };
@@ -11218,11 +11684,11 @@ export interface operations {
       400: {
         content: {
           "application/json": {
-            /** @description A human-readable message describing the error. */
-            message: string;
-            /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-            errorTraceId?: string;
-          }[];
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
         };
       };
       /** @description Missing a JWT token, or token is invalid. */
@@ -11240,11 +11706,11 @@ export interface operations {
       413: {
         content: {
           "application/json": {
-            /** @description A human-readable message describing the error. */
-            message: string;
-            /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-            errorTraceId?: string;
-          }[];
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
         };
       };
       /** @description API rate limit has been exceeded. */
@@ -11269,11 +11735,11 @@ export interface operations {
       default: {
         content: {
           "application/json": {
-            /** @description A human-readable message describing the error. */
-            message: string;
-            /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-            errorTraceId?: string;
-          }[];
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
         };
       };
     };
@@ -11315,11 +11781,11 @@ export interface operations {
       400: {
         content: {
           "application/json": {
-            /** @description A human-readable message describing the error. */
-            message: string;
-            /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-            errorTraceId?: string;
-          }[];
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
         };
       };
       /** @description Missing a JWT token, or token is invalid. */
@@ -11345,11 +11811,11 @@ export interface operations {
       default: {
         content: {
           "application/json": {
-            /** @description A human-readable message describing the error. */
-            message: string;
-            /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-            errorTraceId?: string;
-          }[];
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
         };
       };
     };
@@ -11484,20 +11950,20 @@ export interface operations {
             };
             /** @description The identifying information for the Vulnerability. */
             identifiers?: {
-              /**
-               * @description The display name of the Vulnerability identified.
-               *
-               * @example CWE-123
-               */
-              displayName: string;
-              /**
-               * Format: uri
-               * @description A URL users can use to link to the definition of the Vulnerability identified.
-               *
-               * @example https://cwe.mitre.org/data/definitions/123.html
-               */
-              url: string;
-            }[];
+                /**
+                 * @description The display name of the Vulnerability identified.
+                 *
+                 * @example CWE-123
+                 */
+                displayName: string;
+                /**
+                 * Format: uri
+                 * @description A URL users can use to link to the definition of the Vulnerability identified.
+                 *
+                 * @example https://cwe.mitre.org/data/definitions/123.html
+                 */
+                url: string;
+              }[];
             /**
              * VulnerabilityStatus
              * @description The current status of the Vulnerability.
@@ -11525,22 +11991,60 @@ export interface operations {
                */
               url?: string;
             };
-            /** @description The entities to associate the Security Vulnerability information with. */
-            associations?: {
-              /**
-               * @description Defines the association type.
-               *
-               * @example serviceIdOrKeys
-               * @enum {string}
-               */
-              associationType: "serviceIdOrKeys";
-              /**
-               * @description The service id or keys to associate the Security information with.
-               *
-               * The number of values counted across all associationTypes (serviceIdOrKeys) must not exceed a limit of 500.
-               */
-              values: string[];
-            }[];
+            /** @description The associations (e.g. Jira issue) to add in addition to the currently stored associations of the Security Vulnerability. */
+            addAssociations?: {
+                /**
+                 * @description Defines the association type.
+                 *
+                 * @example issueIdOrKeys
+                 * @enum {string}
+                 */
+                associationType: "issueIdOrKeys";
+                /**
+                 * @description The Jira issue id or keys to associate the Security information with.
+                 *
+                 * The number of values counted across all associationTypes (issueIdOrKeys) must not exceed a limit of 500.
+                 */
+                values: string[];
+              }[];
+            /** @description The associations (e.g. Jira issue) to remove from currently stored associations of the Security Vulnerability. */
+            removeAssociations?: {
+                /**
+                 * @description Defines the association type.
+                 *
+                 * @example issueIdOrKeys
+                 * @enum {string}
+                 */
+                associationType: "issueIdOrKeys";
+                /**
+                 * @description The Jira issue id or keys to associate the Security information with.
+                 *
+                 * The number of values counted across all associationTypes (issueIdOrKeys) must not exceed a limit of 500.
+                 */
+                values: string[];
+              }[];
+            /**
+             * Format: date-time
+             * @description An ISO-8601 Date-time string representing the last time the provider updated associations on this entity.
+             *
+             * Expected format is an RFC3339 formatted string.
+             *
+             * @example 2018-01-20T23:27:25.000Z
+             */
+            associationsLastUpdated?: string;
+            /**
+             * Format: int64
+             * @description A sequence number to compare when writing entity associations to the database.
+             *
+             * This can be any monotonically increasing number. A highly recommended implementation is to use epoch millis.
+             *
+             * This is an optional field. If it is not provided it will default to being equal to the corresponding entity's `updateSequenceNumber`.
+             *
+             * Associations are written following a LastWriteWins strategy, association that are received with an associationsUpdateSequenceNumber lower than what is currently stored will be ignored.
+             *
+             * @example 1523494301448
+             */
+            associationsUpdateSequenceNumber?: number;
           };
         };
       };
@@ -11571,11 +12075,11 @@ export interface operations {
       default: {
         content: {
           "application/json": {
-            /** @description A human-readable message describing the error. */
-            message: string;
-            /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-            errorTraceId?: string;
-          }[];
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
         };
       };
     };
@@ -11634,11 +12138,1739 @@ export interface operations {
       default: {
         content: {
           "application/json": {
-            /** @description A human-readable message describing the error. */
-            message: string;
-            /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
-            errorTraceId?: string;
-          }[];
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
+        };
+      };
+    };
+  };
+  /**
+   * Submit Operations Workspace Ids
+   * @description Insert Operations Workspace IDs to establish a relationship between them and the Jira site the app is installed in. If a relationship between the Workspace ID and Jira already exists then the workspace ID will be ignored and Jira will process the rest of the entries.
+   *
+   * Only Connect apps that define the `jiraOperationsInfoProvider` module can access this resource.
+   * This resource requires the 'WRITE' scope for Connect apps.
+   */
+  submitOperationsWorkspaces: {
+    parameters: {
+      header: {
+        /**
+         * @description All requests must be signed with a Connect JWT token that corresponds to the Provider app installed in Jira.
+         *
+         * If the JWT token corresponds to an app that does not define the Operations module it will be rejected with a 403.
+         *
+         * See https://developer.atlassian.com/blog/2015/01/understanding-jwt/ for more details.
+         */
+        Authorization: string;
+      };
+    };
+    /** @description Operations Workspace ids to submit. */
+    requestBody: {
+      content: {
+        "application/json": {
+          /**
+           * Operations Workspace Ids
+           * @description The IDs of Operations Workspaces that are available to this Jira site.
+           *
+           * @example [
+           *   "111-222-333",
+           *   "444-555-666"
+           * ]
+           */
+          workspaceIds: string[];
+        };
+      };
+    };
+    responses: {
+      /** @description Submission accepted. Each submitted Operations Workspace ID will be linked to Jira. */
+      202: {
+        content: {
+          "application/json": {
+            /**
+             * @description The IDs of Operations Workspaces that have been linked to the Jira site in this request.
+             *
+             * @example [
+             *   "111-222-333",
+             *   "444-555-666"
+             * ]
+             */
+            acceptedWorkspaceIds?: string[];
+          };
+        };
+      };
+      /** @description Request has incorrect format. */
+      400: {
+        content: {
+          "application/json": {
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
+        };
+      };
+      /** @description Missing a JWT token, or token is invalid. */
+      401: {
+        content: never;
+      };
+      /**
+       * @description The JWT token used does not correspond to an app that defines the Operations module,
+       * or the app does not define the 'WRITE' scope.
+       */
+      403: {
+        content: never;
+      };
+      /** @description Set of Ids is too large. Submit fewer Ids in each payload. */
+      413: {
+        content: {
+          "application/json": {
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
+        };
+      };
+      /** @description API rate limit has been exceeded. */
+      429: {
+        content: never;
+      };
+      /** @description Service is unavailable due to maintenance or other reasons. */
+      503: {
+        content: never;
+      };
+      /** @description An unknown error has occurred. */
+      default: {
+        content: {
+          "application/json": {
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
+        };
+      };
+    };
+  };
+  /**
+   * Delete Operations Workpaces by Id
+   * @description Bulk delete all Operations Workspaces that match the given request.
+   *
+   * Only Connect apps that define the `jiraOperationsInfoProvider` module can access this resource.
+   * This resource requires the 'DELETE' scope for Connect apps.
+   *
+   * e.g. DELETE /bulk?workspaceIds=111-222-333,444-555-666
+   */
+  deleteWorkspaces: {
+    parameters: {
+      header: {
+        /**
+         * @description All requests must be signed with a Connect JWT token that corresponds to the Provider app installed in Jira.
+         *
+         * If the JWT token corresponds to an app that does not define the Operations module it will be rejected with a 403.
+         *
+         * See https://developer.atlassian.com/blog/2015/01/understanding-jwt/ for more details.
+         */
+        Authorization: string;
+      };
+    };
+    responses: {
+      /** @description Delete accepted. Workspaces and relate data will eventually be removed from Jira. */
+      202: {
+        content: never;
+      };
+      /** @description Request has incorrect format. */
+      400: {
+        content: {
+          "application/json": {
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
+        };
+      };
+      /** @description Missing a JWT token, or token is invalid. */
+      401: {
+        content: never;
+      };
+      /**
+       * @description The JWT token used does not correspond to an app that defines the Operations Information module,
+       * or the app does not define the 'DELETE' scope.
+       */
+      403: {
+        content: never;
+      };
+      /** @description API rate limit has been exceeded. */
+      429: {
+        content: never;
+      };
+      /** @description Service is unavailable due to maintenance or other reasons. */
+      503: {
+        content: never;
+      };
+      /** @description An unknown error has occurred. */
+      default: {
+        content: {
+          "application/json": {
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
+        };
+      };
+    };
+  };
+  /**
+   * Get all Operations Workspace IDs or a specific Operations Workspace by ID
+   * @description Retrieve the either all Operations Workspace IDs associated with the Jira site or a specific Operations Workspace ID for the given ID.
+   *
+   * The result will be what is currently stored, ignoring any pending updates or deletes.
+   *
+   * e.g. GET /workspace?workspaceId=111-222-333
+   *
+   * Only Connect apps that define the `jiraOperationsInfoProvider` module can access this resource.
+   * This resource requires the 'READ' scope for Connect apps.
+   */
+  getWorkspaces: {
+    parameters: {
+      header: {
+        /**
+         * @description All requests must be signed with a Connect JWT token that corresponds to the Provider app installed in Jira.
+         *
+         * If the JWT token corresponds to an app that does not define the Operations Information module it will be rejected with a 403.
+         *
+         * See https://developer.atlassian.com/blog/2015/01/understanding-jwt/ for more details.
+         */
+        Authorization: string;
+      };
+    };
+    responses: {
+      /** @description Either the ID provided if stored or a list of available IDs. */
+      200: {
+        content: {
+          "application/json": {
+            /**
+             * Operations Workspace Ids
+             * @description The IDs of Operations Workspaces that are available to this Jira site.
+             *
+             * @example [
+             *   "111-222-333",
+             *   "444-555-666"
+             * ]
+             */
+            workspaceIds: string[];
+          };
+        };
+      };
+      /** @description Missing a JWT token, or token is invalid. */
+      401: {
+        content: never;
+      };
+      /**
+       * @description The JWT token used does not correspond to an app that defines the Operations Information module,
+       * or the app does not define the 'READ' scope.
+       */
+      403: {
+        content: never;
+      };
+      /** @description No data found for the given Workspace ID. */
+      404: {
+        content: never;
+      };
+      /** @description API rate limit has been exceeded. */
+      429: {
+        content: never;
+      };
+      /** @description Service is unavailable due to maintenance or other reasons. */
+      503: {
+        content: never;
+      };
+      /** @description An unknown error has occurred. */
+      default: {
+        content: {
+          "application/json": {
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
+        };
+      };
+    };
+  };
+  /**
+   * Submit Incident or Review data
+   * @description Update / insert Incident or Review data.
+   *
+   * Incidents and reviews are identified by their ID, and existing Incident and Review data for the same ID will be replaced if it exists and the updateSequenceNumber of existing data is less than the incoming data.
+   *
+   * Submissions are performed asynchronously. Submitted data will eventually be available in Jira; most updates are available within a short period of time, but may take some time during peak load and/or maintenance times. The getIncidentById or getReviewById operation can be used to confirm that data has been stored successfully (if needed).
+   *
+   * In the case of multiple Incidents and Reviews being submitted in one request, each is validated individually prior to submission. Details of which entities failed submission (if any) are available in the response object.
+   *
+   * A maximum of 1000 incidents can be submitted in one request.
+   *
+   * Only Connect apps that define the `jiraOperationsInfoProvider` module can access this resource.
+   * This resource requires the 'WRITE' scope for Connect apps.
+   */
+  submitEntity: {
+    parameters: {
+      header: {
+        /**
+         * @description All requests must be signed with a Connect JWT token that corresponds to the Provider app installed in Jira.
+         *
+         * If the JWT token corresponds to an app that does not define the Operations Information module it will be rejected with a 403.
+         *
+         * See https://developer.atlassian.com/blog/2015/01/understanding-jwt/ for more details.
+         */
+        Authorization: string;
+      };
+    };
+    /** @description Incident data to submit. */
+    requestBody: {
+      content: {
+        "application/json": {
+          /**
+           * Properties
+           * @description Properties assigned to incidents/components/review data that can then be used for delete / query operations.
+           *
+           * Examples might be an account or user ID that can then be used to clean up data if an account is removed from the Provider system.
+           *
+           * Properties are supplied as key/value pairs, and a maximum of 5 properties can be supplied, keys cannot contain ':' or start with '_'.
+           *
+           * @example {
+           *   "accountId": "account-234",
+           *   "projectId": "project-123"
+           * }
+           */
+          properties?: {
+            [key: string]: string;
+          };
+          /**
+           * ProviderMetadata
+           * @description Information about the provider. This is useful for auditing, logging, debugging,
+           * and other internal uses. It is not considered private information. Hence, it may not contain personally
+           * identifiable information.
+           */
+          providerMetadata?: {
+            /**
+             * @description An optional name of the source of the incidents.
+             * @example Atlassian Operations Platform 2.1.0
+             */
+            product?: string;
+          };
+        } & (({
+          incidents?: ({
+              /**
+               * @description The IncidentData schema version used for this incident data.
+               *
+               * Placeholder to support potential schema changes in the future.
+               *
+               * @default 1.0
+               * @example 1.0
+               * @enum {string}
+               */
+              schemaVersion: "1.0";
+              /**
+               * @description The identifier for the Incident. Must be unique for a given Provider.
+               *
+               * @example 111-222-333
+               */
+              id: string;
+              /**
+               * Format: int64
+               * @description An ID used to apply an ordering to updates for this Incident in the case of out-of-order receipt of update requests.
+               *
+               * This can be any monotonically increasing number. A suggested implementation is to use epoch millis from the Provider system, but other alternatives are valid (e.g. a Provider could store a counter against each Incident and increment that on each update to Jira).
+               *
+               * Updates for a Incident that are received with an updateSqeuenceId lower than what is currently stored will be ignored.
+               *
+               * @example 1523494301448
+               */
+              updateSequenceNumber: number;
+              /**
+               * @description The IDs of the Components impacted by this Incident. Must be unique for a given Provider.
+               *
+               * @example [
+               *   "111-222-333",
+               *   "444-555-666"
+               * ]
+               */
+              affectedComponents: string[];
+              /**
+               * @description The human-readable summary for the Incident. Will be shown in the UI.
+               *
+               * If not provided, will use the ID for display.
+               *
+               * @example Unable to log into VPN
+               */
+              summary: string;
+              /**
+               * @description A description of the issue in Markdown format. Will be shown in the UI and used when creating Jira Issues.
+               *
+               * @example null
+               */
+              description: string;
+              /**
+               * Format: uri
+               * @description A URL users can use to link to a summary view of this incident, if appropriate.
+               *
+               * This could be any location that makes sense in the Provider system (e.g. if the summary information comes from a specific project, it might make sense to link the user to the incident in that project).
+               *
+               * @example https://example.com/project/ITHELPDESK-9/summary
+               */
+              url: string;
+              /**
+               * Format: date-time
+               * @description The timestamp to present to the user that shows when the Incident was raised.
+               *
+               * Expected format is an RFC3339 formatted string.
+               *
+               * @example 2018-01-20T23:27:25.000Z
+               */
+              createdDate: string;
+              /**
+               * Format: date-time
+               * @description The last-updated timestamp to present to the user the last time the Incident was updated.
+               *
+               * Expected format is an RFC3339 formatted string.
+               *
+               * @example 2018-01-20T23:27:25.000Z
+               */
+              lastUpdated: string;
+              /**
+               * IncidentSeverity
+               * @description Severity information for a single Incident.
+               *
+               * This is the severity information that will be presented to the user on e.g. the Jira Incidents screen.
+               */
+              severity?: {
+                /**
+                 * @description The severity level of the Incident with P1 being the highest and P5 being the lowest
+                 * @example P1
+                 * @enum {string}
+                 */
+                level: "P1" | "P2" | "P3" | "P4" | "P5" | "unknown";
+              };
+              /**
+               * IncidentStatus
+               * @description The current status of the Incident.
+               *
+               * @example open
+               * @enum {string}
+               */
+              status: "open" | "resolved" | "unknown";
+              /** @description The IDs of the Jira issues related to this Incident. Must be unique for a given Provider. */
+              associations?: ({
+                  /**
+                   * @description the type of the association being made
+                   * @example issueIdOrKeys
+                   * @enum {string}
+                   */
+                  associationType?: "issueIdOrKeys" | "serviceIdOrKeys" | "ati:cloud:compass:event-source";
+                  values?: string[];
+                })[];
+            })[];
+        }) | ({
+          reviews?: ({
+              /**
+               * @description The PostIncidentReviewData schema version used for this post-incident review data.
+               *
+               * Placeholder to support potential schema changes in the future.
+               *
+               * @default 1.0
+               * @example 1.0
+               * @enum {string}
+               */
+              schemaVersion: "1.0";
+              /**
+               * @description The identifier for the Review. Must be unique for a given Provider.
+               *
+               * @example 111-222-333
+               */
+              id: string;
+              /**
+               * Format: int64
+               * @description An ID used to apply an ordering to updates for this Review in the case of out-of-order receipt of update requests.
+               *
+               * This can be any monotonically increasing number. A suggested implementation is to use epoch millis from the Provider system, but other alternatives are valid (e.g. a Provider could store a counter against each Review and increment that on each update to Jira).
+               *
+               * Updates for a Review that are received with an updateSqeuenceId lower than what is currently stored will be ignored.
+               *
+               * @example 1523494301448
+               */
+              updateSequenceNumber: number;
+              /**
+               * @description The IDs of the Incidents covered by this Review. Must be unique for a given Provider.
+               *
+               * @example [
+               *   "111-222-333",
+               *   "444-555-666"
+               * ]
+               */
+              reviews: string[];
+              /**
+               * @description The human-readable summary for the Post-Incident Review. Will be shown in the UI.
+               *
+               * If not provided, will use the ID for display.
+               *
+               * @example PIR - Unable to log into VPN
+               */
+              summary: string;
+              /**
+               * @description A description of the review in Markdown format. Will be shown in the UI and used when creating Jira Issues.
+               *
+               * @example null
+               */
+              description: string;
+              /**
+               * Format: uri
+               * @description A URL users can use to link to a summary view of this review, if appropriate.
+               *
+               * This could be any location that makes sense in the Provider system (e.g. if the summary information comes from a specific project, it might make sense to link the user to the review in that project).
+               *
+               * @example https://example.com/project/ITHELPDESK-9/summary
+               */
+              url: string;
+              /**
+               * Format: date-time
+               * @description The timestamp to present to the user that shows when the Review was raised.
+               *
+               * Expected format is an RFC3339 formatted string.
+               *
+               * @example 2018-01-20T23:27:25.000Z
+               */
+              createdDate: string;
+              /**
+               * Format: date-time
+               * @description The last-updated timestamp to present to the user the last time the Review was updated.
+               *
+               * Expected format is an RFC3339 formatted string.
+               *
+               * @example 2018-01-20T23:27:25.000Z
+               */
+              lastUpdated: string;
+              /**
+               * Review status
+               * @description The current status of the Post-Incident Review.
+               *
+               * @example open
+               * @enum {string}
+               */
+              status: "in progress" | "outstanding actions" | "completed" | "unknown";
+              /** @description The IDs of the Jira issues related to this Incident. Must be unique for a given Provider. */
+              associations?: ({
+                  /**
+                   * @description the type of the association being made
+                   * @example issueIdOrKeys
+                   * @enum {string}
+                   */
+                  associationType?: "issueIdOrKeys" | "serviceIdOrKeys" | "ati:cloud:compass:event-source";
+                  values?: string[];
+                })[];
+            })[];
+        }));
+      };
+    };
+    responses: {
+      /**
+       * @description Submission accepted. Each submitted Incident that is of a valid format will be eventually available in Jira.
+       *
+       * Details of which Incidents were submitted and which failed submission (due to data format problems etc.) are available in the response object.
+       */
+      202: {
+        content: {
+          "application/json": {
+            /**
+             * @description The IDs of Incidents that have been accepted for submission.
+             *
+             * A Incident may be rejected if it was only associated with unknown project keys.
+             *
+             * Note that a Incident that isn't updated due to it's updateSequenceNumber being out of order is not considered a failed submission.
+             *
+             * @example [
+             *   "111-222-333",
+             *   "444-555-666"
+             * ]
+             */
+            acceptedIncidents?: string[];
+            /**
+             * @description Details of Incidents that have not been accepted for submission, usually due to a problem with the request data.
+             *
+             * The object (if present) will be keyed by Incident ID and include any errors associated with that Incident that have prevented it being submitted.
+             */
+            failedIncidents?: {
+              [key: string]: {
+                  /** @description A human-readable message describing the error. */
+                  message: string;
+                  /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+                  errorTraceId?: string;
+                }[];
+            };
+            /**
+             * @description Project keys that are not known on this Jira instance (if any).
+             *
+             * These may be invalid keys (e.g. `UTF` is sometimes incorrectly identified as a Jira project key), or they may be for projects that no longer exist.
+             *
+             * If a Incident has been associated with project keys other than those in this array it will still be stored against those valid keys.
+             * If a Incident was only associated with project keys deemed to be invalid it won't be persisted.
+             */
+            unknownProjectKeys?: string[];
+          };
+        };
+      };
+      /**
+       * @description Request has incorrect format.
+       *
+       * Note that in the case of an individual Incident having an invalid format (rather than the request as a whole) the response for the request will be a 202 and details of the invalid Incident will be contained in the response object.
+       */
+      400: {
+        content: {
+          "application/json": {
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
+        };
+      };
+      /** @description Missing a JWT token, or token is invalid. */
+      401: {
+        content: never;
+      };
+      /**
+       * @description The JWT token used does not correspond to an app that defines the Operations Information module,
+       * or the app does not define the 'WRITE' scope.
+       */
+      403: {
+        content: never;
+      };
+      /** @description Data is too large. Submit fewer Incidents in each payload. */
+      413: {
+        content: {
+          "application/json": {
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
+        };
+      };
+      /** @description API rate limit has been exceeded. */
+      429: {
+        content: never;
+      };
+      /** @description Service is unavailable due to maintenance or other reasons. */
+      503: {
+        content: never;
+      };
+      /** @description An unknown error has occurred. */
+      default: {
+        content: {
+          "application/json": {
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
+        };
+      };
+    };
+  };
+  /**
+   * Delete Incidents or Review by Property
+   * @description Bulk delete all Entties that match the given request.
+   *
+   * One or more query params must be supplied to specify Properties to delete by.
+   * If more than one Property is provided, data will be deleted that matches ALL of the Properties (e.g. treated as an AND).
+   * See the documentation for the submitEntity operation for more details.
+   *
+   * e.g. DELETE /bulkByProperties?accountId=account-123&createdBy=user-456
+   *
+   * Deletion is performed asynchronously. The getIncidentById operation can be used to confirm that data has been deleted successfully (if needed).
+   *
+   * Only Connect apps that define the `jiraOperationsInfoProvider` module can access this resource.
+   * This resource requires the 'DELETE' scope for Connect apps.
+   */
+  deleteEntityByProperty: {
+    parameters: {
+      header: {
+        /**
+         * @description All requests must be signed with a Connect JWT token that corresponds to the Provider app installed in Jira.
+         *
+         * If the JWT token corresponds to an app that does not define Operations Information module it will be rejected with a 403.
+         *
+         * See https://developer.atlassian.com/blog/2015/01/understanding-jwt/ for more details.
+         */
+        Authorization: string;
+      };
+    };
+    responses: {
+      /** @description Delete accepted. Data will eventually be removed from Jira. */
+      202: {
+        content: never;
+      };
+      /** @description Request has incorrect format (e.g. missing at least one Property param). */
+      400: {
+        content: {
+          "application/json": {
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
+        };
+      };
+      /** @description Missing a JWT token, or token is invalid. */
+      401: {
+        content: never;
+      };
+      /**
+       * @description The JWT token used does not correspond to an app that defines the Operations Information module,
+       * or the app does not define the 'DELETE' scope.
+       */
+      403: {
+        content: never;
+      };
+      /** @description API rate limit has been exceeded. */
+      429: {
+        content: never;
+      };
+      /** @description Service is unavailable due to maintenance or other reasons. */
+      503: {
+        content: never;
+      };
+      /** @description An unknown error has occurred. */
+      default: {
+        content: {
+          "application/json": {
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
+        };
+      };
+    };
+  };
+  /**
+   * Get a Incident by ID
+   * @description Retrieve the currently stored Incident data for the given ID.
+   *
+   * The result will be what is currently stored, ignoring any pending updates or deletes.
+   *
+   * Only Connect apps that define the `jiraOperationsInfoProvider` module can access this resource.
+   * This resource requires the 'READ' scope for Connect apps.
+   */
+  getIncidentById: {
+    parameters: {
+      header: {
+        /**
+         * @description All requests must be signed with a Connect JWT token that corresponds to the Provider app installed in Jira.
+         *
+         * If the JWT token corresponds to an app that does not define Operations Information module it will be rejected with a 403.
+         *
+         * See https://developer.atlassian.com/blog/2015/01/understanding-jwt/ for more details.
+         */
+        Authorization: string;
+      };
+      path: {
+        /** @description The ID of the Incident to fetch. */
+        incidentId: string;
+      };
+    };
+    responses: {
+      /** @description The Incident data currently stored for the given ID. */
+      200: {
+        content: {
+          "application/json": {
+            /**
+             * @description The IncidentData schema version used for this incident data.
+             *
+             * Placeholder to support potential schema changes in the future.
+             *
+             * @default 1.0
+             * @example 1.0
+             * @enum {string}
+             */
+            schemaVersion: "1.0";
+            /**
+             * @description The identifier for the Incident. Must be unique for a given Provider.
+             *
+             * @example 111-222-333
+             */
+            id: string;
+            /**
+             * Format: int64
+             * @description An ID used to apply an ordering to updates for this Incident in the case of out-of-order receipt of update requests.
+             *
+             * This can be any monotonically increasing number. A suggested implementation is to use epoch millis from the Provider system, but other alternatives are valid (e.g. a Provider could store a counter against each Incident and increment that on each update to Jira).
+             *
+             * Updates for a Incident that are received with an updateSqeuenceId lower than what is currently stored will be ignored.
+             *
+             * @example 1523494301448
+             */
+            updateSequenceNumber: number;
+            /**
+             * @description The IDs of the Components impacted by this Incident. Must be unique for a given Provider.
+             *
+             * @example [
+             *   "111-222-333",
+             *   "444-555-666"
+             * ]
+             */
+            affectedComponents: string[];
+            /**
+             * @description The human-readable summary for the Incident. Will be shown in the UI.
+             *
+             * If not provided, will use the ID for display.
+             *
+             * @example Unable to log into VPN
+             */
+            summary: string;
+            /**
+             * @description A description of the issue in Markdown format. Will be shown in the UI and used when creating Jira Issues.
+             *
+             * @example null
+             */
+            description: string;
+            /**
+             * Format: uri
+             * @description A URL users can use to link to a summary view of this incident, if appropriate.
+             *
+             * This could be any location that makes sense in the Provider system (e.g. if the summary information comes from a specific project, it might make sense to link the user to the incident in that project).
+             *
+             * @example https://example.com/project/ITHELPDESK-9/summary
+             */
+            url: string;
+            /**
+             * Format: date-time
+             * @description The timestamp to present to the user that shows when the Incident was raised.
+             *
+             * Expected format is an RFC3339 formatted string.
+             *
+             * @example 2018-01-20T23:27:25.000Z
+             */
+            createdDate: string;
+            /**
+             * Format: date-time
+             * @description The last-updated timestamp to present to the user the last time the Incident was updated.
+             *
+             * Expected format is an RFC3339 formatted string.
+             *
+             * @example 2018-01-20T23:27:25.000Z
+             */
+            lastUpdated: string;
+            /**
+             * IncidentSeverity
+             * @description Severity information for a single Incident.
+             *
+             * This is the severity information that will be presented to the user on e.g. the Jira Incidents screen.
+             */
+            severity?: {
+              /**
+               * @description The severity level of the Incident with P1 being the highest and P5 being the lowest
+               * @example P1
+               * @enum {string}
+               */
+              level: "P1" | "P2" | "P3" | "P4" | "P5" | "unknown";
+            };
+            /**
+             * IncidentStatus
+             * @description The current status of the Incident.
+             *
+             * @example open
+             * @enum {string}
+             */
+            status: "open" | "resolved" | "unknown";
+            /** @description The IDs of the Jira issues related to this Incident. Must be unique for a given Provider. */
+            associations?: ({
+                /**
+                 * @description the type of the association being made
+                 * @example issueIdOrKeys
+                 * @enum {string}
+                 */
+                associationType?: "issueIdOrKeys" | "serviceIdOrKeys" | "ati:cloud:compass:event-source";
+                values?: string[];
+              })[];
+          };
+        };
+      };
+      /** @description Missing a JWT token, or token is invalid. */
+      401: {
+        content: never;
+      };
+      /**
+       * @description The JWT token used does not correspond to an app that defines the Operations Information module,
+       * or the app does not define the 'READ' scope.
+       */
+      403: {
+        content: never;
+      };
+      /** @description No data found for the given Incident ID. */
+      404: {
+        content: never;
+      };
+      /** @description API rate limit has been exceeded. */
+      429: {
+        content: never;
+      };
+      /** @description Service is unavailable due to maintenance or other reasons. */
+      503: {
+        content: never;
+      };
+      /** @description An unknown error has occurred. */
+      default: {
+        content: {
+          "application/json": {
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
+        };
+      };
+    };
+  };
+  /**
+   * Delete a Incident by ID
+   * @description Delete the Incident data currently stored for the given ID.
+   *
+   * Deletion is performed asynchronously. The getIncidentById operation can be used to confirm that data has been deleted successfully (if needed).
+   *
+   * Only Connect apps that define the `jiraOperationsInfoProvider` module can access this resource.
+   * This resource requires the 'DELETE' scope for Connect apps.
+   */
+  deleteIncidentById: {
+    parameters: {
+      header: {
+        /**
+         * @description All requests must be signed with a Connect JWT token that corresponds to the Provider app installed in Jira.
+         *
+         * If the JWT token corresponds to an app that does not define Operations Information module it will be rejected with a 403.
+         *
+         * See https://developer.atlassian.com/blog/2015/01/understanding-jwt/ for more details.
+         */
+        Authorization: string;
+      };
+      path: {
+        /** @description The ID of the Incident to delete. */
+        incidentId: string;
+      };
+    };
+    responses: {
+      /** @description Delete has been accepted. Data will eventually be removed from Jira if it exists. */
+      202: {
+        content: never;
+      };
+      /** @description Missing a JWT token, or token is invalid. */
+      401: {
+        content: never;
+      };
+      /**
+       * @description The JWT token used does not correspond to an app that defines the Operations Information module,
+       * or the app does not define the 'DELETE' scope.
+       */
+      403: {
+        content: never;
+      };
+      /** @description API rate limit has been exceeded. */
+      429: {
+        content: never;
+      };
+      /** @description Service is unavailable due to maintenance or other reasons. */
+      503: {
+        content: never;
+      };
+      /** @description An unknown error has occurred. */
+      default: {
+        content: {
+          "application/json": {
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
+        };
+      };
+    };
+  };
+  /**
+   * Get a Review by ID
+   * @description Retrieve the currently stored Review data for the given ID.
+   *
+   * The result will be what is currently stored, ignoring any pending updates or deletes.
+   *
+   * Only Connect apps that define the `jiraOperationsInfoProvider` module can access this resource.
+   * This resource requires the 'READ' scope for Connect apps.
+   */
+  getReviewById: {
+    parameters: {
+      header: {
+        /**
+         * @description All requests must be signed with a Connect JWT token that corresponds to the Provider app installed in Jira.
+         *
+         * If the JWT token corresponds to an app that does not define Operations Information module it will be rejected with a 403.
+         *
+         * See https://developer.atlassian.com/blog/2015/01/understanding-jwt/ for more details.
+         */
+        Authorization: string;
+      };
+      path: {
+        /** @description The ID of the Review to fetch. */
+        reviewId: string;
+      };
+    };
+    responses: {
+      /** @description The Review data currently stored for the given ID. */
+      200: {
+        content: {
+          "application/json": {
+            /**
+             * @description The PostIncidentReviewData schema version used for this post-incident review data.
+             *
+             * Placeholder to support potential schema changes in the future.
+             *
+             * @default 1.0
+             * @example 1.0
+             * @enum {string}
+             */
+            schemaVersion: "1.0";
+            /**
+             * @description The identifier for the Review. Must be unique for a given Provider.
+             *
+             * @example 111-222-333
+             */
+            id: string;
+            /**
+             * Format: int64
+             * @description An ID used to apply an ordering to updates for this Review in the case of out-of-order receipt of update requests.
+             *
+             * This can be any monotonically increasing number. A suggested implementation is to use epoch millis from the Provider system, but other alternatives are valid (e.g. a Provider could store a counter against each Review and increment that on each update to Jira).
+             *
+             * Updates for a Review that are received with an updateSqeuenceId lower than what is currently stored will be ignored.
+             *
+             * @example 1523494301448
+             */
+            updateSequenceNumber: number;
+            /**
+             * @description The IDs of the Incidents covered by this Review. Must be unique for a given Provider.
+             *
+             * @example [
+             *   "111-222-333",
+             *   "444-555-666"
+             * ]
+             */
+            reviews: string[];
+            /**
+             * @description The human-readable summary for the Post-Incident Review. Will be shown in the UI.
+             *
+             * If not provided, will use the ID for display.
+             *
+             * @example PIR - Unable to log into VPN
+             */
+            summary: string;
+            /**
+             * @description A description of the review in Markdown format. Will be shown in the UI and used when creating Jira Issues.
+             *
+             * @example null
+             */
+            description: string;
+            /**
+             * Format: uri
+             * @description A URL users can use to link to a summary view of this review, if appropriate.
+             *
+             * This could be any location that makes sense in the Provider system (e.g. if the summary information comes from a specific project, it might make sense to link the user to the review in that project).
+             *
+             * @example https://example.com/project/ITHELPDESK-9/summary
+             */
+            url: string;
+            /**
+             * Format: date-time
+             * @description The timestamp to present to the user that shows when the Review was raised.
+             *
+             * Expected format is an RFC3339 formatted string.
+             *
+             * @example 2018-01-20T23:27:25.000Z
+             */
+            createdDate: string;
+            /**
+             * Format: date-time
+             * @description The last-updated timestamp to present to the user the last time the Review was updated.
+             *
+             * Expected format is an RFC3339 formatted string.
+             *
+             * @example 2018-01-20T23:27:25.000Z
+             */
+            lastUpdated: string;
+            /**
+             * Review status
+             * @description The current status of the Post-Incident Review.
+             *
+             * @example open
+             * @enum {string}
+             */
+            status: "in progress" | "outstanding actions" | "completed" | "unknown";
+            /** @description The IDs of the Jira issues related to this Incident. Must be unique for a given Provider. */
+            associations?: ({
+                /**
+                 * @description the type of the association being made
+                 * @example issueIdOrKeys
+                 * @enum {string}
+                 */
+                associationType?: "issueIdOrKeys" | "serviceIdOrKeys" | "ati:cloud:compass:event-source";
+                values?: string[];
+              })[];
+          };
+        };
+      };
+      /** @description Missing a JWT token, or token is invalid. */
+      401: {
+        content: never;
+      };
+      /**
+       * @description The JWT token used does not correspond to an app that defines the Operations Information module,
+       * or the app does not define the 'READ' scope.
+       */
+      403: {
+        content: never;
+      };
+      /** @description No data found for the given Review ID. */
+      404: {
+        content: never;
+      };
+      /** @description API rate limit has been exceeded. */
+      429: {
+        content: never;
+      };
+      /** @description Service is unavailable due to maintenance or other reasons. */
+      503: {
+        content: never;
+      };
+      /** @description An unknown error has occurred. */
+      default: {
+        content: {
+          "application/json": {
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
+        };
+      };
+    };
+  };
+  /**
+   * Delete a Review by ID
+   * @description Delete the Review data currently stored for the given ID.
+   *
+   * Deletion is performed asynchronously. The getReviewById operation can be used to confirm that data has been deleted successfully (if needed).
+   *
+   * Only Connect apps that define the `jiraOperationsInfoProvider` module can access this resource.
+   * This resource requires the 'DELETE' scope for Connect apps.
+   */
+  deleteReviewById: {
+    parameters: {
+      header: {
+        /**
+         * @description All requests must be signed with a Connect JWT token that corresponds to the Provider app installed in Jira.
+         *
+         * If the JWT token corresponds to an app that does not define Operations Information module it will be rejected with a 403.
+         *
+         * See https://developer.atlassian.com/blog/2015/01/understanding-jwt/ for more details.
+         */
+        Authorization: string;
+      };
+      path: {
+        /** @description The ID of the Review to delete. */
+        reviewId: string;
+      };
+    };
+    responses: {
+      /** @description Delete has been accepted. Data will eventually be removed from Jira if it exists. */
+      202: {
+        content: never;
+      };
+      /** @description Missing a JWT token, or token is invalid. */
+      401: {
+        content: never;
+      };
+      /**
+       * @description The JWT token used does not correspond to an app that defines the Operations Information module,
+       * or the app does not define the 'DELETE' scope.
+       */
+      403: {
+        content: never;
+      };
+      /** @description API rate limit has been exceeded. */
+      429: {
+        content: never;
+      };
+      /** @description Service is unavailable due to maintenance or other reasons. */
+      503: {
+        content: never;
+      };
+      /** @description An unknown error has occurred. */
+      default: {
+        content: {
+          "application/json": {
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
+        };
+      };
+    };
+  };
+  /**
+   * Submit DevOps Components
+   * @description Update / insert DevOps Component data.
+   *
+   * Components are identified by their ID, and existing Component data for the same ID will be replaced if it exists and the updateSequenceNumber of existing data is less than the incoming data.
+   *
+   * Submissions are performed asynchronously. Submitted data will eventually be available in Jira; most updates are available within a short period of time, but may take some time during peak load and/or maintenance times. The getComponentById operation can be used to confirm that data has been stored successfully (if needed).
+   *
+   * In the case of multiple Components being submitted in one request, each is validated individually prior to submission. Details of which Components failed submission (if any) are available in the response object.
+   *
+   * A maximum of 1000 components can be submitted in one request.
+   *
+   * Only Connect apps that define the `jiraDevOpsComponentProvider` module can access this resource.
+   * This resource requires the 'WRITE' scope for Connect apps.
+   */
+  submitComponents: {
+    parameters: {
+      header: {
+        /**
+         * @description All requests must be signed with a Connect JWT token that corresponds to the Provider app installed in Jira.
+         *
+         * If the JWT token corresponds to an app that does not define the DevOps Information module it will be rejected with a 403.
+         *
+         * See https://developer.atlassian.com/blog/2015/01/understanding-jwt/ for more details.
+         */
+        Authorization: string;
+      };
+    };
+    /** @description DevOps Component data to submit. */
+    requestBody: {
+      content: {
+        "application/json": {
+          /**
+           * Properties
+           * @description Properties assigned to incidents/components/review data that can then be used for delete / query operations.
+           *
+           * Examples might be an account or user ID that can then be used to clean up data if an account is removed from the Provider system.
+           *
+           * Properties are supplied as key/value pairs, and a maximum of 5 properties can be supplied, keys cannot contain ':' or start with '_'.
+           *
+           * @example {
+           *   "accountId": "account-234",
+           *   "projectId": "project-123"
+           * }
+           */
+          properties?: {
+            [key: string]: string;
+          };
+          components: ({
+              /**
+               * @description The DevOpsComponentData schema version used for this devops component data.
+               *
+               * Placeholder to support potential schema changes in the future.
+               *
+               * @default 1.0
+               * @example 1.0
+               * @enum {string}
+               */
+              schemaVersion: "1.0";
+              /**
+               * @description The identifier for the DevOps Component. Must be unique for a given Provider.
+               *
+               * @example 111-222-333
+               */
+              id: string;
+              /**
+               * Format: int64
+               * @description An ID used to apply an ordering to updates for this DevOps Component in the case of out-of-order receipt of update requests.
+               *
+               * This can be any monotonically increasing number. A suggested implementation is to use epoch millis from the Provider system, but other alternatives are valid (e.g. a Provider could store a counter against each DevOps Component and increment that on each update to Jira).
+               *
+               * Updates for a DevOps Component that are received with an updateSqeuenceId lower than what is currently stored will be ignored.
+               *
+               * @example 1523494301448
+               */
+              updateSequenceNumber: number;
+              /**
+               * @description The human-readable name for the DevOps Component. Will be shown in the UI.
+               *
+               * @example Galactus
+               */
+              name: string;
+              /**
+               * @description The human-readable name for the Provider that owns this DevOps Component. Will be shown in the UI.
+               *
+               * @example Marvel
+               */
+              providerName?: string;
+              /**
+               * @description A description of the DevOps Component in Markdown format. Will be shown in the UI.
+               *
+               * @example null
+               */
+              description: string;
+              /**
+               * Format: uri
+               * @description A URL users can use to link to a summary view of this devops component, if appropriate.
+               *
+               * This could be any location that makes sense in the Provider system (e.g. if the summary information comes from a specific project, it might make sense to link the user to the component in that project).
+               *
+               * @example https://example.com/project/MS/galactus/summary
+               */
+              url: string;
+              /**
+               * Format: uri
+               * @description A URL to display a logo representing this devops component, if available.
+               *
+               * @example https://example.com/project/MS/galactus/logo
+               */
+              avatarUrl: string;
+              /**
+               * @description The tier of the component. Will be shown in the UI.
+               *
+               * @example Tier 1
+               * @enum {string}
+               */
+              tier: "Tier 1" | "Tier 2" | "Tier 3" | "Tier 4";
+              /**
+               * @description The type of the component. Will be shown in the UI.
+               *
+               * @example Service
+               * @enum {string}
+               */
+              componentType: "Service" | "Application" | "Library" | "Capability" | "Cloud resource" | "Data pipeline" | "Machine learning model" | "UI element" | "Website" | "Other";
+              /**
+               * Format: date-time
+               * @description The last-updated timestamp to present to the user the last time the DevOps Component was updated.
+               *
+               * Expected format is an RFC3339 formatted string.
+               *
+               * @example 2018-01-20T23:27:25.000Z
+               */
+              lastUpdated: string;
+            })[];
+          /**
+           * ProviderMetadata
+           * @description Information about the provider. This is useful for auditing, logging, debugging,
+           * and other internal uses. It is not considered private information. Hence, it may not contain personally
+           * identifiable information.
+           */
+          providerMetadata?: {
+            /**
+             * @description An optional name of the source of the incidents.
+             * @example Atlassian Operations Platform 2.1.0
+             */
+            product?: string;
+          };
+        };
+      };
+    };
+    responses: {
+      /**
+       * @description Submission accepted. Each submitted Component that is of a valid format will be eventually available in Jira.
+       * Details of which Components were submitted and which failed submission (due to data format problems etc.) are available in the response object.
+       */
+      202: {
+        content: {
+          "application/json": {
+            /**
+             * @description The IDs of Components that have been accepted for submission.
+             *
+             * A Component may be rejected if it was only associated with unknown project keys.
+             *
+             * Note that a Component that isn't updated due to it's updateSequenceNumber being out of order is not considered a failed submission.
+             *
+             * @example [
+             *   "111-222-333",
+             *   "444-555-666"
+             * ]
+             */
+            acceptedComponents?: string[];
+            /**
+             * @description Details of Components that have not been accepted for submission, usually due to a problem with the request data.
+             *
+             * The object (if present) will be keyed by Component ID and include any errors associated with that Component that have prevented it being submitted.
+             */
+            failedComponents?: {
+              [key: string]: {
+                  /** @description A human-readable message describing the error. */
+                  message: string;
+                  /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+                  errorTraceId?: string;
+                }[];
+            };
+            /**
+             * @description Project keys that are not known on this Jira instance (if any).
+             *
+             * These may be invalid keys (e.g. `UTF` is sometimes incorrectly identified as a Jira project key), or they may be for projects that no longer exist.
+             *
+             * If a Component has been associated with project keys other than those in this array it will still be stored against those valid keys.
+             * If a Component was only associated with project keys deemed to be invalid it won't be persisted.
+             */
+            unknownProjectKeys?: string[];
+          };
+        };
+      };
+      /**
+       * @description Request has incorrect format.
+       *
+       * Note that in the case of an individual Component having an invalid format (rather than the request as a whole) the response for the request will be a 202 and details of the invalid Component will be contained in the response object.
+       */
+      400: {
+        content: {
+          "application/json": {
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
+        };
+      };
+      /** @description Missing a JWT token, or token is invalid. */
+      401: {
+        content: never;
+      };
+      /**
+       * @description The JWT token used does not correspond to an app that defines the Operations Information module,
+       * or the app does not define the 'WRITE' scope.
+       */
+      403: {
+        content: never;
+      };
+      /** @description Data is too large. Submit fewer Components in each payload. */
+      413: {
+        content: {
+          "application/json": {
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
+        };
+      };
+      /** @description API rate limit has been exceeded. */
+      429: {
+        content: never;
+      };
+      /** @description Service is unavailable due to maintenance or other reasons. */
+      503: {
+        content: never;
+      };
+      /** @description An unknown error has occurred. */
+      default: {
+        content: {
+          "application/json": {
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
+        };
+      };
+    };
+  };
+  /**
+   * Delete DevOps Components by Property
+   * @description Bulk delete all Components that match the given request.
+   *
+   * One or more query params must be supplied to specify Properties to delete by.
+   * If more than one Property is provided, data will be deleted that matches ALL of the Properties (e.g. treated as an AND).
+   * See the documentation for the submitComponents operation for more details.
+   *
+   * e.g. DELETE /bulkByProperties?accountId=account-123&createdBy=user-456
+   *
+   * Deletion is performed asynchronously. The getComponentById operation can be used to confirm that data has been deleted successfully (if needed).
+   *
+   * Only Connect apps that define the `jiraDevOpsComponentProvider` module can access this resource.
+   * This resource requires the 'DELETE' scope for Connect apps.
+   */
+  deleteComponentsByProperty: {
+    parameters: {
+      header: {
+        /**
+         * @description All requests must be signed with a Connect JWT token that corresponds to the Provider app installed in Jira.
+         *
+         * If the JWT token corresponds to an app that does not define the Operations Information module it will be rejected with a 403.
+         *
+         * See https://developer.atlassian.com/blog/2015/01/understanding-jwt/ for more details.
+         */
+        Authorization: string;
+      };
+    };
+    responses: {
+      /** @description Delete accepted. Data will eventually be removed from Jira. */
+      202: {
+        content: never;
+      };
+      /** @description Request has incorrect format (e.g. missing at least one Property param). */
+      400: {
+        content: {
+          "application/json": {
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
+        };
+      };
+      /** @description Missing a JWT token, or token is invalid. */
+      401: {
+        content: never;
+      };
+      /**
+       * @description The JWT token used does not correspond to an app that defines the Operations Information module,
+       * or the app does not define the 'DELETE' scope.
+       */
+      403: {
+        content: never;
+      };
+      /** @description API rate limit has been exceeded. */
+      429: {
+        content: never;
+      };
+      /** @description Service is unavailable due to maintenance or other reasons. */
+      503: {
+        content: never;
+      };
+      /** @description An unknown error has occurred. */
+      default: {
+        content: {
+          "application/json": {
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
+        };
+      };
+    };
+  };
+  /**
+   * Get a Component by ID
+   * @description Retrieve the currently stored Component data for the given ID.
+   *
+   * The result will be what is currently stored, ignoring any pending updates or deletes.
+   *
+   * Only Connect apps that define the `jiraDevOpsComponentProvider` module can access this resource.
+   * This resource requires the 'READ' scope for Connect apps.
+   */
+  getComponentById: {
+    parameters: {
+      header: {
+        /**
+         * @description All requests must be signed with a Connect JWT token that corresponds to the Provider app installed in Jira.
+         *
+         * If the JWT token corresponds to an app that does not define Operations Information module it will be rejected with a 403.
+         *
+         * See https://developer.atlassian.com/blog/2015/01/understanding-jwt/ for more details.
+         */
+        Authorization: string;
+      };
+      path: {
+        /** @description The ID of the Component to fetch. */
+        componentId: string;
+      };
+    };
+    responses: {
+      /** @description The Component data currently stored for the given ID. */
+      200: {
+        content: {
+          "application/json": {
+            /**
+             * @description The DevOpsComponentData schema version used for this devops component data.
+             *
+             * Placeholder to support potential schema changes in the future.
+             *
+             * @default 1.0
+             * @example 1.0
+             * @enum {string}
+             */
+            schemaVersion: "1.0";
+            /**
+             * @description The identifier for the DevOps Component. Must be unique for a given Provider.
+             *
+             * @example 111-222-333
+             */
+            id: string;
+            /**
+             * Format: int64
+             * @description An ID used to apply an ordering to updates for this DevOps Component in the case of out-of-order receipt of update requests.
+             *
+             * This can be any monotonically increasing number. A suggested implementation is to use epoch millis from the Provider system, but other alternatives are valid (e.g. a Provider could store a counter against each DevOps Component and increment that on each update to Jira).
+             *
+             * Updates for a DevOps Component that are received with an updateSqeuenceId lower than what is currently stored will be ignored.
+             *
+             * @example 1523494301448
+             */
+            updateSequenceNumber: number;
+            /**
+             * @description The human-readable name for the DevOps Component. Will be shown in the UI.
+             *
+             * @example Galactus
+             */
+            name: string;
+            /**
+             * @description The human-readable name for the Provider that owns this DevOps Component. Will be shown in the UI.
+             *
+             * @example Marvel
+             */
+            providerName?: string;
+            /**
+             * @description A description of the DevOps Component in Markdown format. Will be shown in the UI.
+             *
+             * @example null
+             */
+            description: string;
+            /**
+             * Format: uri
+             * @description A URL users can use to link to a summary view of this devops component, if appropriate.
+             *
+             * This could be any location that makes sense in the Provider system (e.g. if the summary information comes from a specific project, it might make sense to link the user to the component in that project).
+             *
+             * @example https://example.com/project/MS/galactus/summary
+             */
+            url: string;
+            /**
+             * Format: uri
+             * @description A URL to display a logo representing this devops component, if available.
+             *
+             * @example https://example.com/project/MS/galactus/logo
+             */
+            avatarUrl: string;
+            /**
+             * @description The tier of the component. Will be shown in the UI.
+             *
+             * @example Tier 1
+             * @enum {string}
+             */
+            tier: "Tier 1" | "Tier 2" | "Tier 3" | "Tier 4";
+            /**
+             * @description The type of the component. Will be shown in the UI.
+             *
+             * @example Service
+             * @enum {string}
+             */
+            componentType: "Service" | "Application" | "Library" | "Capability" | "Cloud resource" | "Data pipeline" | "Machine learning model" | "UI element" | "Website" | "Other";
+            /**
+             * Format: date-time
+             * @description The last-updated timestamp to present to the user the last time the DevOps Component was updated.
+             *
+             * Expected format is an RFC3339 formatted string.
+             *
+             * @example 2018-01-20T23:27:25.000Z
+             */
+            lastUpdated: string;
+          };
+        };
+      };
+      /** @description Missing a JWT token, or token is invalid. */
+      401: {
+        content: never;
+      };
+      /**
+       * @description The JWT token used does not correspond to an app that defines the Operations Information module,
+       * or the app does not define the 'READ' scope.
+       */
+      403: {
+        content: never;
+      };
+      /** @description No data found for the given Component ID. */
+      404: {
+        content: never;
+      };
+      /** @description API rate limit has been exceeded. */
+      429: {
+        content: never;
+      };
+      /** @description Service is unavailable due to maintenance or other reasons. */
+      503: {
+        content: never;
+      };
+      /** @description An unknown error has occurred. */
+      default: {
+        content: {
+          "application/json": {
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
+        };
+      };
+    };
+  };
+  /**
+   * Delete a Component by ID
+   * @description Delete the Component data currently stored for the given ID.
+   *
+   * Deletion is performed asynchronously. The getComponentById operation can be used to confirm that data has been deleted successfully (if needed).
+   *
+   * Only Connect apps that define the `jiraDevOpsComponentProvider` module can access this resource.
+   * This resource requires the 'DELETE' scope for Connect apps.
+   */
+  deleteComponentById: {
+    parameters: {
+      header: {
+        /**
+         * @description All requests must be signed with a Connect JWT token that corresponds to the Provider app installed in Jira.
+         *
+         * If the JWT token corresponds to an app that does not define Operations Information module it will be rejected with a 403.
+         *
+         * See https://developer.atlassian.com/blog/2015/01/understanding-jwt/ for more details.
+         */
+        Authorization: string;
+      };
+      path: {
+        /** @description The ID of the Component to delete. */
+        componentId: string;
+      };
+    };
+    responses: {
+      /** @description Delete has been accepted. Data will eventually be removed from Jira if it exists. */
+      202: {
+        content: never;
+      };
+      /** @description Missing a JWT token, or token is invalid. */
+      401: {
+        content: never;
+      };
+      /**
+       * @description The JWT token used does not correspond to an app that defines the Operations Information module,
+       * or the app does not define the 'DELETE' scope.
+       */
+      403: {
+        content: never;
+      };
+      /** @description API rate limit has been exceeded. */
+      429: {
+        content: never;
+      };
+      /** @description Service is unavailable due to maintenance or other reasons. */
+      503: {
+        content: never;
+      };
+      /** @description An unknown error has occurred. */
+      default: {
+        content: {
+          "application/json": {
+              /** @description A human-readable message describing the error. */
+              message: string;
+              /** @description An optional trace ID that can be used by Jira developers to locate the source of the error. */
+              errorTraceId?: string;
+            }[];
         };
       };
     };

@@ -4,6 +4,10 @@
     "declaration": true,
     "isolatedModules": true,
     "skipLibCheck": true,
+    "strict": true,
+    "target": "esnext",
+    "module": "commonjs",
+    "lib": ["es2015"],
     "outDir": "lib",
     "baseUrl": "."
   },
