@@ -1,3 +1,10 @@
+## [1.0.5](https://github.com/Aeolun/ts-jira-client/compare/v1.0.4...v1.0.5) (2024-07-10)
+
+
+### Bug Fixes
+
+* do not require query parameter to be specified for getVersions ([00e99ce](https://github.com/Aeolun/ts-jira-client/commit/00e99ce7d1463d9db0b3aa873697a0b072ddecb9))
+
 ## [1.0.4](https://github.com/Aeolun/ts-jira-client/compare/v1.0.3...v1.0.4) (2024-07-10)
 
 
