@@ -75,13 +75,13 @@ describe("Jira API Tests", () => {
         strictSSL: false,
       });
 
-      expect(jira.httpsAgent.options.rejectUnauthorized).toBe(false);
+      expect(jira.httpsAgent?.options.rejectUnauthorized).toBe(false);
     });
 
     it("Constructor with ssl default empty", () => {
       const { jira } = createTestInstance({});
 
-      expect(jira.httpsAgent.options.rejectUnauthorized).toBe(true);
+      expect(jira.httpsAgent?.options.rejectUnauthorized).toBe(true);
     });
 
     it("Constructor with with ssl checking enabled", () => {
@@ -89,7 +89,7 @@ describe("Jira API Tests", () => {
         strictSSL: true,
       });
 
-      expect(jira.httpsAgent.options.rejectUnauthorized).toBe(true);
+      expect(jira.httpsAgent?.options.rejectUnauthorized).toBe(true);
     });
 
     it("should allow the user to pass in a certificate authority", () => {
