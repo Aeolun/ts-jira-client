@@ -1,6 +1,6 @@
 {
   "name": "ts-jira-client",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Wrapper for the JIRA API, based off jira-client",
   "authors": [
     "Bart Riepe <bart@serial-experiments.com>",

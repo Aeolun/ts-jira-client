@@ -1,3 +1,10 @@
+## [1.0.4](https://github.com/Aeolun/ts-jira-client/compare/v1.0.3...v1.0.4) (2024-07-10)
+
+
+### Bug Fixes
+
+* deal with undefined variables passed into query string and update addattachmentonissue to take mime and filename ([97fc03b](https://github.com/Aeolun/ts-jira-client/commit/97fc03b83150cce1d1f91bfd05618646f9ada35e))
+
 ## [1.0.3](https://github.com/Aeolun/ts-jira-client/compare/v1.0.2...v1.0.3) (2024-07-10)
 
 
