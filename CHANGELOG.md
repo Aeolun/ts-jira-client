@@ -1,3 +1,10 @@
+## [1.0.6](https://github.com/Aeolun/ts-jira-client/compare/v1.0.5...v1.0.6) (2024-07-31)
+
+
+### Bug Fixes
+
+* do not overwrite all header values ([c91d9e9](https://github.com/Aeolun/ts-jira-client/commit/c91d9e917b587977d45f0f0f41416033d79620c0))
+
 ## [1.0.5](https://github.com/Aeolun/ts-jira-client/compare/v1.0.4...v1.0.5) (2024-07-10)
 
 
